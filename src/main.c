@@ -21,8 +21,11 @@
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/bluetooth/gatt.h>
 
-#include <bluetooth/services/nus.h>
-#include <bluetooth/services/nus_client.h>
+// #include <bluetooth/services/nus.h>
+// #include <bluetooth/services/nus_client.h>
+#include <gopro.h>
+#include <gopro_client.h>
+
 #include <bluetooth/gatt_dm.h>
 #include <bluetooth/scan.h>
 
