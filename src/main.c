@@ -26,6 +26,8 @@
 #include <gopro.h>
 #include <gopro_client.h>
 
+#include <zephyr/drivers/gpio.h>
+
 #include <bluetooth/gatt_dm.h>
 #include <bluetooth/scan.h>
 
@@ -48,6 +50,21 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 #define UART_WAIT_FOR_BUF_DELAY K_MSEC(50)
 #define UART_RX_TIMEOUT 50000 /* Wait for RX complete event time in microseconds. */
 
+
+#define SW0_NODE	DT_ALIAS(sw0)
+#if !DT_NODE_HAS_STATUS_OKAY(SW0_NODE)
+#error "Unsupported board: sw0 devicetree alias is not defined"
+#endif
+static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET_OR(SW0_NODE, gpios,{0});
+static struct gpio_callback button_cb_data;
+
+/*
+ * The led0 devicetree alias is optional. If present, we'll use it
+ * to turn on the LED whenever the button is pressed.
+ */
+static struct gpio_dt_spec led = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led0), gpios,
+						     {0});
+
 static const struct device *uart = DEVICE_DT_GET(DT_CHOSEN(nordic_nus_uart));
 static struct k_work_delayable uart_work;
 static struct k_work scan_work;
@@ -65,6 +82,13 @@ static K_FIFO_DEFINE(fifo_uart_rx_data);
 
 static struct bt_conn *default_conn;
 static struct bt_nus_client nus_client;
+
+void button_pressed(const struct device *dev, struct gpio_callback *cb,
+		    uint32_t pins)
+{
+	LOG_INF("Button pressed at %" PRIu32 "\n", k_cycle_get_32());
+}
+
 
 static void ble_data_sent(struct bt_nus_client *nus, uint8_t err,
 					const uint8_t *const data, uint16_t len)
@@ -607,6 +631,47 @@ int main(void)
 {
 	int err;
 
+
+	if (!gpio_is_ready_dt(&button)) {
+		LOG_ERR("Error: button device %s is not ready\n",
+		       button.port->name);
+		return 0;
+	}
+
+
+	err = gpio_pin_configure_dt(&button, GPIO_INPUT);
+	if (err != 0) {
+		LOG_ERR("Error %d: failed to configure %s pin %d\n",
+		       err, button.port->name, button.pin);
+		return 0;
+	}
+
+	err = gpio_pin_interrupt_configure_dt(&button, GPIO_INT_EDGE_TO_ACTIVE);
+	if (err != 0) {
+		LOG_ERR("Error %d: failed to configure interrupt on %s pin %d\n", err, button.port->name, button.pin);
+		return 0;
+	}
+
+	gpio_init_callback(&button_cb_data, button_pressed, BIT(button.pin));
+	gpio_add_callback(button.port, &button_cb_data);
+	LOG_INF("Set up button at %s pin %d\n", button.port->name, button.pin);
+
+	if (led.port && !gpio_is_ready_dt(&led)) {
+		printk("Error %d: LED device %s is not ready; ignoring it\n",err, led.port->name);
+		led.port = NULL;
+	}
+	if (led.port) {
+		err = gpio_pin_configure_dt(&led, GPIO_OUTPUT);
+		if (err != 0) {
+			LOG_ERR("Error %d: failed to configure LED device %s pin %d\n",err, led.port->name, led.pin);
+			led.port = NULL;
+		} else {
+			LOG_INF("Set up LED at %s pin %d\n", led.port->name, led.pin);
+		}
+	}
+
+	LOG_INF("Press the button\n");
+
 	err = bt_conn_auth_cb_register(&conn_auth_callbacks);
 	if (err) {
 		LOG_ERR("Failed to register authorization callbacks.");
@@ -615,7 +680,7 @@ int main(void)
 
 	err = bt_conn_auth_info_cb_register(&conn_auth_info_callbacks);
 	if (err) {
-		printk("Failed to register authorization info callbacks.\n");
+		LOG_ERR("Failed to register authorization info callbacks.\n");
 		return 0;
 	}
 
