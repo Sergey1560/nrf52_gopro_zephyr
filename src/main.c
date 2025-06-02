@@ -43,9 +43,6 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 /* UART payload buffer element size. */
 #define UART_BUF_SIZE 20
 
-#define KEY_PASSKEY_ACCEPT DK_BTN1_MSK
-#define KEY_PASSKEY_REJECT DK_BTN2_MSK
-
 #define NUS_WRITE_TIMEOUT K_MSEC(150)
 #define UART_WAIT_FOR_BUF_DELAY K_MSEC(50)
 #define UART_RX_TIMEOUT 50000 /* Wait for RX complete event time in microseconds. */
@@ -62,8 +59,7 @@ static struct gpio_callback button_cb_data;
  * The led0 devicetree alias is optional. If present, we'll use it
  * to turn on the LED whenever the button is pressed.
  */
-static struct gpio_dt_spec led = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led0), gpios,
-						     {0});
+static struct gpio_dt_spec led = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led0), gpios,{0});
 
 static const struct device *uart = DEVICE_DT_GET(DT_CHOSEN(nordic_nus_uart));
 static struct k_work_delayable uart_work;
@@ -73,8 +69,8 @@ K_SEM_DEFINE(nus_write_sem, 0, 1);
 
 struct uart_data_t {
 	void *fifo_reserved;
-	uint8_t  data[UART_BUF_SIZE];
 	uint16_t len;
+	uint8_t  data[UART_BUF_SIZE];
 };
 
 static K_FIFO_DEFINE(fifo_uart_tx_data);
@@ -83,13 +79,25 @@ static K_FIFO_DEFINE(fifo_uart_rx_data);
 static struct bt_conn *default_conn;
 static struct bt_nus_client nus_client;
 
-void button_pressed(const struct device *dev, struct gpio_callback *cb,
-		    uint32_t pins)
-{
+static struct uart_data_t cmd_buf_list[] = {
+	{.len = 4, .data={3,1,1,1}},  //shutter on
+	{.len = 4, .data={3,1,1,0}}	  //shutter off
+}; 
+
+void button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins){
+	static uint8_t cmd_index = 0;
+
 	LOG_INF("Button pressed at %" PRIu32 "\n", k_cycle_get_32());
 
 	if (led.port) {
 			gpio_pin_toggle_dt(&led);
+	}
+
+	k_fifo_put(&fifo_uart_rx_data, &cmd_buf_list[cmd_index]);
+	cmd_index++;
+
+	if(cmd_index > (sizeof(cmd_buf_list)/sizeof(cmd_buf_list[0]))-1 ){
+		cmd_index = 0;
 	}
 }
 
@@ -674,8 +682,6 @@ int main(void)
 		}
 	}
 
-	LOG_INF("Press the button\n");
-
 	err = bt_conn_auth_cb_register(&conn_auth_callbacks);
 	if (err) {
 		LOG_ERR("Failed to register authorization callbacks.");
@@ -717,44 +723,23 @@ int main(void)
 		return 0;
 	}
 
-	printk("Starting Bluetooth Central UART sample\n");
-
-	struct uart_data_t nus_data = {
-		.len = 0,
-	};
+	LOG_INF("Starting Bluetooth Central sample\n");
 
 	for (;;) {
 		/* Wait indefinitely for data to be sent over Bluetooth */
-		struct uart_data_t *buf = k_fifo_get(&fifo_uart_rx_data,
-						     K_FOREVER);
+		struct uart_data_t *buf = k_fifo_get(&fifo_uart_rx_data,K_FOREVER);
 
-		int plen = MIN(sizeof(nus_data.data) - nus_data.len, buf->len);
-		int loc = 0;
+		LOG_HEXDUMP_INF(buf->data, buf->len,"GET Data to send:");
 
-		while (plen > 0) {
-			memcpy(&nus_data.data[nus_data.len], &buf->data[loc], plen);
-			nus_data.len += plen;
-			loc += plen;
-			if (nus_data.len >= sizeof(nus_data.data) ||
-			   (nus_data.data[nus_data.len - 1] == '\n') ||
-			   (nus_data.data[nus_data.len - 1] == '\r')) {
-				err = bt_nus_client_send(&nus_client, nus_data.data, nus_data.len);
-				if (err) {
-					LOG_WRN("Failed to send data over BLE connection"
-						"(err %d)", err);
-				}
+		err = bt_nus_client_send(&nus_client, buf->data, buf->len);
 
-				err = k_sem_take(&nus_write_sem, NUS_WRITE_TIMEOUT);
-				if (err) {
-					LOG_WRN("NUS send timeout");
-				}
-
-				nus_data.len = 0;
-			}
-
-			plen = MIN(sizeof(nus_data.data), buf->len - loc);
+		if (err) {
+			LOG_WRN("Failed to send data over BLE connection (err %d)", err);
 		}
 
-		k_free(buf);
+		err = k_sem_take(&nus_write_sem, NUS_WRITE_TIMEOUT);
+		if (err) {
+			LOG_WRN("Data send timeout");
+		}
 	}
 }
