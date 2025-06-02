@@ -87,6 +87,10 @@ void button_pressed(const struct device *dev, struct gpio_callback *cb,
 		    uint32_t pins)
 {
 	LOG_INF("Button pressed at %" PRIu32 "\n", k_cycle_get_32());
+
+	if (led.port) {
+			gpio_pin_toggle_dt(&led);
+	}
 }
 
 
