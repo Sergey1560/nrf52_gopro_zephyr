@@ -8,7 +8,6 @@
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/bluetooth/gatt.h>
 
-#include <gopro.h>
 #include <gopro_client.h>
 
 #include <zephyr/logging/log.h>
@@ -118,7 +117,7 @@ int bt_nus_handles_assign(struct bt_gatt_dm *dm,  struct bt_nus_client *nus_c){
 	const struct bt_gatt_dm_attr *gatt_chrc;
 	const struct bt_gatt_dm_attr *gatt_desc;
 
-	if (bt_uuid_cmp(gatt_service->uuid, BT_UUID_NUS_SERVICE)) {
+	if (bt_uuid_cmp(gatt_service->uuid, BT_UUID_GOPRO_SERVICE)) {
 		LOG_ERR("Not valid GoPro Service UUID");
 		return -ENOTSUP;
 	}
@@ -126,41 +125,41 @@ int bt_nus_handles_assign(struct bt_gatt_dm *dm,  struct bt_nus_client *nus_c){
 	memset(&nus_c->handles, 0xFF, sizeof(nus_c->handles));
 
 	/* NUS TX Characteristic */
-	gatt_chrc = bt_gatt_dm_char_by_uuid(dm, BT_UUID_NUS_TX);
+	gatt_chrc = bt_gatt_dm_char_by_uuid(dm, BT_UUID_GOPRO_NOTIFY);
 	if (!gatt_chrc) {
 		LOG_ERR("Missing NUS TX characteristic.");
 		return -EINVAL;
 	}
 	/* NUS TX */
-	gatt_desc = bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_NUS_TX);
+	gatt_desc = bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GOPRO_NOTIFY);
 	if (!gatt_desc) {
-		LOG_ERR("Missing NUS TX value descriptor in characteristic.");
+		LOG_ERR("Missing GoPro Notify value descriptor in characteristic.");
 		return -EINVAL;
 	}
-	LOG_DBG("Found handle for NUS TX characteristic.");
+	LOG_INF("Found handle for GoPro Notify characteristic.");
 	nus_c->handles.tx = gatt_desc->handle;
 	/* NUS TX CCC */
 	gatt_desc = bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GATT_CCC);
 	if (!gatt_desc) {
-		LOG_ERR("Missing NUS TX CCC in characteristic.");
+		LOG_ERR("Missing GoPro Notify CCC in characteristic.");
 		return -EINVAL;
 	}
-	LOG_DBG("Found handle for CCC of NUS TX characteristic.");
+	LOG_INF("Found handle for CCC of GoPro Notify characteristic.");
 	nus_c->handles.tx_ccc = gatt_desc->handle;
 
 	/* NUS RX Characteristic */
-	gatt_chrc = bt_gatt_dm_char_by_uuid(dm, BT_UUID_NUS_RX);
+	gatt_chrc = bt_gatt_dm_char_by_uuid(dm, BT_UUID_GOPRO_WRITE);
 	if (!gatt_chrc) {
-		LOG_ERR("Missing NUS RX characteristic.");
+		LOG_ERR("Missing GoPro Write characteristic.");
 		return -EINVAL;
 	}
 	/* NUS RX */
-	gatt_desc = bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_NUS_RX);
+	gatt_desc = bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GOPRO_WRITE);
 	if (!gatt_desc) {
-		LOG_ERR("Missing NUS RX value descriptor in characteristic.");
+		LOG_ERR("Missing GoPro Write value descriptor in characteristic.");
 		return -EINVAL;
 	}
-	LOG_DBG("Found handle for NUS RX characteristic.");
+	LOG_INF("Found handle for GoPro Write characteristic.");
 	nus_c->handles.rx = gatt_desc->handle;
 
 	/* Assign connection instance. */

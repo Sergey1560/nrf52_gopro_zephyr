@@ -11,7 +11,6 @@ project(central_uart)
 # NORDIC SDK APP START
 target_sources(app PRIVATE
   src/main.c
-  src/gopro.c
   src/gopro_client.c
 )
 target_include_directories(app PRIVATE

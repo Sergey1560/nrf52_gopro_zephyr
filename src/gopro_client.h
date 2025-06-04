@@ -1,18 +1,5 @@
-/*
- * Copyright (c) 2018 Nordic Semiconductor ASA
- *
- * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
- */
-
 #ifndef BT_NUS_CLIENT_H_
 #define BT_NUS_CLIENT_H_
-
-/**
- * @file
- * @defgroup bt_nus_client Bluetooth LE GATT NUS Client API
- * @{
- * @brief API for the Bluetooth LE GATT Nordic UART Service (NUS) Client.
- */
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,6 +8,17 @@ extern "C" {
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/bluetooth/conn.h>
 #include <bluetooth/gatt_dm.h>
+
+#define BLE_UUID16_GOPRO_SERVICE    0xFEA6      
+//#define BT_UUID_NUS_VAL 			BT_UUID_128_ENCODE(0x0000fea6, 0x0000, 0x1000, 0x8000, 0x00805f9b34fb)
+
+#define BT_UUID_GOPRO_WRITE_VAL 	BT_UUID_128_ENCODE(0xb5f90072, 0xaa8d, 0x11e3, 0x9046, 0x0002a5d5c51b)
+#define BT_UUID_GOPRO_NOTIFY_VAL 	BT_UUID_128_ENCODE(0xb5f90073, 0xaa8d, 0x11e3, 0x9046, 0x0002a5d5c51b)
+
+#define BT_UUID_GOPRO_SERVICE	   	BT_UUID_DECLARE_16(BLE_UUID16_GOPRO_SERVICE)
+#define BT_UUID_GOPRO_WRITE        	BT_UUID_DECLARE_128(BT_UUID_GOPRO_WRITE_VAL)
+#define BT_UUID_GOPRO_NOTIFY       	BT_UUID_DECLARE_128(BT_UUID_GOPRO_NOTIFY_VAL)
+
 
 /** @brief Handles on the connected peer device that are needed to interact with
  * the device.

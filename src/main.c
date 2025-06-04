@@ -15,7 +15,6 @@
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/bluetooth/gatt.h>
 
-#include <gopro.h>
 #include <gopro_client.h>
 
 #include <zephyr/drivers/gpio.h>
@@ -185,7 +184,7 @@ static void gatt_discover(struct bt_conn *conn)
 		return;
 	}
 
-	err = bt_gatt_dm_start(conn, BT_UUID_NUS_SERVICE, &discovery_cb, &nus_client);
+	err = bt_gatt_dm_start(conn, BT_UUID_GOPRO_SERVICE, &discovery_cb, &nus_client);
 	if (err) {
 		LOG_ERR("could not start the discovery procedure, error code: %d", err);
 	}
@@ -376,7 +375,7 @@ static int scan_start(void)
 
 	bt_scan_filter_remove_all();
 
-	err = bt_scan_filter_add(BT_SCAN_FILTER_TYPE_UUID, BT_UUID_NUS_SERVICE);
+	err = bt_scan_filter_add(BT_SCAN_FILTER_TYPE_UUID, BT_UUID_GOPRO_SERVICE);
 	if (err) {
 		LOG_ERR("UUID filter cannot be added (err %d", err);
 		return err;
