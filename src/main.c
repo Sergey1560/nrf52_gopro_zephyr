@@ -144,29 +144,26 @@ static uint8_t ble_data_received(struct bt_nus_client *nus,	const uint8_t *data,
 }
 
 
-static void discovery_complete(struct bt_gatt_dm *dm,
-			       void *context)
+static void discovery_complete(struct bt_gatt_dm *dm, void *context)
 {
 	struct bt_nus_client *nus = context;
 	LOG_INF("Service discovery completed");
 
 	bt_gatt_dm_data_print(dm);
 
+	LOG_INF("Assign handles");
 	bt_nus_handles_assign(dm, nus);
 	bt_nus_subscribe_receive(nus);
 
 	bt_gatt_dm_data_release(dm);
 }
 
-static void discovery_service_not_found(struct bt_conn *conn,
-					void *context)
+static void discovery_service_not_found(struct bt_conn *conn, void *context)
 {
 	LOG_INF("Service not found");
 }
 
-static void discovery_error(struct bt_conn *conn,
-			    int err,
-			    void *context)
+static void discovery_error(struct bt_conn *conn, int err,void *context)
 {
 	LOG_WRN("Error while discovering GATT database: (%d)", err);
 }
@@ -181,17 +178,15 @@ static void gatt_discover(struct bt_conn *conn)
 {
 	int err;
 
+	LOG_INF("Start discovery");
+
 	if (conn != default_conn) {
 		return;
 	}
 
-	err = bt_gatt_dm_start(conn,
-			       BT_UUID_NUS_SERVICE,
-			       &discovery_cb,
-			       &nus_client);
+	err = bt_gatt_dm_start(conn, BT_UUID_NUS_SERVICE, &discovery_cb, &nus_client);
 	if (err) {
-		LOG_ERR("could not start the discovery procedure, error "
-			"code: %d", err);
+		LOG_ERR("could not start the discovery procedure, error code: %d", err);
 	}
 }
 
@@ -235,12 +230,13 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
 		LOG_WRN("MTU exchange failed (err %d)", err);
 	}
 
-	err = bt_conn_set_security(conn, BT_SECURITY_L2);
-	if (err) {
-		LOG_WRN("Failed to set security: %d", err);
+	// LOG_INF("Change security");
+	// err = bt_conn_set_security(conn, BT_SECURITY_L1);
+	// if (err) {
+	// 	LOG_WRN("Failed to set security: %d", err);
+	// }
+	gatt_discover(conn);
 
-		gatt_discover(conn);
-	}
 
 	err = bt_scan_stop();
 	if ((!err) && (err != -EALREADY)) {
@@ -270,7 +266,7 @@ static void security_changed(struct bt_conn *conn, bt_security_t level,
 			     enum bt_security_err err)
 {
 	char addr[BT_ADDR_LE_STR_LEN];
-
+	
 	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
 
 	if (!err) {
@@ -306,9 +302,9 @@ static void scan_connecting_error(struct bt_scan_device_info *device_info)
 	LOG_WRN("Connecting failed");
 }
 
-static void scan_connecting(struct bt_scan_device_info *device_info,
-			    struct bt_conn *conn)
+static void scan_connecting(struct bt_scan_device_info *device_info, struct bt_conn *conn)
 {
+	LOG_INF("Scan connecting");
 	default_conn = bt_conn_ref(conn);
 }
 
@@ -332,7 +328,15 @@ static int nus_client_init(void)
 	return err;
 }
 
-BT_SCAN_CB_INIT(scan_cb, scan_filter_match, NULL, scan_connecting_error, scan_connecting);
+
+static void scan_filter_no_match(struct bt_scan_device_info *device_info, bool connectable){
+	char addr[BT_ADDR_LE_STR_LEN];
+	
+	bt_addr_le_to_str(device_info->recv_info->addr, addr,  sizeof(addr));
+	LOG_DBG("Scan no match %s",addr);
+}
+
+BT_SCAN_CB_INIT(scan_cb, scan_filter_match, scan_filter_no_match, scan_connecting_error, scan_connecting);
 
 static void try_add_address_filter(const struct bt_bond_info *info, void *user_data)
 {

@@ -110,13 +110,9 @@ int bt_nus_client_send(struct bt_nus_client *nus_c, const uint8_t *data,
 	return err;
 }
 
-int bt_nus_handles_assign(struct bt_gatt_dm *dm,
-			  struct bt_nus_client *nus_c)
-{
-	const struct bt_gatt_dm_attr *gatt_service_attr =
-			bt_gatt_dm_service_get(dm);
-	const struct bt_gatt_service_val *gatt_service =
-			bt_gatt_dm_attr_service_val(gatt_service_attr);
+int bt_nus_handles_assign(struct bt_gatt_dm *dm,  struct bt_nus_client *nus_c){
+	const struct bt_gatt_dm_attr *gatt_service_attr = bt_gatt_dm_service_get(dm);
+	const struct bt_gatt_service_val *gatt_service = bt_gatt_dm_attr_service_val(gatt_service_attr);
 	const struct bt_gatt_dm_attr *gatt_chrc;
 	const struct bt_gatt_dm_attr *gatt_desc;
 
