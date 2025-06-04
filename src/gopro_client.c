@@ -96,6 +96,8 @@ int bt_nus_client_send(struct bt_nus_client *nus_c, const uint8_t *data,
 		return -EALREADY;
 	}
 
+	LOG_INF("Send handle: 0x%0X %d bytes",nus_c->handles.rx,len);
+
 	nus_c->rx_write_params.func = on_sent;
 	nus_c->rx_write_params.handle = nus_c->handles.rx;
 	nus_c->rx_write_params.offset = 0;
@@ -117,6 +119,7 @@ int bt_nus_handles_assign(struct bt_gatt_dm *dm,  struct bt_nus_client *nus_c){
 	const struct bt_gatt_dm_attr *gatt_desc;
 
 	if (bt_uuid_cmp(gatt_service->uuid, BT_UUID_NUS_SERVICE)) {
+		LOG_ERR("Not valid GoPro Service UUID");
 		return -ENOTSUP;
 	}
 	LOG_DBG("Getting handles from NUS service.");
@@ -170,6 +173,7 @@ int bt_nus_subscribe_receive(struct bt_nus_client *nus_c)
 	int err;
 
 	if (atomic_test_and_set_bit(&nus_c->state, NUS_C_TX_NOTIF_ENABLED)) {
+		LOG_ERR("Subs error");
 		return -EALREADY;
 	}
 
@@ -177,10 +181,10 @@ int bt_nus_subscribe_receive(struct bt_nus_client *nus_c)
 	nus_c->tx_notif_params.value = BT_GATT_CCC_NOTIFY;
 	nus_c->tx_notif_params.value_handle = nus_c->handles.tx;
 	nus_c->tx_notif_params.ccc_handle = nus_c->handles.tx_ccc;
-	atomic_set_bit(nus_c->tx_notif_params.flags,
-		       BT_GATT_SUBSCRIBE_FLAG_VOLATILE);
+	atomic_set_bit(nus_c->tx_notif_params.flags,BT_GATT_SUBSCRIBE_FLAG_VOLATILE);
 
 	err = bt_gatt_subscribe(nus_c->conn, &nus_c->tx_notif_params);
+
 	if (err) {
 		LOG_ERR("Subscribe failed (err %d)", err);
 		atomic_clear_bit(&nus_c->state, NUS_C_TX_NOTIF_ENABLED);
