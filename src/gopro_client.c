@@ -19,9 +19,7 @@ enum {
 	NUS_C_RX_WRITE_PENDING
 };
 
-static uint8_t on_received(struct bt_conn *conn,
-			struct bt_gatt_subscribe_params *params,
-			const void *data, uint16_t length)
+static uint8_t on_received(struct bt_conn *conn, struct bt_gatt_subscribe_params *params, const void *data, uint16_t length)
 {
 	struct bt_nus_client *nus;
 
@@ -46,8 +44,7 @@ static uint8_t on_received(struct bt_conn *conn,
 	return BT_GATT_ITER_CONTINUE;
 }
 
-static void on_sent(struct bt_conn *conn, uint8_t err,
-		    struct bt_gatt_write_params *params)
+static void on_sent(struct bt_conn *conn, uint8_t err, struct bt_gatt_write_params *params)
 {
 	struct bt_nus_client *nus_c;
 	const void *data;
@@ -66,8 +63,7 @@ static void on_sent(struct bt_conn *conn, uint8_t err,
 	}
 }
 
-int bt_nus_client_init(struct bt_nus_client *nus_c,
-		       const struct bt_nus_client_init_param *nus_c_init)
+int bt_nus_client_init(struct bt_nus_client *nus_c, const struct bt_nus_client_init_param *nus_c_init)
 {
 	if (!nus_c || !nus_c_init) {
 		return -EINVAL;
@@ -82,8 +78,7 @@ int bt_nus_client_init(struct bt_nus_client *nus_c,
 	return 0;
 }
 
-int bt_nus_client_send(struct bt_nus_client *nus_c, const uint8_t *data,
-		       uint16_t len)
+int bt_nus_client_send(struct bt_nus_client *nus_c, const uint8_t *data, uint16_t len)
 {
 	int err;
 

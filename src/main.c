@@ -207,8 +207,7 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
 	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
 
 	if (conn_err) {
-		LOG_INF("Failed to connect to %s, 0x%02x %s", addr, conn_err,
-			bt_hci_err_to_str(conn_err));
+		LOG_INF("Failed to connect to %s, 0x%02x %s", addr, conn_err, bt_hci_err_to_str(conn_err));
 
 		if (default_conn == conn) {
 			bt_conn_unref(default_conn);
@@ -230,13 +229,12 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
 		LOG_WRN("MTU exchange failed (err %d)", err);
 	}
 
-	// LOG_INF("Change security");
-	err = bt_conn_set_security(conn, BT_SECURITY_L1);
+	LOG_INF("Change security to L2");
+	err = bt_conn_set_security(conn, BT_SECURITY_L2);
 	if (err) {
 		LOG_WRN("Failed to set security: %d", err);
+		gatt_discover(conn);
 	}
-	gatt_discover(conn);
-
 
 	err = bt_scan_stop();
 	if ((!err) && (err != -EALREADY)) {
@@ -275,7 +273,7 @@ static void security_changed(struct bt_conn *conn, bt_security_t level,enum bt_s
 			bt_security_err_to_str(err));
 	}
 
-	//gatt_discover(conn);
+	gatt_discover(conn);
 }
 
 BT_CONN_CB_DEFINE(conn_callbacks) = {
@@ -284,16 +282,13 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 	.security_changed = security_changed
 };
 
-static void scan_filter_match(struct bt_scan_device_info *device_info,
-			      struct bt_scan_filter_match *filter_match,
-			      bool connectable)
+static void scan_filter_match(struct bt_scan_device_info *device_info,struct bt_scan_filter_match *filter_match, bool connectable)
 {
 	char addr[BT_ADDR_LE_STR_LEN];
 
 	bt_addr_le_to_str(device_info->recv_info->addr, addr, sizeof(addr));
 
-	LOG_INF("Filters matched. Address: %s connectable: %d",
-		addr, connectable);
+	LOG_INF("Filters matched. Address: %s connectable: %d", addr, connectable);
 }
 
 static void scan_connecting_error(struct bt_scan_device_info *device_info)
@@ -303,7 +298,7 @@ static void scan_connecting_error(struct bt_scan_device_info *device_info)
 
 static void scan_connecting(struct bt_scan_device_info *device_info, struct bt_conn *conn)
 {
-	LOG_INF("Scan connecting");
+	LOG_DBG("Scan connecting");
 	default_conn = bt_conn_ref(conn);
 }
 
@@ -463,7 +458,7 @@ int main(void)
 {
 	int err;
 
-
+/*
 	if (!gpio_is_ready_dt(&button)) {
 		LOG_ERR("Error: button device %s is not ready\n",
 		       button.port->name);
@@ -501,7 +496,7 @@ int main(void)
 			LOG_INF("Set up LED at %s pin %d\n", led.port->name, led.pin);
 		}
 	}
-
+*/
 	err = bt_conn_auth_cb_register(&conn_auth_callbacks);
 	if (err) {
 		LOG_ERR("Failed to register authorization callbacks.");
