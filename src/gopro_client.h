@@ -44,7 +44,7 @@ struct bt_gopro_client_handles {
 struct bt_gopro_client;
 
 /** @brief NUS Client callback structure. */
-struct bt_nus_client_cb {
+struct bt_gopro_client_cb {
 	/** @brief Data received callback.
 	 *
 	 * The data has been received as a notification of the NUS TX
@@ -100,14 +100,14 @@ struct bt_gopro_client {
 	struct bt_gatt_write_params rx_write_params;
 
         /** Application callbacks. */
-	struct bt_nus_client_cb cb;
+	struct bt_gopro_client_cb cb;
 };
 
 /** @brief NUS Client initialization structure. */
-struct bt_nus_client_init_param {
+struct bt_gopro_client_init_param {
 
         /** Callbacks provided by the user. */
-	struct bt_nus_client_cb cb;
+	struct bt_gopro_client_cb cb;
 };
 
 /** @brief Initialize the GoPro Client module.
@@ -121,7 +121,7 @@ struct bt_nus_client_init_param {
  * @retval 0 If the operation was successful.
  *           Otherwise, a negative error code is returned.
  */
-int bt_gopro_client_init(struct bt_gopro_client *nus, const struct bt_nus_client_init_param *init_param);
+int bt_gopro_client_init(struct bt_gopro_client *nus, const struct bt_gopro_client_init_param *init_param);
 
 /** @brief Send data to the server.
  *

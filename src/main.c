@@ -162,7 +162,7 @@ static void discovery_complete(struct bt_gatt_dm *dm, void *context)
 
 static void discovery_service_not_found(struct bt_conn *conn, void *context)
 {
-	LOG_INF("Service not found");
+	LOG_WRN("Service not found");
 }
 
 static void discovery_error(struct bt_conn *conn, int err,void *context)
@@ -222,7 +222,6 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
 	}
 
 	LOG_INF("Connected: %s", addr);
-	
 
 	static struct bt_gatt_exchange_params exchange_params;
 
@@ -308,7 +307,7 @@ static void scan_connecting(struct bt_scan_device_info *device_info, struct bt_c
 static int nus_client_init(void)
 {
 	int err;
-	struct bt_nus_client_init_param init = {
+	struct bt_gopro_client_init_param init = {
 		.cb = {
 			.received = ble_data_received,
 			.sent = ble_data_sent,
