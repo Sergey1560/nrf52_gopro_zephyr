@@ -25,11 +25,10 @@
 #include <zephyr/settings/settings.h>
 #include <zephyr/logging/log.h>
 
-#define LOG_MODULE_NAME central_gopro
-LOG_MODULE_REGISTER(LOG_MODULE_NAME);
+LOG_MODULE_REGISTER(central_gopro, LOG_LEVEL_DBG);
 
-/* UART payload buffer element size. */
-#define UART_BUF_SIZE 20
+/* payload buffer element size. */
+#define DATA_BUF_SIZE 20
 
 #define NUS_WRITE_TIMEOUT K_MSEC(150)
 // #define UART_WAIT_FOR_BUF_DELAY K_MSEC(50)
@@ -55,19 +54,19 @@ static struct k_work scan_work;
 
 K_SEM_DEFINE(nus_write_sem, 0, 1);
 
-struct uart_data_t {
+struct write_data_t {
 	void *fifo_reserved;
 	uint16_t len;
-	uint8_t  data[UART_BUF_SIZE];
+	uint8_t  data[DATA_BUF_SIZE];
 };
 
 //static K_FIFO_DEFINE(fifo_uart_tx_data);
 static K_FIFO_DEFINE(fifo_uart_rx_data);
 
 static struct bt_conn *default_conn;
-static struct bt_nus_client nus_client;
+static struct bt_gopro_client nus_client;
 
-static struct uart_data_t cmd_buf_list[] = {
+static struct write_data_t cmd_buf_list[] = {
 	{.len = 4, .data={3,1,1,1}},  //shutter on
 	{.len = 4, .data={3,1,1,0}}	  //shutter off
 }; 
@@ -90,8 +89,7 @@ void button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t
 }
 
 
-static void ble_data_sent(struct bt_nus_client *nus, uint8_t err,
-					const uint8_t *const data, uint16_t len)
+static void ble_data_sent(struct bt_gopro_client *nus, uint8_t err, const uint8_t *const data, uint16_t len)
 {
 	ARG_UNUSED(nus);
 	ARG_UNUSED(data);
@@ -104,7 +102,7 @@ static void ble_data_sent(struct bt_nus_client *nus, uint8_t err,
 	}
 }
 
-static uint8_t ble_data_received(struct bt_nus_client *nus,	const uint8_t *data, uint16_t len)
+static uint8_t ble_data_received(struct bt_gopro_client *nus,	const uint8_t *data, uint16_t len)
 {
 	ARG_UNUSED(nus);
 
@@ -145,7 +143,7 @@ static uint8_t ble_data_received(struct bt_nus_client *nus,	const uint8_t *data,
 
 static void discovery_complete(struct bt_gatt_dm *dm, void *context)
 {
-	struct bt_nus_client *nus = context;
+	struct bt_gopro_client *nus = context;
 	LOG_INF("Service discovery completed");
 
 	bt_security_t sec_level_str = bt_conn_get_security(default_conn);
@@ -155,7 +153,7 @@ static void discovery_complete(struct bt_gatt_dm *dm, void *context)
 	bt_gatt_dm_data_print(dm);
 
 	LOG_INF("Assign handles");
-	bt_nus_handles_assign(dm, nus);
+	bt_gopro_handles_assign(dm, nus);
 	// LOG_INF("Subscribe");
 	// bt_nus_subscribe_receive(nus);
 	LOG_INF("Release data");
@@ -317,7 +315,7 @@ static int nus_client_init(void)
 		}
 	};
 
-	err = bt_nus_client_init(&nus_client, &init);
+	err = bt_gopro_client_init(&nus_client, &init);
 	if (err) {
 		LOG_ERR("NUS Client initialization failed (err %d)", err);
 		return err;
@@ -540,11 +538,11 @@ int main(void)
 
 	for (;;) {
 		/* Wait indefinitely for data to be sent over Bluetooth */
-		struct uart_data_t *buf = k_fifo_get(&fifo_uart_rx_data,K_FOREVER);
+		struct write_data_t *buf = k_fifo_get(&fifo_uart_rx_data,K_FOREVER);
 
 		LOG_HEXDUMP_INF(buf->data, buf->len,"GET Data to send:");
 
-		err = bt_nus_client_send(&nus_client, buf->data, buf->len);
+		err = bt_gopro_client_send(&nus_client, buf->data, buf->len);
 
 		if (err) {
 			LOG_WRN("Failed to send data over BLE connection (err %d)", err);
