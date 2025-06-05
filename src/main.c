@@ -458,13 +458,11 @@ int main(void)
 {
 	int err;
 
-/*
 	if (!gpio_is_ready_dt(&button)) {
 		LOG_ERR("Error: button device %s is not ready\n",
 		       button.port->name);
 		return 0;
 	}
-
 
 	err = gpio_pin_configure_dt(&button, GPIO_INPUT);
 	if (err != 0) {
@@ -496,7 +494,7 @@ int main(void)
 			LOG_INF("Set up LED at %s pin %d\n", led.port->name, led.pin);
 		}
 	}
-*/
+
 	err = bt_conn_auth_cb_register(&conn_auth_callbacks);
 	if (err) {
 		LOG_ERR("Failed to register authorization callbacks.");
