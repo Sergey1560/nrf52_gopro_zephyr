@@ -148,6 +148,10 @@ static void discovery_complete(struct bt_gatt_dm *dm, void *context)
 	struct bt_nus_client *nus = context;
 	LOG_INF("Service discovery completed");
 
+	bt_security_t sec_level_str = bt_conn_get_security(default_conn);
+
+	LOG_INF("Security Level now: %d",sec_level_str);
+
 	bt_gatt_dm_data_print(dm);
 
 	LOG_INF("Assign handles");
@@ -220,6 +224,7 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
 	}
 
 	LOG_INF("Connected: %s", addr);
+	
 
 	static struct bt_gatt_exchange_params exchange_params;
 
@@ -229,8 +234,8 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
 		LOG_WRN("MTU exchange failed (err %d)", err);
 	}
 
-	LOG_INF("Change security to L2");
-	err = bt_conn_set_security(conn, BT_SECURITY_L2);
+	LOG_INF("Change security");
+	err = bt_conn_set_security(conn, BT_SECURITY_L3);
 	if (err) {
 		LOG_WRN("Failed to set security: %d", err);
 		gatt_discover(conn);
