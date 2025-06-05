@@ -235,7 +235,7 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
 	}
 
 	LOG_INF("Change security");
-	err = bt_conn_set_security(conn, BT_SECURITY_L3);
+	err = bt_conn_set_security(conn, BT_SECURITY_L2);
 	if (err) {
 		LOG_WRN("Failed to set security: %d", err);
 		gatt_discover(conn);
