@@ -36,10 +36,19 @@ LOG_MODULE_REGISTER(central_gopro, LOG_LEVEL_DBG);
 
 
 #define SW0_NODE	DT_ALIAS(sw0)
+#define SW1_NODE	DT_ALIAS(sw1)
+
 #if !DT_NODE_HAS_STATUS_OKAY(SW0_NODE)
 #error "Unsupported board: sw0 devicetree alias is not defined"
 #endif
-static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET_OR(SW0_NODE, gpios,{0});
+
+#if !DT_NODE_HAS_STATUS_OKAY(SW1_NODE)
+#error "Unsupported board: sw1 devicetree alias is not defined"
+#endif
+
+static const struct gpio_dt_spec button_rec = GPIO_DT_SPEC_GET_OR(SW0_NODE, gpios,{0});
+static const struct gpio_dt_spec button_hl  = GPIO_DT_SPEC_GET_OR(SW1_NODE, gpios,{0});
+
 static struct gpio_callback button_cb_data;
 
 /*
@@ -71,20 +80,33 @@ static struct write_data_t cmd_buf_list[] = {
 	{.len = 4, .data={3,1,1,0}}	  //shutter off
 }; 
 
+static struct write_data_t cmd_hl = {.len=2, .data={1,0x18}};
+
+
 void button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins){
 	static uint8_t cmd_index = 0;
 
-	LOG_INF("Button pressed at %" PRIu32 "\n", k_cycle_get_32());
+	LOG_INF("Button pressed at %" PRIu32 " pins: %d", k_cycle_get_32(),pins);
 
-	if (led.port) {
-			gpio_pin_toggle_dt(&led);
+	
+	if(pins & BIT(button_rec.pin)){
+		LOG_INF("REC Button");
+		if (led.port) {
+				gpio_pin_toggle_dt(&led);
+		}
+
+		k_fifo_put(&fifo_uart_rx_data, &cmd_buf_list[cmd_index]);
+		cmd_index++;
+
+		if(cmd_index > (sizeof(cmd_buf_list)/sizeof(cmd_buf_list[0]))-1 ){
+			cmd_index = 0;
+		}
 	}
+	
+	if(pins & BIT(button_hl.pin)){
+		LOG_INF("HL Button");
 
-	k_fifo_put(&fifo_uart_rx_data, &cmd_buf_list[cmd_index]);
-	cmd_index++;
-
-	if(cmd_index > (sizeof(cmd_buf_list)/sizeof(cmd_buf_list[0]))-1 ){
-		cmd_index = 0;
+		k_fifo_put(&fifo_uart_rx_data, &cmd_hl);
 	}
 }
 
@@ -154,8 +176,8 @@ static void discovery_complete(struct bt_gatt_dm *dm, void *context)
 
 	LOG_INF("Assign handles");
 	bt_gopro_handles_assign(dm, nus);
-	// LOG_INF("Subscribe");
-	// bt_nus_subscribe_receive(nus);
+	LOG_INF("Subscribe");
+	bt_gopro_subscribe_receive(nus);
 	LOG_INF("Release data");
 	bt_gatt_dm_data_release(dm);
 }
@@ -456,32 +478,63 @@ static struct bt_conn_auth_info_cb conn_auth_info_callbacks = {
 	.pairing_failed = pairing_failed
 };
 
-int main(void)
-{
-	int err;
 
-	if (!gpio_is_ready_dt(&button)) {
+static void gpio_init(void){
+	int err=0;
+
+	if (!gpio_is_ready_dt(&button_rec)) {
 		LOG_ERR("Error: button device %s is not ready\n",
-		       button.port->name);
-		return 0;
+		       button_rec.port->name);
+		return;
 	}
 
-	err = gpio_pin_configure_dt(&button, GPIO_INPUT);
+	if (!gpio_is_ready_dt(&button_hl)) {
+		LOG_ERR("Error: button device %s is not ready\n",
+		       button_hl.port->name);
+		return;
+	}
+
+
+	err = gpio_pin_configure_dt(&button_rec, GPIO_INPUT);
 	if (err != 0) {
 		LOG_ERR("Error %d: failed to configure %s pin %d\n",
-		       err, button.port->name, button.pin);
-		return 0;
+		       err, button_rec.port->name, button_rec.pin);
+		return;
 	}
 
-	err = gpio_pin_interrupt_configure_dt(&button, GPIO_INT_EDGE_TO_ACTIVE);
+
+	err = gpio_pin_configure_dt(&button_hl, GPIO_INPUT);
 	if (err != 0) {
-		LOG_ERR("Error %d: failed to configure interrupt on %s pin %d\n", err, button.port->name, button.pin);
-		return 0;
+		LOG_ERR("Error %d: failed to configure %s pin %d\n",
+		       err, button_hl.port->name, button_hl.pin);
+		return;
 	}
 
-	gpio_init_callback(&button_cb_data, button_pressed, BIT(button.pin));
-	gpio_add_callback(button.port, &button_cb_data);
-	LOG_INF("Set up button at %s pin %d\n", button.port->name, button.pin);
+	err = gpio_pin_interrupt_configure_dt(&button_rec, GPIO_INT_EDGE_TO_ACTIVE);
+	if (err != 0) {
+		LOG_ERR("Error %d: failed to configure interrupt on %s pin %d\n", err, button_rec.port->name, button_rec.pin);
+		return;
+	}
+
+	err = gpio_pin_interrupt_configure_dt(&button_hl, GPIO_INT_EDGE_TO_ACTIVE);
+	if (err != 0) {
+		LOG_ERR("Error %d: failed to configure interrupt on %s pin %d\n", err, button_hl.port->name, button_hl.pin);
+		return;
+	}
+
+	gpio_init_callback(&button_cb_data, button_pressed, BIT(button_rec.pin)|BIT(button_hl.pin));
+	gpio_add_callback(button_rec.port, &button_cb_data);
+
+	LOG_INF("Set up REC button at %s pin %d\n", button_rec.port->name, button_rec.pin);
+
+}
+
+
+int main(void)
+{
+	int err=0;
+	
+	gpio_init();
 
 	if (led.port && !gpio_is_ready_dt(&led)) {
 		printk("Error %d: LED device %s is not ready; ignoring it\n",err, led.port->name);
@@ -532,7 +585,7 @@ int main(void)
 		return 0;
 	}
 
-	bt_unpair(BT_ID_DEFAULT,BT_ADDR_LE_ANY);
+//	bt_unpair(BT_ID_DEFAULT,BT_ADDR_LE_ANY);
 	LOG_INF("Starting Bluetooth Central sample\n");
 
 	for (;;) {
