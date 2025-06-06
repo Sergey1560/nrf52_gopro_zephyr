@@ -10,35 +10,43 @@ extern "C" {
 #include <bluetooth/gatt_dm.h>
 
 #define BLE_UUID16_GOPRO_SERVICE    0xFEA6      
-//#define BT_UUID_NUS_VAL 			BT_UUID_128_ENCODE(0x0000fea6, 0x0000, 0x1000, 0x8000, 0x00805f9b34fb)
 
-#define BT_UUID_GOPRO_WRITE_VAL 	BT_UUID_128_ENCODE(0xb5f90072, 0xaa8d, 0x11e3, 0x9046, 0x0002a5d5c51b)
-#define BT_UUID_GOPRO_NOTIFY_VAL 	BT_UUID_128_ENCODE(0xb5f90073, 0xaa8d, 0x11e3, 0x9046, 0x0002a5d5c51b)
+#define BT_UUID_GOPRO_CMD_WRITE_VAL 		BT_UUID_128_ENCODE(0xb5f90072, 0xaa8d, 0x11e3, 0x9046, 0x0002a5d5c51b)
+#define BT_UUID_GOPRO_CMD_NOTIFY_VAL 		BT_UUID_128_ENCODE(0xb5f90073, 0xaa8d, 0x11e3, 0x9046, 0x0002a5d5c51b)
 
-#define BT_UUID_GOPRO_SERVICE	   	BT_UUID_DECLARE_16(BLE_UUID16_GOPRO_SERVICE)
-#define BT_UUID_GOPRO_WRITE        	BT_UUID_DECLARE_128(BT_UUID_GOPRO_WRITE_VAL)
-#define BT_UUID_GOPRO_NOTIFY       	BT_UUID_DECLARE_128(BT_UUID_GOPRO_NOTIFY_VAL)
+#define BT_UUID_GOPRO_SETTINGS_WRITE_VAL 	BT_UUID_128_ENCODE(0xb5f90074, 0xaa8d, 0x11e3, 0x9046, 0x0002a5d5c51b)
+#define BT_UUID_GOPRO_SETTINGS_NOTIFY_VAL 	BT_UUID_128_ENCODE(0xb5f90075, 0xaa8d, 0x11e3, 0x9046, 0x0002a5d5c51b)
 
+#define BT_UUID_GOPRO_QUERY_WRITE_VAL 		BT_UUID_128_ENCODE(0xb5f90076, 0xaa8d, 0x11e3, 0x9046, 0x0002a5d5c51b)
+#define BT_UUID_GOPRO_QUERY_NOTIFY_VAL 		BT_UUID_128_ENCODE(0xb5f90077, 0xaa8d, 0x11e3, 0x9046, 0x0002a5d5c51b)
+
+
+#define BT_UUID_GOPRO_SERVICE	   			BT_UUID_DECLARE_16(BLE_UUID16_GOPRO_SERVICE)
+
+#define BT_UUID_GOPRO_CMD_WRITE        		BT_UUID_DECLARE_128(BT_UUID_GOPRO_CMD_WRITE_VAL)
+#define BT_UUID_GOPRO_CMD_NOTIFY       		BT_UUID_DECLARE_128(BT_UUID_GOPRO_CMD_NOTIFY_VAL)
+
+#define BT_UUID_GOPRO_SETTINGS_WRITE     	BT_UUID_DECLARE_128(BT_UUID_GOPRO_SETTINGS_WRITE_VAL)
+#define BT_UUID_GOPRO_SETTINGS_NOTIFY      	BT_UUID_DECLARE_128(BT_UUID_GOPRO_SETTINGS_NOTIFY_VAL)
+
+#define BT_UUID_GOPRO_QUERY_WRITE        	BT_UUID_DECLARE_128(BT_UUID_GOPRO_QUERY_WRITE_VAL)
+#define BT_UUID_GOPRO_QUERY_NOTIFY       	BT_UUID_DECLARE_128(BT_UUID_GOPRO_QUERY_NOTIFY_VAL)
 
 /** @brief Handles on the connected peer device that are needed to interact with
  * the device.
  */
 struct bt_gopro_client_handles {
+	uint16_t gp072;			/* Handle of the GP-0072 Command characteristic */
+	uint16_t gp073;			/* Handle of the GP-0073 characteristic */
+	uint16_t gp073_ccc; 	/* Handle of the CCC descriptor of the GP0073 characteristic */
 
-        /** Handle of the NUS RX characteristic, as provided by
-	 *  a discovery.
-         */
-	uint16_t rx;
+	uint16_t gp074;			/* Handle of the GP-0074 Settings characteristic */
+	uint16_t gp075;			/* Handle of the GP-0075 characteristic */
+	uint16_t gp075_ccc; 	/* Handle of the CCC descriptor of the GP0075 characteristic */
 
-        /** Handle of the NUS TX characteristic, as provided by
-	 *  a discovery.
-         */
-	uint16_t tx;
-
-        /** Handle of the CCC descriptor of the NUS TX characteristic,
-	 *  as provided by a discovery.
-         */
-	uint16_t tx_ccc;
+	uint16_t gp076;			/* Handle of the GP-0074 Settings characteristic */
+	uint16_t gp077;			/* Handle of the GP-0075 characteristic */
+	uint16_t gp077_ccc; 	/* Handle of the CCC descriptor of the GP0075 characteristic */
 };
 
 struct bt_gopro_client;
@@ -94,10 +102,14 @@ struct bt_gopro_client {
 	struct bt_gopro_client_handles handles;
 
         /** GATT subscribe parameters for NUS TX Characteristic. */
-	struct bt_gatt_subscribe_params tx_notif_params;
+	struct bt_gatt_subscribe_params cmd_notif_params;
+	struct bt_gatt_subscribe_params settings_notif_params;
+	struct bt_gatt_subscribe_params query_notif_params;
 
         /** GATT write parameters for NUS RX Characteristic. */
-	struct bt_gatt_write_params rx_write_params;
+	struct bt_gatt_write_params cmd_write_params;
+	struct bt_gatt_write_params settings_write_params;
+	struct bt_gatt_write_params query_write_params;
 
         /** Application callbacks. */
 	struct bt_gopro_client_cb cb;
