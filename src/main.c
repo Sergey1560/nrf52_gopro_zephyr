@@ -38,24 +38,32 @@ LOG_MODULE_REGISTER(central_gopro, LOG_LEVEL_DBG);
 #define SW0_NODE	DT_ALIAS(sw0)
 #define SW1_NODE	DT_ALIAS(sw1)
 
-#if !DT_NODE_HAS_STATUS_OKAY(SW0_NODE)
-#error "Unsupported board: sw0 devicetree alias is not defined"
+#if DT_NODE_HAS_STATUS_OKAY(SW0_NODE)
+//#error "Unsupported board: sw0 devicetree alias is not defined"
+#define BUTTON_PRESENT
 #endif
 
-#if !DT_NODE_HAS_STATUS_OKAY(SW1_NODE)
-#error "Unsupported board: sw1 devicetree alias is not defined"
-#endif
+// #if !DT_NODE_HAS_STATUS_OKAY(SW1_NODE)
+// #error "Unsupported board: sw1 devicetree alias is not defined"
+// #endif
 
+#ifdef BUTTON_PRESENT
 static const struct gpio_dt_spec button_rec = GPIO_DT_SPEC_GET_OR(SW0_NODE, gpios,{0});
 static const struct gpio_dt_spec button_hl  = GPIO_DT_SPEC_GET_OR(SW1_NODE, gpios,{0});
 
 static struct gpio_callback button_cb_data;
+#endif
 
-/*
- * The led0 devicetree alias is optional. If present, we'll use it
- * to turn on the LED whenever the button is pressed.
- */
+#define LED0_NODE	DT_ALIAS(led0)
+#if DT_NODE_HAS_STATUS_OKAY(LED0_NODE)
+//#error "Unsupported board: sw0 devicetree alias is not defined"
+#define LED_PRESENT
+#endif
+
+
+#ifdef LED_PRESENT
 static struct gpio_dt_spec led = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led0), gpios,{0});
+#endif
 
 //static const struct device *uart = DEVICE_DT_GET(DT_CHOSEN(nordic_nus_uart));
 //static struct k_work_delayable uart_work;
@@ -82,7 +90,7 @@ static struct write_data_t cmd_buf_list[] = {
 
 static struct write_data_t cmd_hl = {.len=2, .data={1,0x18}};
 
-
+#ifdef BUTTON_PRESENT
 void button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins){
 	static uint8_t cmd_index = 0;
 
@@ -109,7 +117,7 @@ void button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t
 		k_fifo_put(&fifo_uart_rx_data, &cmd_hl);
 	}
 }
-
+#endif
 
 static void ble_data_sent(struct bt_gopro_client *nus, uint8_t err, const uint8_t *const data, uint16_t len)
 {
@@ -478,7 +486,7 @@ static struct bt_conn_auth_info_cb conn_auth_info_callbacks = {
 	.pairing_failed = pairing_failed
 };
 
-
+#ifdef BUTTON_PRESENT
 static void gpio_init(void){
 	int err=0;
 
@@ -528,14 +536,18 @@ static void gpio_init(void){
 	LOG_INF("Set up REC button at %s pin %d\n", button_rec.port->name, button_rec.pin);
 
 }
+#endif
 
 
 int main(void)
 {
 	int err=0;
-	
-	gpio_init();
 
+	#ifdef BUTTON_PRESENT
+	gpio_init();
+	#endif
+	
+	#ifdef LED_PRESENT
 	if (led.port && !gpio_is_ready_dt(&led)) {
 		printk("Error %d: LED device %s is not ready; ignoring it\n",err, led.port->name);
 		led.port = NULL;
@@ -549,7 +561,8 @@ int main(void)
 			LOG_INF("Set up LED at %s pin %d\n", led.port->name, led.pin);
 		}
 	}
-
+	#endif
+	
 	err = bt_conn_auth_cb_register(&conn_auth_callbacks);
 	if (err) {
 		LOG_ERR("Failed to register authorization callbacks.");

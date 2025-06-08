@@ -1,0 +1,5 @@
+board:
+  name: goprocan_nrf52840
+  vendor: vend
+  socs:
+    - name: nrf52840
