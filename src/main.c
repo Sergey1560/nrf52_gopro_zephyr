@@ -81,7 +81,7 @@ struct write_data_t {
 static K_FIFO_DEFINE(fifo_uart_rx_data);
 
 static struct bt_conn *default_conn;
-static struct bt_gopro_client nus_client;
+static struct bt_gopro_client gopro_client;
 
 static struct write_data_t cmd_buf_list[] = {
 	{.len = 4, .data={3,1,1,1}},  //shutter on
@@ -216,7 +216,7 @@ static void gatt_discover(struct bt_conn *conn)
 		return;
 	}
 
-	err = bt_gatt_dm_start(conn, BT_UUID_GOPRO_SERVICE, &discovery_cb, &nus_client);
+	err = bt_gatt_dm_start(conn, BT_UUID_GOPRO_SERVICE, &discovery_cb, &gopro_client);
 	if (err) {
 		LOG_ERR("could not start the discovery procedure, error code: %d", err);
 	}
@@ -334,8 +334,7 @@ static void scan_connecting(struct bt_scan_device_info *device_info, struct bt_c
 	default_conn = bt_conn_ref(conn);
 }
 
-static int nus_client_init(void)
-{
+static int gopro_client_init(void){
 	int err;
 	struct bt_gopro_client_init_param init = {
 		.cb = {
@@ -344,13 +343,13 @@ static int nus_client_init(void)
 		}
 	};
 
-	err = bt_gopro_client_init(&nus_client, &init);
+	err = bt_gopro_client_init(&gopro_client, &init);
 	if (err) {
-		LOG_ERR("NUS Client initialization failed (err %d)", err);
+		LOG_ERR("GoPro Client initialization failed (err %d)", err);
 		return err;
 	}
 
-	LOG_INF("NUS Client module initialized");
+	LOG_INF("GoPro Client module initialized");
 	return err;
 }
 
@@ -562,7 +561,7 @@ int main(void)
 		}
 	}
 	#endif
-	
+
 	err = bt_conn_auth_cb_register(&conn_auth_callbacks);
 	if (err) {
 		LOG_ERR("Failed to register authorization callbacks.");
@@ -586,7 +585,7 @@ int main(void)
 		settings_load();
 	}
 
-	err = nus_client_init();
+	err = gopro_client_init();
 	if (err != 0) {
 		LOG_ERR("nus_client_init failed (err %d)", err);
 		return 0;
@@ -607,7 +606,7 @@ int main(void)
 
 		LOG_HEXDUMP_INF(buf->data, buf->len,"GET Data to send:");
 
-		err = bt_gopro_client_send(&nus_client, buf->data, buf->len);
+		err = bt_gopro_client_send(&gopro_client, buf->data, buf->len);
 
 		if (err) {
 			LOG_WRN("Failed to send data over BLE connection (err %d)", err);
