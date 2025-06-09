@@ -10,6 +10,47 @@
 		zephyr,sram = &sram0;
 		zephyr,flash = &flash0;
 		zephyr,code-partition = &slot0_partition;
+		zephyr,canbus = &canbus;
+	};
+};
+
+
+&uart0 {
+	pinctrl-0 = <&uart0_default>;
+	pinctrl-1 = <&uart0_sleep>;
+	pinctrl-names = "default", "sleep";
+	current-speed = <38400>;
+	status = "okay";
+};
+
+&gpio1 {
+	status = "okay";
+};
+
+&gpio0 {
+	status = "okay";
+};
+
+&gpiote {
+    status = "okay";
+};
+
+&spi0{
+    compatible = "nordic,nrf-spi";
+    status = "okay";
+    cs-gpios = <&gpio0 26 GPIO_ACTIVE_LOW>;
+    pinctrl-0 = <&spi0_default>;
+    pinctrl-1 = <&spi0_sleep>;
+    pinctrl-names = "default","sleep";
+
+    canbus:mcp2515@0 {
+		compatible = "microchip,mcp2515";
+		spi-max-frequency = <1000000>;
+		int-gpios = <&gpio1 9 (GPIO_ACTIVE_LOW)>; 
+		status = "okay";
+		label = "CAN_1";
+		reg = <0x0>;
+		osc-freq = <8000000>;
 	};
 };
 

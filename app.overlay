@@ -6,6 +6,7 @@
 
 / {
 	 chosen {
-		 nordic,nus-uart = &uart0;
+		nordic,nus-uart = &uart0;
 	 };
 };
+

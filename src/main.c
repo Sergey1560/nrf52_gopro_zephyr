@@ -22,6 +22,9 @@
 #include <bluetooth/gatt_dm.h>
 #include <bluetooth/scan.h>
 
+#include <zephyr/drivers/spi.h>
+#include <zephyr/drivers/can.h>
+
 #include <zephyr/settings/settings.h>
 #include <zephyr/logging/log.h>
 
@@ -64,6 +67,8 @@ static struct gpio_callback button_cb_data;
 #ifdef LED_PRESENT
 static struct gpio_dt_spec led = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led0), gpios,{0});
 #endif
+
+const struct device *const can_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_canbus));
 
 //static const struct device *uart = DEVICE_DT_GET(DT_CHOSEN(nordic_nus_uart));
 //static struct k_work_delayable uart_work;
@@ -594,6 +599,11 @@ int main(void)
 	scan_init();
 	err = scan_start();
 	if (err) {
+		return 0;
+	}
+
+	if (!device_is_ready(can_dev)) {
+		printf("CAN: Device %s not ready.\n", can_dev->name);
 		return 0;
 	}
 
