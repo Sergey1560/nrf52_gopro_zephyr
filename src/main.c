@@ -592,20 +592,73 @@ int main(void)
 
 	err = gopro_client_init();
 	if (err != 0) {
-		LOG_ERR("nus_client_init failed (err %d)", err);
+		LOG_ERR("gopro_client_init failed (err %d)", err);
 		return 0;
 	}
 
-	scan_init();
-	err = scan_start();
-	if (err) {
-		return 0;
-	}
+	// scan_init();
+	// err = scan_start();
+	// if (err) {
+	// 	return 0;
+	// }
 
 	if (!device_is_ready(can_dev)) {
-		printf("CAN: Device %s not ready.\n", can_dev->name);
+		LOG_ERR("CAN: Device %s not ready.\n", can_dev->name);
+		return 0;
+	}else{
+		LOG_INF("CAN device ready");
+	}
+
+	// struct can_timing timing;
+
+	// err = can_calc_timing(can_dev, &timing, 500000, 0);
+	// if (err > 0) {
+	// 	LOG_ERR("Sample-Point error: %d", err);
+	// }
+	// err = can_stop(can_dev);
+	// if (err != 0) {
+	// LOG_ERR("Failed to stop CAN controller");
+	// }
+
+	// err = can_set_timing(can_dev, &timing);
+	// if (err != 0) {
+	// 	LOG_ERR("Failed to set timing");
+	// }
+
+	LOG_INF("Trying to set bitrate.");
+	err = can_set_bitrate(can_dev, 500000);
+	if (err != 0) {
+		LOG_ERR("Error setting CAN bitrate [%d]", err);
 		return 0;
 	}
+	LOG_INF("Bitrate set.");
+
+	err = can_start(can_dev);
+	if (err != 0) {
+		LOG_ERR("Error starting CAN controller [%d]", err);
+		return 0;
+	}else{
+		LOG_INF("CAN Start");
+	}
+
+	struct can_frame frame = {
+			.flags = 0,
+			.id = 0x123,
+			.dlc = 8,
+			.data = {1,2,3,4,5,6,7,8}
+	};
+
+	for(uint32_t i=0; i<0x1000; i++){
+		LOG_INF("[%d] cansend",i);
+		err = can_send(can_dev, &frame, K_MSEC(100), NULL, NULL);
+		if (err != 0) {
+				LOG_ERR("[%d]CAN Sending failed [%d]", i, err);
+		}else{
+			LOG_INF("Send %d message done",i);
+		}
+		k_msleep(1000);
+	}
+
 
 //	bt_unpair(BT_ID_DEFAULT,BT_ADDR_LE_ANY);
 	LOG_INF("Starting Bluetooth Central sample\n");
