@@ -68,6 +68,8 @@ static struct gpio_callback button_cb_data;
 static struct gpio_dt_spec led = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led0), gpios,{0});
 #endif
 
+//static struct gpio_dt_spec mcp_rst = GPIO_DT_SPEC_GET_OR(DT_ALIAS(mcp2515rst), gpios,{0});
+
 const struct device *const can_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_canbus));
 
 //static const struct device *uart = DEVICE_DT_GET(DT_CHOSEN(nordic_nus_uart));
@@ -542,6 +544,35 @@ static void gpio_init(void){
 }
 #endif
 
+// #define MCP2515_8MHz_500kBPS_CFG1            0x00
+// #define MCP2515_8MHz_500kBPS_CFG2            0x90
+// #define MCP2515_8MHz_500kBPS_CFG3            0x82
+
+// #define MCP2515_8MHz_500kBPS_CFG1            0x40
+// #define MCP2515_8MHz_500kBPS_CFG2            0x91
+// #define MCP2515_8MHz_500kBPS_CFG3            0x01
+
+// #define MCP2515_8MHz_500kBPS_CFG1            0xc0
+// #define MCP2515_8MHz_500kBPS_CFG2            0x91
+// #define MCP2515_8MHz_500kBPS_CFG3            0x01
+
+
+static void mcp2515_get_timing(struct can_timing *timing){
+
+	uint8_t cnf1 = 0x40;
+	uint8_t cnf2 = 0x91;
+	uint8_t cnf3 = 0x01;
+
+	timing->sjw= (cnf1 >> 6) + 1;
+	timing->prescaler= (cnf1 & 0x3F) + 1;
+
+	timing->phase_seg1= ((cnf2 >> 3) & 7)+1;
+	timing->prop_seg= (cnf2 & 0x7) + 1;
+
+	timing->phase_seg2=(cnf3 & 7)+1;
+
+}
+
 
 int main(void)
 {
@@ -552,19 +583,19 @@ int main(void)
 	#endif
 	
 	#ifdef LED_PRESENT
-	if (led.port && !gpio_is_ready_dt(&led)) {
-		printk("Error %d: LED device %s is not ready; ignoring it\n",err, led.port->name);
-		led.port = NULL;
-	}
-	if (led.port) {
-		err = gpio_pin_configure_dt(&led, GPIO_OUTPUT);
-		if (err != 0) {
-			LOG_ERR("Error %d: failed to configure LED device %s pin %d\n",err, led.port->name, led.pin);
-			led.port = NULL;
-		} else {
-			LOG_INF("Set up LED at %s pin %d\n", led.port->name, led.pin);
-		}
-	}
+	// if (led.port && !gpio_is_ready_dt(&led)) {
+	// 	printk("Error %d: LED device %s is not ready; ignoring it\n",err, led.port->name);
+	// 	led.port = NULL;
+	// }
+	// if (led.port) {
+	// 	err = gpio_pin_configure_dt(&led, GPIO_OUTPUT);
+	// 	if (err != 0) {
+	// 		LOG_ERR("Error %d: failed to configure LED device %s pin %d\n",err, led.port->name, led.pin);
+	// 		led.port = NULL;
+	// 	} else {
+	// 		LOG_INF("Set up LED at %s pin %d\n", led.port->name, led.pin);
+	// 	}
+	// }
 	#endif
 
 	err = bt_conn_auth_cb_register(&conn_auth_callbacks);
@@ -602,6 +633,37 @@ int main(void)
 	// 	return 0;
 	// }
 
+	
+	// if (mcp_rst.port && !gpio_is_ready_dt(&mcp_rst)) {
+	// 	printk("Error %d: mcp_rst device %s is not ready; ignoring it\n",err, mcp_rst.port->name);
+	// 	mcp_rst.port = NULL;
+	// }
+	// if (mcp_rst.port) {
+	// 	err = gpio_pin_configure_dt(&mcp_rst, GPIO_OUTPUT);
+	// if (err != 0) {
+	// 	LOG_ERR("Error %d: failed to configure mcp_rst device %s pin %d\n",err, mcp_rst.port->name, mcp_rst.pin);
+	// 	mcp_rst.port = NULL;
+	// } else {
+	// 	LOG_INF("Set up mcp_rst at %s pin %d\n", mcp_rst.port->name, mcp_rst.pin);
+	// }
+	// }
+
+	// gpio_pin_set_dt(&mcp_rst,1);
+	
+	const struct device *gpio_dev = device_get_binding("GPIO_0");
+	err = gpio_pin_configure(gpio_dev, 30, GPIO_OUTPUT);
+	
+	if(err != 0){
+		LOG_ERR("Pin cfg err %d",err);
+	}
+	
+	err=gpio_pin_set(gpio_dev,30,1);
+		
+	if(err != 0){
+		LOG_ERR("Pin set err %d",err);
+	}
+	
+
 	if (!device_is_ready(can_dev)) {
 		LOG_ERR("CAN: Device %s not ready.\n", can_dev->name);
 		return 0;
@@ -609,29 +671,45 @@ int main(void)
 		LOG_INF("CAN device ready");
 	}
 
-	// struct can_timing timing;
-
-	// err = can_calc_timing(can_dev, &timing, 500000, 0);
-	// if (err > 0) {
-	// 	LOG_ERR("Sample-Point error: %d", err);
-	// }
-	// err = can_stop(can_dev);
+	// LOG_INF("Trying to set bitrate.");
+	// err = can_set_bitrate(can_dev, 500000);
 	// if (err != 0) {
-	// LOG_ERR("Failed to stop CAN controller");
+	// 	LOG_ERR("Error setting CAN bitrate [%d]", err);
+	// 	return 0;
+	// }else{
+	// 	LOG_INF("Bitrate set.");
 	// }
 
-	// err = can_set_timing(can_dev, &timing);
-	// if (err != 0) {
-	// 	LOG_ERR("Failed to set timing");
-	// }
-
-	LOG_INF("Trying to set bitrate.");
-	err = can_set_bitrate(can_dev, 500000);
-	if (err != 0) {
-		LOG_ERR("Error setting CAN bitrate [%d]", err);
-		return 0;
+	err = can_set_mode(can_dev, CAN_MODE_NORMAL);
+    if (err != 0) {
+        LOG_ERR("Error setting CAN mode [%d]", err);
+        return 0;
+    }else{
+    	LOG_INF("MODE NORMAL Enabled.");
 	}
-	LOG_INF("Bitrate set.");
+
+	LOG_DBG("Can bitrate MIN: %d MAX: %d",can_get_bitrate_min(can_dev),can_get_bitrate_max(can_dev));
+
+
+	struct can_timing timing;
+	mcp2515_get_timing(&timing);
+
+	const struct can_timing *min = can_get_timing_min(can_dev);
+  	const struct can_timing *max = can_get_timing_max(can_dev);
+
+	LOG_INF("SWJ: %d  MIN: %d MAX: %d",timing.sjw,min->sjw,max->sjw);
+	LOG_INF("Prescaler: %d  MIN: %d MAX: %d",timing.prescaler,min->prescaler,max->prescaler);
+	LOG_INF("Pseg1: %d  MIN: %d MAX: %d",timing.phase_seg1,min->phase_seg1,max->phase_seg1);
+	LOG_INF("Pseg2: %d  MIN: %d MAX: %d",timing.phase_seg2,min->phase_seg2,max->phase_seg2);
+	LOG_INF("Propseg: %d  MIN: %d MAX: %d",timing.prop_seg,min->prop_seg,max->prop_seg);
+
+
+	err = can_set_timing(can_dev, &timing);
+	
+	if (err != 0) {
+		LOG_ERR("Failed to set timing: %d",err);
+	}
+
 
 	err = can_start(can_dev);
 	if (err != 0) {
@@ -650,7 +728,8 @@ int main(void)
 
 	for(uint32_t i=0; i<0x1000; i++){
 		LOG_INF("[%d] cansend",i);
-		err = can_send(can_dev, &frame, K_MSEC(100), NULL, NULL);
+		
+		err = can_send(can_dev, &frame, K_MSEC(10), NULL, NULL);
 		if (err != 0) {
 				LOG_ERR("[%d]CAN Sending failed [%d]", i, err);
 		}else{
