@@ -544,6 +544,13 @@ static void gpio_init(void){
 }
 #endif
 
+
+void rx_callback_function(const struct device *dev, struct can_frame *frame, void *user_data)
+{
+        LOG_INF("Get CAN frame 0x%0X",frame->id);
+}
+
+
 // #define MCP2515_8MHz_500kBPS_CFG1            0x00
 // #define MCP2515_8MHz_500kBPS_CFG2            0x90
 // #define MCP2515_8MHz_500kBPS_CFG3            0x82
@@ -710,6 +717,18 @@ int main(void)
 		LOG_ERR("Failed to set timing: %d",err);
 	}
 
+
+	const struct can_filter my_filter = {
+			.flags = 0,
+			.id = 0x42A,
+			.mask = CAN_STD_ID_MASK
+	};
+	int filter_id;
+
+	filter_id = can_add_rx_filter(can_dev, rx_callback_function, NULL, &my_filter);
+	if (filter_id < 0) {
+		LOG_ERR("Unable to add rx filter [%d]", filter_id);
+	}
 
 	err = can_start(can_dev);
 	if (err != 0) {
