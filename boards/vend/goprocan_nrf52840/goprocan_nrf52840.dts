@@ -30,6 +30,12 @@
 			label = "Blue LED";
 		};
 	};
+
+	mcp_rst_switch: mcp_rst_switch {
+		compatible = "power-switch";
+		gpios = <&gpio0 30 GPIO_ACTIVE_HIGH>;
+	};
+
 };
 
 &uart0 {

@@ -19,6 +19,12 @@
 
 #ifdef CANBUS_PRESENT
 
+#if !DT_NODE_EXISTS(DT_NODELABEL(mcp_rst_switch))
+#error "Overlay for MCP2515 RST pin not properly defined."
+#endif
+
+static const struct gpio_dt_spec mcp_rst_switch = 	GPIO_DT_SPEC_GET_OR(DT_NODELABEL(mcp_rst_switch), gpios, {0});
+
 LOG_MODULE_REGISTER(canbus_gopro, LOG_LEVEL_DBG);
 
 const struct device *const can_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_canbus));
@@ -72,21 +78,38 @@ int canbus_init(void){
     int err;
 	struct can_timing timing;
 
-    //RST pin
-    const struct device *gpio_dev = device_get_binding("GPIO_0");
-    err = gpio_pin_configure(gpio_dev, 30, GPIO_OUTPUT);
-	
-	if(err != 0){
-		LOG_ERR("Pin cfg err %d",err);
-        return err;
+	if (!gpio_is_ready_dt(&mcp_rst_switch)) {
+		LOG_ERR("The MCP2515 RST pin GPIO port is not ready.");
+		return -1;
 	}
+
+	err = gpio_pin_configure_dt(&mcp_rst_switch, GPIO_OUTPUT_INACTIVE);
+	if (err != 0) {
+		LOG_ERR("Configuring RST pin failed: %d", err);
+		return-1;
+	}
+
+	err = gpio_pin_set_dt(&mcp_rst_switch, 1);
+	if (err != 0) {
+		LOG_ERR("Setting RST pin level failed: %d\n", err);
+		return -1;
+	}
+
+    // //RST pin
+    // const struct device *gpio_dev = device_get_binding("GPIO_0");
+    // err = gpio_pin_configure(gpio_dev, 30, GPIO_OUTPUT);
 	
-	err=gpio_pin_set(gpio_dev,30,1);
+	// if(err != 0){
+	// 	LOG_ERR("Pin cfg err %d",err);
+    //     return err;
+	// }
+	
+	// err=gpio_pin_set(gpio_dev,30,1);
 		
-	if(err != 0){
-		LOG_ERR("Pin set err %d",err);
-        return err;
-    }
+	// if(err != 0){
+	// 	LOG_ERR("Pin set err %d",err);
+    //     return err;
+    // }
 	
 	if (!device_is_ready(can_dev)) {
 		LOG_ERR("CAN: Device %s not ready.\n", can_dev->name);
@@ -123,8 +146,6 @@ int canbus_init(void){
 		LOG_ERR("Failed to set timing: %d",err);
         return err;
     }
-
-
 
 	int filter_id = can_add_rx_filter(can_dev, rx_callback_function, NULL, &goprocan_filter);
 
