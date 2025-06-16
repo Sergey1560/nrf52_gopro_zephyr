@@ -10,6 +10,15 @@
 #include <zephyr/sys/printk.h>
 #include <zephyr/logging/log.h>
 
+
+#define CAN_MCP_NODE	DT_ALIAS(cannode)
+
+#if DT_NODE_HAS_STATUS_OKAY(CAN_MCP_NODE)
+#define CANBUS_PRESENT
+#endif
+
+#ifdef CANBUS_PRESENT
+
 LOG_MODULE_REGISTER(canbus_gopro, LOG_LEVEL_DBG);
 
 const struct device *const can_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_canbus));
@@ -148,3 +157,15 @@ int can_hb(void){
 
     return err;
 }
+
+#else
+
+int canbus_init(void){
+	return 0;
+}
+
+int can_hb(void){
+	return 0;
+}
+
+#endif

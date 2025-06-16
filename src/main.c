@@ -33,17 +33,11 @@ LOG_MODULE_REGISTER(central_gopro, LOG_LEVEL_DBG);
 /* payload buffer element size. */
 #define DATA_BUF_SIZE 20
 
-#define NUS_WRITE_TIMEOUT K_MSEC(150)
-// #define UART_WAIT_FOR_BUF_DELAY K_MSEC(50)
-// #define UART_RX_TIMEOUT 50000 /* Wait for RX complete event time in microseconds. */
+#define GOPRO_WRITE_TIMEOUT K_MSEC(150)
 
-//static struct gpio_dt_spec mcp_rst = GPIO_DT_SPEC_GET_OR(DT_ALIAS(mcp2515rst), gpios,{0});
-
-//static const struct device *uart = DEVICE_DT_GET(DT_CHOSEN(nordic_nus_uart));
-//static struct k_work_delayable uart_work;
 static struct k_work scan_work;
 
-K_SEM_DEFINE(nus_write_sem, 0, 1);
+K_SEM_DEFINE(gopro_write_sem, 0, 1);
 
 struct write_data_t {
 	void *fifo_reserved;
@@ -51,7 +45,6 @@ struct write_data_t {
 	uint8_t  data[DATA_BUF_SIZE];
 };
 
-//static K_FIFO_DEFINE(fifo_uart_tx_data);
 static K_FIFO_DEFINE(fifo_uart_rx_data);
 
 static struct bt_conn *default_conn;
@@ -70,7 +63,7 @@ static void ble_data_sent(struct bt_gopro_client *nus, uint8_t err, const uint8_
 	ARG_UNUSED(data);
 	ARG_UNUSED(len);
 
-	k_sem_give(&nus_write_sem);
+	k_sem_give(&gopro_write_sem);
 
 	if (err) {
 		LOG_WRN("ATT error code: 0x%02X", err);
@@ -82,35 +75,6 @@ static uint8_t ble_data_received(struct bt_gopro_client *nus,	const uint8_t *dat
 	ARG_UNUSED(nus);
 
 	LOG_HEXDUMP_DBG(data,len,"Recieve data:");
-
-	// int err;
-
-	// for (uint16_t pos = 0; pos != len;) {
-	// 	struct uart_data_t *tx = k_malloc(sizeof(*tx));
-
-	// 	if (!tx) {
-	// 		LOG_WRN("Not able to allocate UART send data buffer");
-	// 		return BT_GATT_ITER_CONTINUE;
-	// 	}
-
-	// 	/* Keep the last byte of TX buffer for potential LF char. */
-	// 	size_t tx_data_size = sizeof(tx->data) - 1;
-
-	// 	if ((len - pos) > tx_data_size) {
-	// 		tx->len = tx_data_size;
-	// 	} else {
-	// 		tx->len = (len - pos);
-	// 	}
-
-	// 	memcpy(tx->data, &data[pos], tx->len);
-
-	// 	pos += tx->len;
-
-	// 	err = uart_tx(uart, tx->data, tx->len, SYS_FOREVER_MS);
-	// 	if (err) {
-	// 		k_fifo_put(&fifo_uart_tx_data, tx);
-	// 	}
-	// }
 
 	return BT_GATT_ITER_CONTINUE;
 }
@@ -501,7 +465,7 @@ int main(void)
 			LOG_WRN("Failed to send data over BLE connection (err %d)", err);
 		}
 
-		err = k_sem_take(&nus_write_sem, NUS_WRITE_TIMEOUT);
+		err = k_sem_take(&gopro_write_sem, GOPRO_WRITE_TIMEOUT);
 		if (err) {
 			LOG_WRN("Data send timeout");
 		}

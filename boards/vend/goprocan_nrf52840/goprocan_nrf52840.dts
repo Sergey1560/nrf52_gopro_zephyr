@@ -13,28 +13,24 @@
 		zephyr,canbus = &canbus;
 	};
 
+	aliases {
+		led0 = &led0;
+		led1 = &led1;
+		cannode = &canbus;
+	};
 
 	leds {
 		compatible = "gpio-leds";
 		led0: led_0 {
 			gpios = <&gpio0 28 GPIO_ACTIVE_HIGH>;
-			label = "Green LED 0";
+			label = "Green LED";
 		};
 		led1: led_1 {
 			gpios = <&gpio1 11 GPIO_ACTIVE_HIGH>;
-			label = "Green LED 1";
+			label = "Blue LED";
 		};
-		// mcp2515rst: mcp2515rst_1 {
-		// 	gpios = <&gpio0 30 GPIO_ACTIVE_HIGH>;
-		// 	label = "MCP2515 RST";
-		// };
 	};
-
-
-
-
 };
-
 
 &uart0 {
 	pinctrl-0 = <&uart0_default>;
@@ -46,6 +42,7 @@
 
 &gpio1 {
 	status = "okay";
+	label = "GPIO_1";
 };
 
 &gpio0 {
