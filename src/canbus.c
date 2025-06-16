@@ -25,6 +25,15 @@
 
 static const struct gpio_dt_spec mcp_rst_switch = 	GPIO_DT_SPEC_GET_OR(DT_NODELABEL(mcp_rst_switch), gpios, {0});
 
+const struct can_timing mcp2515_8mhz_500 = {
+	.sjw = 2,
+	.prop_seg = 2,
+	.phase_seg1 = 3,
+	.phase_seg2 = 2,
+	.prescaler = 1
+};
+
+
 LOG_MODULE_REGISTER(canbus_gopro, LOG_LEVEL_DBG);
 
 const struct device *const can_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_canbus));
@@ -57,12 +66,7 @@ static void rx_callback_function(const struct device *dev, struct can_frame *fra
 }
 
 
-static void mcp2515_get_timing(struct can_timing *timing){
-
-	uint8_t cnf1 = 0x40;
-	uint8_t cnf2 = 0x91;
-	uint8_t cnf3 = 0x01;
-
+void mcp2515_get_timing(struct can_timing *timing, uint8_t cnf1, uint8_t cnf2, uint8_t cnf3){
 	timing->sjw= (cnf1 >> 6) + 1;
 	timing->prescaler= (cnf1 & 0x3F) + 1;
 
@@ -70,13 +74,11 @@ static void mcp2515_get_timing(struct can_timing *timing){
 	timing->prop_seg= (cnf2 & 0x7) + 1;
 
 	timing->phase_seg2=(cnf3 & 7)+1;
-
 }
 
 
 int canbus_init(void){
     int err;
-	struct can_timing timing;
 
 	if (!gpio_is_ready_dt(&mcp_rst_switch)) {
 		LOG_ERR("The MCP2515 RST pin GPIO port is not ready.");
@@ -95,27 +97,11 @@ int canbus_init(void){
 		return -1;
 	}
 
-    // //RST pin
-    // const struct device *gpio_dev = device_get_binding("GPIO_0");
-    // err = gpio_pin_configure(gpio_dev, 30, GPIO_OUTPUT);
-	
-	// if(err != 0){
-	// 	LOG_ERR("Pin cfg err %d",err);
-    //     return err;
-	// }
-	
-	// err=gpio_pin_set(gpio_dev,30,1);
-		
-	// if(err != 0){
-	// 	LOG_ERR("Pin set err %d",err);
-    //     return err;
-    // }
-	
 	if (!device_is_ready(can_dev)) {
 		LOG_ERR("CAN: Device %s not ready.\n", can_dev->name);
 		return -1;
 	}else{
-		LOG_INF("CAN device ready");
+		LOG_DBG("CAN device ready");
 	}
 
 	err = can_set_mode(can_dev, CAN_MODE_NORMAL);
@@ -124,23 +110,20 @@ int canbus_init(void){
         LOG_ERR("Error setting CAN mode [%d]", err);
         return -1;
     }else{
-    	LOG_INF("MODE NORMAL Enabled.");
+    	LOG_DBG("MODE NORMAL Enabled.");
 	}
 
-	LOG_DBG("Can bitrate MIN: %d MAX: %d",can_get_bitrate_min(can_dev),can_get_bitrate_max(can_dev));
+	// LOG_DBG("Can bitrate MIN: %d MAX: %d",can_get_bitrate_min(can_dev),can_get_bitrate_max(can_dev));
+	// mcp2515_get_timing(&timing, 0x40, 0x91, 0x01);
+	// const struct can_timing *min = can_get_timing_min(can_dev);
+  	// const struct can_timing *max = can_get_timing_max(can_dev);
+	// LOG_DBG("SWJ: %d  MIN: %d MAX: %d",timing.sjw,min->sjw,max->sjw);
+	// LOG_DBG("Prescaler: %d  MIN: %d MAX: %d",timing.prescaler,min->prescaler,max->prescaler);
+	// LOG_DBG("Pseg1: %d  MIN: %d MAX: %d",timing.phase_seg1,min->phase_seg1,max->phase_seg1);
+	// LOG_DBG("Pseg2: %d  MIN: %d MAX: %d",timing.phase_seg2,min->phase_seg2,max->phase_seg2);
+	// LOG_DBG("Propseg: %d  MIN: %d MAX: %d",timing.prop_seg,min->prop_seg,max->prop_seg);
 
-	mcp2515_get_timing(&timing);
-
-	const struct can_timing *min = can_get_timing_min(can_dev);
-  	const struct can_timing *max = can_get_timing_max(can_dev);
-
-	LOG_DBG("SWJ: %d  MIN: %d MAX: %d",timing.sjw,min->sjw,max->sjw);
-	LOG_DBG("Prescaler: %d  MIN: %d MAX: %d",timing.prescaler,min->prescaler,max->prescaler);
-	LOG_DBG("Pseg1: %d  MIN: %d MAX: %d",timing.phase_seg1,min->phase_seg1,max->phase_seg1);
-	LOG_DBG("Pseg2: %d  MIN: %d MAX: %d",timing.phase_seg2,min->phase_seg2,max->phase_seg2);
-	LOG_DBG("Propseg: %d  MIN: %d MAX: %d",timing.prop_seg,min->prop_seg,max->prop_seg);
-
-	err = can_set_timing(can_dev, &timing);
+	err = can_set_timing(can_dev, &mcp2515_8mhz_500);
 	
 	if (err != 0) {
 		LOG_ERR("Failed to set timing: %d",err);
@@ -173,7 +156,7 @@ int can_hb(void){
     if (err != 0) {
         LOG_ERR("CAN Sending failed [%d]", err);
     }else{
-        LOG_INF("Send message done");
+        LOG_DBG("Send message done");
     }
 
     return err;
