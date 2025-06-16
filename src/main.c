@@ -15,6 +15,8 @@
 #include <zephyr/drivers/can.h>
 #include <zephyr/drivers/gpio.h>
 
+#include <zephyr/zbus/zbus.h>
+
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/hci.h>
 #include <zephyr/bluetooth/conn.h>
@@ -30,6 +32,8 @@
 
 LOG_MODULE_REGISTER(central_gopro, LOG_LEVEL_DBG);
 
+ZBUS_CHAN_DECLARE(leds_chan);
+
 /* payload buffer element size. */
 #define DATA_BUF_SIZE 20
 
@@ -38,6 +42,16 @@ LOG_MODULE_REGISTER(central_gopro, LOG_LEVEL_DBG);
 static struct k_work scan_work;
 
 K_SEM_DEFINE(gopro_write_sem, 0, 1);
+
+#define GOPRO_NAME_LEN	20
+
+struct gopro_connection_t {
+	struct bt_scan_device_info *device_info;
+	char  name[GOPRO_NAME_LEN];
+	uint8_t state;
+};
+struct gopro_connection_t  gopro_connection;
+
 
 struct write_data_t {
 	void *fifo_reserved;
@@ -223,13 +237,89 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 	.security_changed = security_changed
 };
 
+
+static bool eir_found(struct bt_data *data, void *user_data)
+{
+	int err;
+	struct led_message_t led_message;
+
+	if(data->type == 9){
+		memset(gopro_connection.name,0,GOPRO_NAME_LEN);
+		if(data->data_len < GOPRO_NAME_LEN){
+			memcpy(gopro_connection.name,data->data,data->data_len);
+			gopro_connection.name[data->data_len]=0;
+		}
+		LOG_DBG("Device name: %s",gopro_connection.name);
+
+	}else if((data->type == 255) && (data->data_len == 14) ){
+		
+		gopro_connection.state = data->data[3];
+
+		switch (gopro_connection.state)
+		{
+		case 0:
+			led_message.mode = LED_MODE_BLINK_1S;
+			led_message.led_number = 1;
+			zbus_chan_pub(&leds_chan, &led_message, K_NO_WAIT);			
+			//LOG_DBG("Camera OFF");
+			break;
+		
+		case 1:
+			led_message.mode = LED_MODE_BLINK_300MS;
+			led_message.led_number = 1;
+			zbus_chan_pub(&leds_chan, &led_message, K_NO_WAIT);			
+
+			LOG_DBG("Camera ON, connecting");
+			
+			err = bt_scan_stop();
+			if (err) {
+				LOG_ERR("Failed to stop scanning (err %d)", err);
+				return err;
+			}
+
+			struct bt_conn_le_create_param *conn_params;
+
+			conn_params = BT_CONN_LE_CREATE_PARAM(BT_CONN_LE_OPT_CODED | BT_CONN_LE_OPT_NO_1M,BT_GAP_SCAN_FAST_INTERVAL,BT_GAP_SCAN_FAST_INTERVAL);
+
+			err = bt_conn_le_create(gopro_connection.device_info->recv_info->addr, conn_params,BT_LE_CONN_PARAM_DEFAULT,&default_conn);
+
+			if(err != 0){
+				LOG_ERR("Conn failed, err: %d",err);
+			}
+
+			break;
+
+		case 5:
+			led_message.mode = LED_MODE_BLINK_100MS;
+			led_message.led_number = 1;
+			zbus_chan_pub(&leds_chan, &led_message, K_NO_WAIT);			
+
+			LOG_DBG("Camera Pairing");
+			break;
+
+		default:
+			LOG_DBG("Camera state: %d",gopro_connection.state);
+			break;
+		}
+	}else{
+		//LOG_DBG("[AD]: type %u data_len %u", data->type, data->data_len);
+		//LOG_HEXDUMP_DBG(data->data,data->data_len,"AD data");
+	}
+	
+	return true;
+};
+
 static void scan_filter_match(struct bt_scan_device_info *device_info,struct bt_scan_filter_match *filter_match, bool connectable)
 {
 	char addr[BT_ADDR_LE_STR_LEN];
 
 	bt_addr_le_to_str(device_info->recv_info->addr, addr, sizeof(addr));
 
-	LOG_INF("Filters matched. Address: %s connectable: %d", addr, connectable);
+	LOG_DBG("Filters matched. Address: %s connectable: %d", addr, connectable);
+
+	gopro_connection.device_info=device_info;
+
+	bt_data_parse(device_info->adv_data,eir_found,(void *)device_info->recv_info->addr);
 }
 
 static void scan_connecting_error(struct bt_scan_device_info *device_info)
@@ -267,7 +357,7 @@ static void scan_filter_no_match(struct bt_scan_device_info *device_info, bool c
 	char addr[BT_ADDR_LE_STR_LEN];
 	
 	bt_addr_le_to_str(device_info->recv_info->addr, addr,  sizeof(addr));
-	LOG_DBG("Scan no match %s",addr);
+	//LOG_DBG("Scan no match %s",addr);
 }
 
 BT_SCAN_CB_INIT(scan_cb, scan_filter_match, scan_filter_no_match, scan_connecting_error, scan_connecting);
@@ -345,7 +435,7 @@ static void scan_work_handler(struct k_work *item)
 static void scan_init(void)
 {
 	struct bt_scan_init_param scan_init = {
-		.connect_if_match = true,
+		.connect_if_match = false,
 	};
 
 	bt_scan_init(&scan_init);
@@ -395,15 +485,13 @@ static struct bt_conn_auth_info_cb conn_auth_info_callbacks = {
 };
 
 
-
-
-
 int main(void)
 {
 	int err=0;
 
 	gopro_gpio_init();
 	gopro_leds_init();	
+	canbus_init();
 
 	err = bt_conn_auth_cb_register(&conn_auth_callbacks);
 	if (err) {
@@ -434,24 +522,21 @@ int main(void)
 		return 0;
 	}
 
-	// scan_init();
-	// err = scan_start();
-	// if (err) {
-	// 	return 0;
-	// }
-
-	canbus_init();
-
-
-	for(uint32_t i=0; i<0x1000; i++){
-		LOG_INF("[%d] cansend",i);
-		can_hb();
-		k_msleep(1000);
+	scan_init();
+	err = scan_start();
+	if (err) {
+		return 0;
 	}
+
+	// for(uint32_t i=0; i<0x1000; i++){
+	// 	LOG_INF("[%d] cansend",i);
+	// 	can_hb();
+	// 	k_msleep(1000);
+	// }
 
 
 //	bt_unpair(BT_ID_DEFAULT,BT_ADDR_LE_ANY);
-	LOG_INF("Starting Bluetooth Central sample\n");
+	LOG_INF("Starting Bluetooth Central");
 
 	for (;;) {
 		/* Wait indefinitely for data to be sent over Bluetooth */

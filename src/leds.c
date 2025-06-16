@@ -8,7 +8,7 @@
 #include <zephyr/sys/printk.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/logging/log.h>
-
+#include <zephyr/zbus/zbus.h>
 
 #define LED0_NODE	DT_ALIAS(led0)
 #if DT_NODE_HAS_STATUS_OKAY(LED0_NODE)
@@ -17,12 +17,38 @@
 
 
 #ifdef LED_PRESENT
+LOG_MODULE_REGISTER(gopro_leds, LOG_LEVEL_DBG);
+
 static struct gpio_dt_spec led_rec = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led0), gpios,{0});
 static struct gpio_dt_spec led_bt = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led1), gpios,{0});
 
+ZBUS_CHAN_DEFINE(leds_chan,                           	/* Name */
+         struct led_message_t,                       		      	/* Message type */
+         NULL,                                       	/* Validator */
+         NULL,                                       	/* User Data */
+         ZBUS_OBSERVERS(leds_obs),  	        		/* observers */
+         ZBUS_MSG_INIT(0)       						/* Initial value */
+);
 
-LOG_MODULE_REGISTER(gopro_leds, LOG_LEVEL_DBG);
+ZBUS_SUBSCRIBER_DEFINE(leds_obs, 4);
 
+void leds_obs_task(void)
+{
+        const struct zbus_channel *chan;
+		while (!zbus_sub_wait(&leds_obs, &chan, K_FOREVER)) {
+                struct led_message_t led_message;
+
+                if (&leds_chan == chan) {
+                        // Indirect message access
+                        zbus_chan_read(&leds_chan, &led_message, K_NO_WAIT);
+                        LOG_DBG("Set Mode %d for Led %d", led_message.mode, led_message.led_number);
+                }else{
+					LOG_DBG("No leds chan");
+				}
+        }
+}
+
+K_THREAD_DEFINE(subscriber_task_id, 512, leds_obs_task, NULL, NULL, NULL, 3, 0, 0);
 
 int gopro_leds_init(void){
 	int err;
@@ -55,6 +81,8 @@ int gopro_leds_init(void){
 		}
 	}
 
+	gopro_led_set_bt(0);
+	gopro_led_set_rec(0);
 	return 0;
 }
 
