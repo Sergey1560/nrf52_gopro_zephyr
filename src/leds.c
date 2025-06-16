@@ -32,20 +32,87 @@ ZBUS_CHAN_DEFINE(leds_chan,                           	/* Name */
 
 ZBUS_SUBSCRIBER_DEFINE(leds_obs, 4);
 
-void leds_obs_task(void)
-{
-        const struct zbus_channel *chan;
-		while (!zbus_sub_wait(&leds_obs, &chan, K_FOREVER)) {
-                struct led_message_t led_message;
+void leds_obs_task(void){
+	const struct zbus_channel *chan;
+	struct led_message_t led_message;
+	struct gpio_dt_spec *led;
+	
+	int prescaler = 0;
 
-                if (&leds_chan == chan) {
-                        // Indirect message access
-                        zbus_chan_read(&leds_chan, &led_message, K_NO_WAIT);
-                        LOG_DBG("Set Mode %d for Led %d", led_message.mode, led_message.led_number);
-                }else{
-					LOG_DBG("No leds chan");
+	led_message.value = 0;
+	
+	while(1){
+		if(zbus_sub_wait(&leds_obs, &chan, K_MSEC(100)) == 0 ){//Notification recv
+			if (&leds_chan == chan) {
+				zbus_chan_read(&leds_chan, &led_message, K_NO_WAIT);
+			}
+		}
+		
+		switch (led_message.led_number)
+		{
+		case 1:
+			led = &led_bt;
+			break;
+
+		case 2:
+			led = &led_rec;
+			break;
+		
+		default:
+			led = NULL;
+			break;
+		}
+
+		if(led != NULL){
+
+			switch (led_message.mode)
+			{
+			case LED_MODE_OFF:
+				gpio_pin_set_dt(led,0);
+				break;
+
+			case LED_MODE_ON:
+				gpio_pin_set_dt(led,1);
+				break;
+
+			case LED_MODE_BLINK_100MS:
+				gpio_pin_toggle_dt(led);
+				break;
+
+			case LED_MODE_BLINK_300MS:
+				prescaler++;
+				if(prescaler > 3){
+					prescaler = 0;
+					gpio_pin_toggle_dt(led);	
 				}
-        }
+				break;
+
+			case LED_MODE_BLINK_1S:
+				prescaler++;
+				if(prescaler > 10){
+					prescaler = 0;
+					gpio_pin_toggle_dt(led);	
+				}
+				break;
+
+				default:
+				break;
+			}
+		}
+	}
+	
+	
+	// while (!zbus_sub_wait(&leds_obs, &chan, K_FOREVER)) {
+	// 		struct led_message_t led_message;
+
+	// 		if (&leds_chan == chan) {
+	// 				// Indirect message access
+	// 				zbus_chan_read(&leds_chan, &led_message, K_NO_WAIT);
+	// 				LOG_DBG("Set Mode %d for Led %d", led_message.mode, led_message.led_number);
+	// 		}else{
+	// 			LOG_DBG("No leds chan");
+	// 		}
+	// }
 }
 
 K_THREAD_DEFINE(subscriber_task_id, 512, leds_obs_task, NULL, NULL, NULL, 3, 0, 0);

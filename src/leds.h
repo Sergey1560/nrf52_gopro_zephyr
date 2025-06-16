@@ -18,8 +18,8 @@ struct led_message_t{
         uint8_t value;
         struct 
         {
-            uint8_t mode:2;
-            uint8_t led_number:6;
+            uint8_t mode:3;
+            uint8_t led_number:5;
         };
     };
 };

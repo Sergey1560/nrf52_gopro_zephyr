@@ -111,6 +111,12 @@ static void discovery_complete(struct bt_gatt_dm *dm, void *context)
 	bt_gopro_subscribe_receive(nus);
 	LOG_INF("Release data");
 	bt_gatt_dm_data_release(dm);
+
+	struct led_message_t led_message;
+	led_message.mode = LED_MODE_ON;
+	led_message.led_number = 1;
+	zbus_chan_pub(&leds_chan, &led_message, K_NO_WAIT);			
+
 }
 
 static void discovery_service_not_found(struct bt_conn *conn, void *context)
@@ -204,6 +210,12 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
 
 	LOG_INF("Disconnected: %s, reason 0x%02x %s", addr, reason, bt_hci_err_to_str(reason));
+
+	struct led_message_t led_message;
+	led_message.mode = LED_MODE_OFF;
+	led_message.led_number = 1;
+	zbus_chan_pub(&leds_chan, &led_message, K_NO_WAIT);			
+
 
 	if (default_conn != conn) {
 		return;
