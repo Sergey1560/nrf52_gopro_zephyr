@@ -12,6 +12,9 @@ project(gopro_remote)
 target_sources(app PRIVATE
   src/main.c
   src/gopro_client.c
+  src/canbus.c
+  src/buttons.c
+  src/leds.c
 )
 target_include_directories(app PRIVATE
 src
