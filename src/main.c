@@ -71,6 +71,13 @@ static struct write_data_t cmd_buf_list[] = {
 
 static struct write_data_t cmd_hl = {.len=2, .data={1,0x18}};
 
+static void led_idle_handler(struct k_work *work);
+static void led_idle_timer_handler(struct k_timer *dummy);
+
+K_WORK_DEFINE(led_idle_work, led_idle_handler);
+K_TIMER_DEFINE(led_idle_timer, led_idle_timer_handler, NULL);
+#define LED_TIMER_START	do{k_timer_start(&led_idle_timer, K_SECONDS(5), K_SECONDS(5));}while(0)
+
 static void ble_data_sent(struct bt_gopro_client *nus, uint8_t err, const uint8_t *const data, uint16_t len)
 {
 	ARG_UNUSED(nus);
@@ -112,10 +119,7 @@ static void discovery_complete(struct bt_gatt_dm *dm, void *context)
 	LOG_INF("Release data");
 	bt_gatt_dm_data_release(dm);
 
-	struct led_message_t led_message;
-	led_message.mode = LED_MODE_ON;
-	led_message.led_number = 1;
-	zbus_chan_pub(&leds_chan, &led_message, K_NO_WAIT);			
+	gopro_led_mode_set(LED_NUM_BT,LED_MODE_ON);
 
 }
 
@@ -181,6 +185,8 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
 	}
 
 	LOG_INF("Connected: %s", addr);
+	
+	k_timer_stop(&led_idle_timer);
 
 	static struct bt_gatt_exchange_params exchange_params;
 
@@ -211,11 +217,7 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 
 	LOG_INF("Disconnected: %s, reason 0x%02x %s", addr, reason, bt_hci_err_to_str(reason));
 
-	struct led_message_t led_message;
-	led_message.mode = LED_MODE_OFF;
-	led_message.led_number = 1;
-	zbus_chan_pub(&leds_chan, &led_message, K_NO_WAIT);			
-
+	gopro_led_mode_set(LED_NUM_BT,LED_MODE_BLINK_5S);
 
 	if (default_conn != conn) {
 		return;
@@ -253,7 +255,6 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 static bool eir_found(struct bt_data *data, void *user_data)
 {
 	int err;
-	struct led_message_t led_message;
 
 	if(data->type == 9){
 		memset(gopro_connection.name,0,GOPRO_NAME_LEN);
@@ -270,17 +271,12 @@ static bool eir_found(struct bt_data *data, void *user_data)
 		switch (gopro_connection.state)
 		{
 		case 0:
-			led_message.mode = LED_MODE_BLINK_1S;
-			led_message.led_number = 1;
-			zbus_chan_pub(&leds_chan, &led_message, K_NO_WAIT);			
+			gopro_led_mode_set(LED_NUM_BT,LED_MODE_BLINK_1S);
 			//LOG_DBG("Camera OFF");
 			break;
 		
 		case 1:
-			led_message.mode = LED_MODE_BLINK_300MS;
-			led_message.led_number = 1;
-			zbus_chan_pub(&leds_chan, &led_message, K_NO_WAIT);			
-
+			gopro_led_mode_set(LED_NUM_BT,LED_MODE_BLINK_300MS);
 			LOG_DBG("Camera ON, connecting");
 			
 			err = bt_scan_stop();
@@ -302,10 +298,7 @@ static bool eir_found(struct bt_data *data, void *user_data)
 			break;
 
 		case 5:
-			led_message.mode = LED_MODE_BLINK_100MS;
-			led_message.led_number = 1;
-			zbus_chan_pub(&leds_chan, &led_message, K_NO_WAIT);			
-
+			gopro_led_mode_set(LED_NUM_BT,LED_MODE_BLINK_100MS);
 			LOG_DBG("Camera Pairing");
 			break;
 
@@ -330,6 +323,8 @@ static void scan_filter_match(struct bt_scan_device_info *device_info,struct bt_
 	LOG_DBG("Filters matched. Address: %s connectable: %d", addr, connectable);
 
 	gopro_connection.device_info=device_info;
+
+	LED_TIMER_START;
 
 	bt_data_parse(device_info->adv_data,eir_found,(void *)device_info->recv_info->addr);
 }
@@ -433,14 +428,26 @@ static int scan_start(void)
 		return err;
 	}
 
+	LED_TIMER_START;
 	LOG_INF("Scan started");
 	return 0;
 }
 
+static void led_idle_handler(struct k_work *work){
+	LOG_DBG("Set LED to idle state");
+	gopro_led_mode_set(LED_NUM_BT,LED_MODE_BLINK_5S);
+}
+
+
+static void led_idle_timer_handler(struct k_timer *dummy){
+    k_work_submit(&led_idle_work);
+}
+
+
 static void scan_work_handler(struct k_work *item)
 {
 	ARG_UNUSED(item);
-
+	LOG_DBG("Scan start");
 	(void)scan_start();
 }
 
