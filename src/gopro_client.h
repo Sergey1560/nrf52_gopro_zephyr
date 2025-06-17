@@ -32,6 +32,24 @@ extern "C" {
 #define BT_UUID_GOPRO_QUERY_WRITE        	BT_UUID_DECLARE_128(BT_UUID_GOPRO_QUERY_WRITE_VAL)
 #define BT_UUID_GOPRO_QUERY_NOTIFY       	BT_UUID_DECLARE_128(BT_UUID_GOPRO_QUERY_NOTIFY_VAL)
 
+#define GOPRO_NAME_LEN	12
+
+enum gopro_state_list_t{
+    GPSTATE_UNKNOWN,
+    GPSTATE_OFFLINE,
+    GPSTATE_ONLINE,
+    GPSTATE_CONNECTED,
+    GPSTATE_PAIRING,
+    GPSTATE_END
+};
+
+struct gopro_state_t {
+	struct bt_scan_device_info *device_info;
+	enum gopro_state_list_t  state;
+	char name[GOPRO_NAME_LEN];
+};
+
+
 /** @brief Handles on the connected peer device that are needed to interact with
  * the device.
  */
@@ -121,6 +139,12 @@ struct bt_gopro_client_init_param {
         /** Callbacks provided by the user. */
 	struct bt_gopro_client_cb cb;
 };
+
+
+int gopro_client_set_device_info(struct bt_scan_device_info *device_info);
+struct bt_scan_device_info* gopro_client_get_device_info(void);
+int gopro_client_set_sate(enum gopro_state_list_t  state);
+int gopro_client_setname(char *name, uint8_t len);
 
 /** @brief Initialize the GoPro Client module.
  *

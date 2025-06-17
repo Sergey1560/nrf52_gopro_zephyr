@@ -43,16 +43,6 @@ static struct k_work scan_work;
 
 K_SEM_DEFINE(gopro_write_sem, 0, 1);
 
-#define GOPRO_NAME_LEN	20
-
-struct gopro_connection_t {
-	struct bt_scan_device_info *device_info;
-	char  name[GOPRO_NAME_LEN];
-	uint8_t state;
-};
-struct gopro_connection_t  gopro_connection;
-
-
 struct write_data_t {
 	void *fifo_reserved;
 	uint16_t len;
@@ -120,6 +110,7 @@ static void discovery_complete(struct bt_gatt_dm *dm, void *context)
 	bt_gatt_dm_data_release(dm);
 
 	gopro_led_mode_set(LED_NUM_BT,LED_MODE_ON);
+	gopro_client_set_sate(GPSTATE_CONNECTED);
 
 }
 
@@ -257,26 +248,21 @@ static bool eir_found(struct bt_data *data, void *user_data)
 	int err;
 
 	if(data->type == 9){
-		memset(gopro_connection.name,0,GOPRO_NAME_LEN);
-		if(data->data_len < GOPRO_NAME_LEN){
-			memcpy(gopro_connection.name,data->data,data->data_len);
-			gopro_connection.name[data->data_len]=0;
-		}
-		LOG_DBG("Device name: %s",gopro_connection.name);
+
+		gopro_client_setname((char *)data->data,data->data_len);
 
 	}else if((data->type == 255) && (data->data_len == 14) ){
 		
-		gopro_connection.state = data->data[3];
-
-		switch (gopro_connection.state)
+		switch (data->data[3])
 		{
 		case 0:
 			gopro_led_mode_set(LED_NUM_BT,LED_MODE_BLINK_1S);
-			//LOG_DBG("Camera OFF");
+			gopro_client_set_sate(GPSTATE_OFFLINE);
 			break;
 		
 		case 1:
 			gopro_led_mode_set(LED_NUM_BT,LED_MODE_BLINK_300MS);
+			gopro_client_set_sate(GPSTATE_ONLINE);
 			LOG_DBG("Camera ON, connecting");
 			
 			err = bt_scan_stop();
@@ -286,10 +272,10 @@ static bool eir_found(struct bt_data *data, void *user_data)
 			}
 
 			struct bt_conn_le_create_param *conn_params;
-
 			conn_params = BT_CONN_LE_CREATE_PARAM(BT_CONN_LE_OPT_CODED | BT_CONN_LE_OPT_NO_1M,BT_GAP_SCAN_FAST_INTERVAL,BT_GAP_SCAN_FAST_INTERVAL);
 
-			err = bt_conn_le_create(gopro_connection.device_info->recv_info->addr, conn_params,BT_LE_CONN_PARAM_DEFAULT,&default_conn);
+			struct bt_scan_device_info *device_info = gopro_client_get_device_info();
+			err = bt_conn_le_create(device_info->recv_info->addr, conn_params,BT_LE_CONN_PARAM_DEFAULT,&default_conn);
 
 			if(err != 0){
 				LOG_ERR("Conn failed, err: %d",err);
@@ -299,11 +285,12 @@ static bool eir_found(struct bt_data *data, void *user_data)
 
 		case 5:
 			gopro_led_mode_set(LED_NUM_BT,LED_MODE_BLINK_100MS);
+			gopro_client_set_sate(GPSTATE_PAIRING);
 			LOG_DBG("Camera Pairing");
 			break;
 
 		default:
-			LOG_DBG("Camera state: %d",gopro_connection.state);
+			LOG_DBG("Camera state: %d",data->data[3]);
 			break;
 		}
 	}else{
@@ -322,7 +309,7 @@ static void scan_filter_match(struct bt_scan_device_info *device_info,struct bt_
 
 	LOG_DBG("Filters matched. Address: %s connectable: %d", addr, connectable);
 
-	gopro_connection.device_info=device_info;
+	gopro_client_set_device_info(device_info);
 
 	LED_TIMER_START;
 
@@ -436,6 +423,8 @@ static int scan_start(void)
 static void led_idle_handler(struct k_work *work){
 	LOG_DBG("Set LED to idle state");
 	gopro_led_mode_set(LED_NUM_BT,LED_MODE_BLINK_5S);
+	gopro_client_set_sate(GPSTATE_UNKNOWN);
+	gopro_client_setname(NULL,0);
 }
 
 
