@@ -144,6 +144,7 @@ struct bt_gopro_client_init_param {
 int gopro_client_set_device_info(struct bt_scan_device_info *device_info);
 struct bt_scan_device_info* gopro_client_get_device_info(void);
 int gopro_client_set_sate(enum gopro_state_list_t  state);
+enum gopro_state_list_t gopro_client_get_state(void);
 int gopro_client_setname(char *name, uint8_t len);
 
 /** @brief Initialize the GoPro Client module.

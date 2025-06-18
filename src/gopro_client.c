@@ -47,6 +47,12 @@ int gopro_client_set_sate(enum gopro_state_list_t  state){
 }
 
 
+enum gopro_state_list_t gopro_client_get_state(void){
+
+	return gopro_state.state;
+}
+
+
 int gopro_client_setname(char *name, uint8_t len){
 
 	if(len >= GOPRO_NAME_LEN){

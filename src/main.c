@@ -248,6 +248,8 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 static bool eir_found(struct bt_data *data, void *user_data)
 {
 	int err;
+	struct bt_conn_le_create_param *conn_params;
+
 
 	if(data->type == 9){
 
@@ -267,20 +269,19 @@ static bool eir_found(struct bt_data *data, void *user_data)
 			gopro_client_set_sate(GPSTATE_ONLINE);
 			LOG_DBG("Camera ON, connecting");
 			
-			err = bt_scan_stop();
-			if (err) {
-				LOG_ERR("Failed to stop scanning (err %d)", err);
-				return err;
-			}
+			// err = bt_scan_stop();
+			// if (err) {
+			// 	LOG_ERR("Failed to stop scanning (err %d)", err);
+			// 	return err;
+			// }
 
-			struct bt_conn_le_create_param *conn_params;
-			conn_params = BT_CONN_LE_CREATE_PARAM(BT_CONN_LE_OPT_CODED | BT_CONN_LE_OPT_NO_1M,BT_GAP_SCAN_FAST_INTERVAL,BT_GAP_SCAN_FAST_INTERVAL);
-			gopro_device_info=gopro_client_get_device_info();
-			err = bt_conn_le_create(gopro_device_info->recv_info->addr, conn_params,BT_LE_CONN_PARAM_DEFAULT,&default_conn);
+			// conn_params = BT_CONN_LE_CREATE_PARAM(BT_CONN_LE_OPT_CODED | BT_CONN_LE_OPT_NO_1M,BT_GAP_SCAN_FAST_INTERVAL,BT_GAP_SCAN_FAST_INTERVAL);
+			// gopro_device_info=gopro_client_get_device_info();
+			// err = bt_conn_le_create(gopro_device_info->recv_info->addr, conn_params,BT_LE_CONN_PARAM_DEFAULT,&default_conn);
 
-			if(err != 0){
-				LOG_ERR("Conn failed, err: %d",err);
-			}
+			// if(err != 0){
+			// 	LOG_ERR("Conn failed, err: %d",err);
+			// }
 
 			break;
 
@@ -288,6 +289,15 @@ static bool eir_found(struct bt_data *data, void *user_data)
 			gopro_led_mode_set(LED_NUM_BT,LED_MODE_BLINK_100MS);
 			gopro_client_set_sate(GPSTATE_PAIRING);
 			LOG_DBG("Camera Pairing");
+
+			// conn_params = BT_CONN_LE_CREATE_PARAM(BT_CONN_LE_OPT_CODED | BT_CONN_LE_OPT_NO_1M,BT_GAP_SCAN_FAST_INTERVAL,BT_GAP_SCAN_FAST_INTERVAL);
+			// gopro_device_info=gopro_client_get_device_info();
+			// err = bt_conn_le_create(gopro_device_info->recv_info->addr, conn_params,BT_LE_CONN_PARAM_DEFAULT,&default_conn);
+
+			// if(err != 0){
+			// 	LOG_ERR("Conn failed, err: %d",err);
+			// }
+
 			break;
 
 		default:
@@ -444,7 +454,7 @@ static void scan_work_handler(struct k_work *item)
 static void scan_init(void)
 {
 	struct bt_scan_init_param scan_init = {
-		.connect_if_match = false,
+		.connect_if_match = true,
 	};
 
 	bt_scan_init(&scan_init);
@@ -536,12 +546,6 @@ int main(void)
 	if (err) {
 		return 0;
 	}
-
-	// for(uint32_t i=0; i<0x1000; i++){
-	// 	LOG_INF("[%d] cansend",i);
-	// 	can_hb();
-	// 	k_msleep(1000);
-	// }
 
 
 //	bt_unpair(BT_ID_DEFAULT,BT_ADDR_LE_ANY);

@@ -10,6 +10,7 @@
 #include <zephyr/sys/printk.h>
 #include <zephyr/logging/log.h>
 
+#include <gopro_client.h>
 
 #define CAN_MCP_NODE	DT_ALIAS(cannode)
 
@@ -18,12 +19,18 @@
 #endif
 
 #ifdef CANBUS_PRESENT
+LOG_MODULE_REGISTER(canbus_gopro, LOG_LEVEL_DBG);
 
 #if !DT_NODE_EXISTS(DT_NODELABEL(mcp_rst_switch))
 #error "Overlay for MCP2515 RST pin not properly defined."
 #endif
 
-static const struct gpio_dt_spec mcp_rst_switch = 	GPIO_DT_SPEC_GET_OR(DT_NODELABEL(mcp_rst_switch), gpios, {0});
+static void can_tx_handler(struct k_work *work);
+static void can_tx_timer_handler(struct k_timer *dummy);
+
+K_WORK_DEFINE(can_tx_work, can_tx_handler);
+K_TIMER_DEFINE(can_tx_timer, can_tx_timer_handler, NULL);
+#define CAN_TX_TIMER_START	do{k_timer_start(&can_tx_timer, K_MSEC(100), K_MSEC(100));}while(0)
 
 const struct can_timing mcp2515_8mhz_500 = {
 	.sjw = 2,
@@ -33,18 +40,15 @@ const struct can_timing mcp2515_8mhz_500 = {
 	.prescaler = 1
 };
 
-
-LOG_MODULE_REGISTER(canbus_gopro, LOG_LEVEL_DBG);
-
+static const struct gpio_dt_spec mcp_rst_switch = 	GPIO_DT_SPEC_GET_OR(DT_NODELABEL(mcp_rst_switch), gpios, {0});
 const struct device *const can_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_canbus));
-
 const struct can_frame heart_beat_frame = {
 			.flags = 0,
 			.id = GPCAN_HEART_BEAT_ID,
 			.dlc = 8,
-			.data = {1,2,3,4,5,6,7,8}
+			.data = {0,0,0,0,0,0,0,0}
 	};
-
+	
 #ifdef GPCAN_ENABLE_FILTER
 const struct can_filter goprocan_filter = {
         .flags = 0,
@@ -145,22 +149,38 @@ int canbus_init(void){
 		LOG_INF("CAN Start");
 	}
 
+	CAN_TX_TIMER_START;
+	
     return 0;
 }
 
-int can_hb(void){
-    int err;
 
-    err = can_send(can_dev, &heart_beat_frame, K_MSEC(10), NULL, NULL);
+static void can_tx_handler(struct k_work *work){
+    int err;
+	struct can_frame tx_frame;
+	
+	memset(&tx_frame,0,sizeof(struct can_frame));
+
+	tx_frame.id = GPCAN_HEART_BEAT_ID;
+	tx_frame.dlc = 3;
+
+	tx_frame.data[0] = gopro_client_get_state();
+	tx_frame.data[1] = 0;  //rec on/off
+	tx_frame.data[2] = 85; //Battery 
+
+    err = can_send(can_dev, &tx_frame, K_MSEC(10), NULL, NULL);
 
     if (err != 0) {
         LOG_ERR("CAN Sending failed [%d]", err);
-    }else{
-        LOG_DBG("Send message done");
     }
 
-    return err;
-}
+};
+
+static void can_tx_timer_handler(struct k_timer *dummy){
+	k_work_submit(&can_tx_work);
+};
+
+
 
 #else
 
