@@ -16,7 +16,7 @@ LOG_MODULE_REGISTER(gopro_c, LOG_LEVEL_DBG);
 static void gopro_client_update_state(void);
 
 
-struct gopro_state_t gopro_state;
+static struct gopro_state_t gopro_state;
 
 
 int gopro_client_set_device_info(struct bt_scan_device_info *device_info){
@@ -31,8 +31,6 @@ struct bt_scan_device_info* gopro_client_get_device_info(void){
 }
 
 int gopro_client_set_sate(enum gopro_state_list_t  state){
-
-	return 0;
 
 	if(state >= GPSTATE_END){
 		LOG_ERR("Invalid state num %d of %d",state,GPSTATE_END-1);
@@ -51,28 +49,25 @@ int gopro_client_set_sate(enum gopro_state_list_t  state){
 
 int gopro_client_setname(char *name, uint8_t len){
 
-	return 0;
-
 	if(len >= GOPRO_NAME_LEN){
 		LOG_ERR("GoPro name out of bound %d of %d",len,GOPRO_NAME_LEN-1);
 		return -1;
 	}
 
-	if(name != NULL){
+	if( (len > 0) && (name != NULL) ){
 		if(strncmp(gopro_state.name,name,len) == 0){
 			LOG_DBG("GoPro name already set");
 			return 0;
 		}
-	}
 
-	memset(gopro_state.name,0,GOPRO_NAME_LEN);
-	
-	if( (len > 0) && (name != NULL) ){
 		memcpy(gopro_state.name,name,len);
 		gopro_state.name[len]=0;
 
 		LOG_DBG("Set GoPro name: %s", gopro_state.name);
+	}else{
+		memset(gopro_state.name,0,GOPRO_NAME_LEN);
 	}
+	
 	gopro_client_update_state();
 
 	return 0;

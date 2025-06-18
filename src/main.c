@@ -43,6 +43,8 @@ static struct k_work scan_work;
 
 K_SEM_DEFINE(gopro_write_sem, 0, 1);
 
+static struct bt_scan_device_info *gopro_device_info;
+
 struct write_data_t {
 	void *fifo_reserved;
 	uint16_t len;
@@ -273,9 +275,8 @@ static bool eir_found(struct bt_data *data, void *user_data)
 
 			struct bt_conn_le_create_param *conn_params;
 			conn_params = BT_CONN_LE_CREATE_PARAM(BT_CONN_LE_OPT_CODED | BT_CONN_LE_OPT_NO_1M,BT_GAP_SCAN_FAST_INTERVAL,BT_GAP_SCAN_FAST_INTERVAL);
-
-			struct bt_scan_device_info *device_info = gopro_client_get_device_info();
-			err = bt_conn_le_create(device_info->recv_info->addr, conn_params,BT_LE_CONN_PARAM_DEFAULT,&default_conn);
+			gopro_device_info=gopro_client_get_device_info();
+			err = bt_conn_le_create(gopro_device_info->recv_info->addr, conn_params,BT_LE_CONN_PARAM_DEFAULT,&default_conn);
 
 			if(err != 0){
 				LOG_ERR("Conn failed, err: %d",err);
