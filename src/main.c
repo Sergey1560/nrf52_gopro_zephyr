@@ -235,7 +235,13 @@ static void security_changed(struct bt_conn *conn, bt_security_t level,enum bt_s
 	} else {
 		LOG_WRN("Security failed: %s level %u err %d %s", addr, level, err,
 			bt_security_err_to_str(err));
-	}
+	
+			if(err == BT_SECURITY_ERR_PIN_OR_KEY_MISSING){
+				LOG_INF("Remove bonding, start new pair");
+				bt_unpair(BT_ID_DEFAULT,BT_ADDR_LE_ANY);
+			}
+		
+		}
 
 	gatt_discover(conn);
 }
@@ -320,7 +326,7 @@ static void scan_filter_match(struct bt_scan_device_info *device_info,struct bt_
 
 	LOG_DBG("Filters matched. Address: %s connectable: %d", addr, connectable);
 
-	gopro_client_set_device_addr(device_info->recv_info->addr);
+	gopro_client_set_device_addr((bt_addr_le_t *)device_info->recv_info->addr);
 
 	LED_TIMER_START;
 
@@ -485,6 +491,7 @@ static void pairing_complete(struct bt_conn *conn, bool bonded)
 	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
 
 	LOG_INF("Pairing completed: %s, bonded: %d", addr, bonded);
+	settings_save();
 }
 
 
@@ -506,7 +513,6 @@ static struct bt_conn_auth_info_cb conn_auth_info_callbacks = {
 	.pairing_complete = pairing_complete,
 	.pairing_failed = pairing_failed
 };
-
 
 int main(void)
 {
@@ -535,14 +541,18 @@ int main(void)
 	}
 	LOG_INF("Bluetooth initialized");
 
-	if (IS_ENABLED(CONFIG_SETTINGS)) {
-		settings_load();
-	}
-
 	err = gopro_client_init();
 	if (err != 0) {
 		LOG_ERR("gopro_client_init failed (err %d)", err);
 		return 0;
+	}
+
+	settings_subsys_init();
+	err=settings_load();
+	if(err != 0){
+		LOG_ERR("Settings load err: %d",err);
+	}else{
+		LOG_DBG("Settings load done");
 	}
 
 	scan_init();
@@ -551,8 +561,6 @@ int main(void)
 		return 0;
 	}
 
-
-//	bt_unpair(BT_ID_DEFAULT,BT_ADDR_LE_ANY);
 	LOG_INF("Starting Bluetooth Central");
 
 	for (;;) {

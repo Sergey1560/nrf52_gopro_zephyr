@@ -9,6 +9,7 @@
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/zbus/zbus.h>
 
 #include <gopro_client.h>
 
@@ -25,10 +26,25 @@ LOG_MODULE_REGISTER(canbus_gopro, LOG_LEVEL_DBG);
 #error "Overlay for MCP2515 RST pin not properly defined."
 #endif
 
-static void can_tx_handler(struct k_work *work);
+//static void can_tx_handler(struct k_work *work);
 static void can_tx_timer_handler(struct k_timer *dummy);
+static void can_tx_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
 
-K_WORK_DEFINE(can_tx_work, can_tx_handler);
+
+ZBUS_CHAN_DEFINE(can_tx_chan,                           	/* Name */
+         struct can_frame,                       		      	/* Message type */
+         NULL,                                       	/* Validator */
+         NULL,                                       	/* User Data */
+         ZBUS_OBSERVERS(can_tx_subscriber),  	        		/* observers */
+         ZBUS_MSG_INIT(0)       						/* Initial value */
+);
+
+//ZBUS_SUBSCRIBER_DEFINE(can_tx_subscriber, 4);
+ZBUS_MSG_SUBSCRIBER_DEFINE(can_tx_subscriber);
+K_THREAD_DEFINE(can_tx_subscriber_task_id, 1024, can_tx_subscriber_task, NULL, NULL, NULL, 3, 0, 0);
+
+
+//K_WORK_DEFINE(can_tx_work, can_tx_handler);
 K_TIMER_DEFINE(can_tx_timer, can_tx_timer_handler, NULL);
 #define CAN_TX_TIMER_START	do{k_timer_start(&can_tx_timer, K_MSEC(100), K_MSEC(100));}while(0)
 
@@ -154,11 +170,30 @@ int canbus_init(void){
     return 0;
 }
 
-
-static void can_tx_handler(struct k_work *work){
-    int err;
+static void can_tx_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
+	int err;
 	struct can_frame tx_frame;
-	
+	ARG_UNUSED(ptr1);
+	ARG_UNUSED(ptr2);
+	ARG_UNUSED(ptr3);
+	const struct zbus_channel *chan;
+
+	while (!zbus_sub_wait_msg(&can_tx_subscriber, &chan, &tx_frame, K_FOREVER)) {
+		if (&can_tx_chan == chan) {
+				//LOG_DBG("Msg to send: 0x%0X len: %d", tx_frame.id,tx_frame.dlc);
+
+				err = can_send(can_dev, &tx_frame, K_MSEC(10), NULL, NULL);
+
+				if (err != 0) {
+					LOG_ERR("CAN Sending failed [%d]", err);
+				}
+
+			}
+	}
+};
+
+static void can_tx_timer_handler(struct k_timer *dummy){
+	struct can_frame tx_frame;
 	memset(&tx_frame,0,sizeof(struct can_frame));
 
 	tx_frame.id = GPCAN_HEART_BEAT_ID;
@@ -168,16 +203,7 @@ static void can_tx_handler(struct k_work *work){
 	tx_frame.data[1] = 0;  //rec on/off
 	tx_frame.data[2] = 85; //Battery 
 
-    err = can_send(can_dev, &tx_frame, K_MSEC(10), NULL, NULL);
-
-    if (err != 0) {
-        LOG_ERR("CAN Sending failed [%d]", err);
-    }
-
-};
-
-static void can_tx_timer_handler(struct k_timer *dummy){
-	k_work_submit(&can_tx_work);
+	zbus_chan_pub(&can_tx_chan, &tx_frame, K_NO_WAIT);
 };
 
 
