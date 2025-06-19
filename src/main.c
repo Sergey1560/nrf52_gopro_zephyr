@@ -41,7 +41,7 @@ static struct k_work scan_work;
 
 K_SEM_DEFINE(gopro_write_sem, 0, 1);
 
-#define BT_AUTO_CONNECT
+//#define BT_AUTO_CONNECT
 
 #ifndef BT_AUTO_CONNECT
 struct bt_conn_le_create_param *conn_params = BT_CONN_LE_CREATE_PARAM(BT_CONN_LE_OPT_CODED | BT_CONN_LE_OPT_NO_1M,BT_GAP_SCAN_FAST_INTERVAL,BT_GAP_SCAN_FAST_INTERVAL);
@@ -161,6 +161,7 @@ static void exchange_func(struct bt_conn *conn, uint8_t err, struct bt_gatt_exch
 
 static void connected(struct bt_conn *conn, uint8_t conn_err)
 {
+	static struct bt_gatt_exchange_params exchange_params;
 	char addr[BT_ADDR_LE_STR_LEN];
 	int err;
 
@@ -182,8 +183,6 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
 	LOG_INF("Connected: %s", addr);
 	
 	k_timer_stop(&led_idle_timer);
-
-	static struct bt_gatt_exchange_params exchange_params;
 
 	exchange_params.func = exchange_func;
 	err = bt_gatt_exchange_mtu(conn, &exchange_params);
@@ -212,11 +211,11 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 
 	LOG_INF("Disconnected: %s, reason 0x%02x %s", addr, reason, bt_hci_err_to_str(reason));
 
-	gopro_led_mode_set(LED_NUM_BT,LED_MODE_BLINK_5S);
+	//gopro_led_mode_set(LED_NUM_BT,LED_MODE_BLINK_5S);
 
-	if (default_conn != conn) {
-		return;
-	}
+	// if (default_conn != conn) {
+	// 	return;
+	// }
 
 	bt_conn_unref(default_conn);
 	default_conn = NULL;
@@ -296,13 +295,19 @@ static bool eir_found(struct bt_data *data, void *user_data)
 			gopro_client_set_sate(GPSTATE_PAIRING);
 			LOG_DBG("Camera Pairing");
 
-			// conn_params = BT_CONN_LE_CREATE_PARAM(BT_CONN_LE_OPT_CODED | BT_CONN_LE_OPT_NO_1M,BT_GAP_SCAN_FAST_INTERVAL,BT_GAP_SCAN_FAST_INTERVAL);
-			// gopro_device_info=gopro_client_get_device_info();
-			// err = bt_conn_le_create(gopro_device_info->recv_info->addr, conn_params,BT_LE_CONN_PARAM_DEFAULT,&default_conn);
+			#ifndef BT_AUTO_CONNECT
+			err = bt_scan_stop();
+			if (err) {
+				LOG_ERR("Failed to stop scanning (err %d)", err);
+				return err;
+			}
 
-			// if(err != 0){
-			// 	LOG_ERR("Conn failed, err: %d",err);
-			// }
+			err = bt_conn_le_create(gopro_client_get_device_addr(), conn_params,BT_LE_CONN_PARAM_DEFAULT,&default_conn);
+
+			if(err != 0){
+				LOG_ERR("Conn failed, err: %d",err);
+			}
+			#endif
 
 			break;
 
@@ -350,6 +355,7 @@ static int gopro_client_init(void){
 		.cb = {
 			.received = ble_data_received,
 			.sent = ble_data_sent,
+			.unsubscribed = NULL
 		}
 	};
 

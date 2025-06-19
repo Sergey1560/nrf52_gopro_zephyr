@@ -105,9 +105,9 @@ static uint8_t on_received(struct bt_conn *conn, struct bt_gatt_subscribe_params
 		LOG_DBG("[UNSUBSCRIBED]");
 		params->value_handle = 0;
 		atomic_clear_bit(&nus->state, GOPRO_C_TX_NOTIF_ENABLED);
-		if (nus->cb.unsubscribed) {
-			nus->cb.unsubscribed(nus);
-		}
+		// if (nus->cb.unsubscribed) {
+		// 	nus->cb.unsubscribed(nus);
+		// }
 		return BT_GATT_ITER_STOP;
 	}
 
