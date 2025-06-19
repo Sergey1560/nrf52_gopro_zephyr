@@ -5,9 +5,13 @@
 extern "C" {
 #endif
 
+
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/bluetooth/conn.h>
 #include <bluetooth/gatt_dm.h>
+
+#include <bluetooth/scan.h>
+
 
 #define BLE_UUID16_GOPRO_SERVICE    0xFEA6      
 
@@ -44,7 +48,8 @@ enum gopro_state_list_t{
 };
 
 struct gopro_state_t {
-	struct bt_scan_device_info *device_info;
+	struct bt_scan_device_info device_info;
+	bt_addr_le_t addr;
 	enum gopro_state_list_t  state;
 	char name[GOPRO_NAME_LEN];
 };
@@ -141,8 +146,8 @@ struct bt_gopro_client_init_param {
 };
 
 
-int gopro_client_set_device_info(struct bt_scan_device_info *device_info);
-struct bt_scan_device_info* gopro_client_get_device_info(void);
+int gopro_client_set_device_addr(bt_addr_le_t* addr);
+bt_addr_le_t* gopro_client_get_device_addr(void);
 int gopro_client_set_sate(enum gopro_state_list_t  state);
 enum gopro_state_list_t gopro_client_get_state(void);
 int gopro_client_setname(char *name, uint8_t len);

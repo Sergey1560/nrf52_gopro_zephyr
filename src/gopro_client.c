@@ -19,15 +19,17 @@ static void gopro_client_update_state(void);
 static struct gopro_state_t gopro_state;
 
 
-int gopro_client_set_device_info(struct bt_scan_device_info *device_info){
+int gopro_client_set_device_addr(bt_addr_le_t* addr){
 
-	gopro_state.device_info = device_info;
+	gopro_state.addr = *addr;
 	return 0;
 }
 
-struct bt_scan_device_info* gopro_client_get_device_info(void){
+bt_addr_le_t* gopro_client_get_device_addr(void){
 
-	return gopro_state.device_info;
+	bt_addr_le_t *addr = &gopro_state.addr;
+	
+	return addr;
 }
 
 int gopro_client_set_sate(enum gopro_state_list_t  state){
