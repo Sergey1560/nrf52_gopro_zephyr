@@ -4,7 +4,10 @@
 
 
 #define GPCAN_HEART_BEAT_ID   0x734
-#define GPCAN_INPUT_MSG_ID    0x740
+#define GPCAN_INPUT_CMD_ID    0x772
+#define GPCAN_INPUT_SET_ID    0x774
+#define GPCAN_INPUT_QUERY_ID  0x776
+#define GPCAN_REPLY_MSG_ID    0x741
 #define GPCAN_ENABLE_FILTER  
 
 // #define MCP2515_8MHz_500kBPS_CFG1            0x00

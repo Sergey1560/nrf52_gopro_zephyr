@@ -37,6 +37,7 @@ extern "C" {
 #define BT_UUID_GOPRO_QUERY_NOTIFY       	BT_UUID_DECLARE_128(BT_UUID_GOPRO_QUERY_NOTIFY_VAL)
 
 #define GOPRO_NAME_LEN	20
+#define GOPRO_CMD_DATA_LEN	8
 
 enum gopro_state_list_t{
     GPSTATE_UNKNOWN,
@@ -53,6 +54,14 @@ struct gopro_state_t {
 	enum gopro_state_list_t  state;
 	char name[GOPRO_NAME_LEN];
 };
+
+
+struct gopro_cmd_t {
+	uint32_t len;
+	uint32_t cmd_type;
+	uint8_t  data[GOPRO_CMD_DATA_LEN];
+};
+
 
 
 /** @brief Handles on the connected peer device that are needed to interact with
@@ -179,7 +188,7 @@ int bt_gopro_client_init(struct bt_gopro_client *nus, const struct bt_gopro_clie
  * @retval 0 If the operation was successful.
  *           Otherwise, a negative error code is returned.
  */
-int bt_gopro_client_send(struct bt_gopro_client *nus, const uint8_t *data, uint16_t len);
+int bt_gopro_client_send(struct bt_gopro_client *nus, struct gopro_cmd_t *gopro_cmd);
 
 /** @brief Assign handles to the GoPro Client instance.
  *

@@ -7,6 +7,7 @@
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/bluetooth/gatt.h>
+#include <zephyr/zbus/zbus.h>
 
 #include <gopro_client.h>
 
@@ -15,8 +16,8 @@ LOG_MODULE_REGISTER(gopro_c, LOG_LEVEL_DBG);
 
 static void gopro_client_update_state(void);
 
-
 static struct gopro_state_t gopro_state;
+
 
 
 int gopro_client_set_device_addr(bt_addr_le_t* addr){
@@ -111,7 +112,7 @@ static uint8_t on_received(struct bt_conn *conn, struct bt_gatt_subscribe_params
 		return BT_GATT_ITER_STOP;
 	}
 
-	LOG_DBG("[NOTIFICATION] data %p length %u", data, length);
+	LOG_DBG("[NOTIFICATION] length %u handle %d", length, params->value_handle);
 	if (nus->cb.received) {
 		return nus->cb.received(nus, data, length);
 	}
@@ -153,7 +154,7 @@ int bt_gopro_client_init(struct bt_gopro_client *nus_c, const struct bt_gopro_cl
 	return 0;
 }
 
-int bt_gopro_client_send(struct bt_gopro_client *nus_c, const uint8_t *data, uint16_t len)
+int bt_gopro_client_send(struct bt_gopro_client *nus_c, struct gopro_cmd_t *gopro_cmd)
 {
 	int err;
 
@@ -165,13 +166,29 @@ int bt_gopro_client_send(struct bt_gopro_client *nus_c, const uint8_t *data, uin
 		return -EALREADY;
 	}
 
-	LOG_INF("Send handle: 0x%0X %d bytes",nus_c->handles.gp072,len);
+	switch (gopro_cmd->cmd_type)
+	{
+	case 72:
+		nus_c->cmd_write_params.handle = nus_c->handles.gp072;
+		break;
+	case 74:
+		nus_c->cmd_write_params.handle = nus_c->handles.gp074;
+		break;
+	case 76:
+		nus_c->cmd_write_params.handle = nus_c->handles.gp076;
+		break;
+	
+	default:
+		LOG_ERR("Invalid cmd type (not 72,74,76): %d",gopro_cmd->cmd_type);
+		return -ENOTSUP;
+		break;
+	}
+	LOG_DBG("Send handle: 0x%0X %d bytes",nus_c->cmd_write_params.handle,gopro_cmd->len);
 
 	nus_c->cmd_write_params.func = on_sent;
-	nus_c->cmd_write_params.handle = nus_c->handles.gp072;
 	nus_c->cmd_write_params.offset = 0;
-	nus_c->cmd_write_params.data = data;
-	nus_c->cmd_write_params.length = len;
+	nus_c->cmd_write_params.data = gopro_cmd->data;
+	nus_c->cmd_write_params.length = gopro_cmd->len;
 
 	err = bt_gatt_write(nus_c->conn, &nus_c->cmd_write_params);
 	if (err) {
@@ -259,6 +276,21 @@ int bt_gopro_handles_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client *nus_
 	LOG_INF("Found handle for CCC of GoPro Settings Notify characteristic. 0x%0X",gatt_desc->handle);
 	nus_c->handles.gp075_ccc = gatt_desc->handle;
 
+	/* CMD Write Characteristic */
+	gatt_chrc = bt_gatt_dm_char_by_uuid(dm, BT_UUID_GOPRO_SETTINGS_WRITE);
+	if (!gatt_chrc) {
+		LOG_ERR("Missing GoPro Write characteristic.");
+		return -EINVAL;
+	}
+	/* CMD Write */
+	gatt_desc = bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GOPRO_SETTINGS_WRITE);
+	if (!gatt_desc) {
+		LOG_ERR("Missing GoPro Write value descriptor in characteristic.");
+		return -EINVAL;
+	}
+	LOG_INF("Found handle for GoPro Settings Write characteristic.");
+	nus_c->handles.gp074 = gatt_desc->handle;
+
 
 
 	/* Query Characteristic */
@@ -285,7 +317,20 @@ int bt_gopro_handles_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client *nus_
 	LOG_INF("Found handle for CCC of GoPro Query Notify characteristic. 0x%0X",gatt_desc->handle);
 	nus_c->handles.gp077_ccc = gatt_desc->handle;
 
-
+	/* CMD Write Characteristic */
+	gatt_chrc = bt_gatt_dm_char_by_uuid(dm, BT_UUID_GOPRO_QUERY_WRITE);
+	if (!gatt_chrc) {
+		LOG_ERR("Missing GoPro Write characteristic.");
+		return -EINVAL;
+	}
+	/* CMD Write */
+	gatt_desc = bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GOPRO_QUERY_WRITE);
+	if (!gatt_desc) {
+		LOG_ERR("Missing GoPro Write value descriptor in characteristic.");
+		return -EINVAL;
+	}
+	LOG_INF("Found handle for GoPro Settings Write characteristic.");
+	nus_c->handles.gp076 = gatt_desc->handle;
 
 	/* Assign connection instance. */
 	nus_c->conn = bt_gatt_dm_conn_get(dm);

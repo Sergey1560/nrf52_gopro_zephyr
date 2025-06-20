@@ -26,7 +26,6 @@ LOG_MODULE_REGISTER(canbus_gopro, LOG_LEVEL_DBG);
 #error "Overlay for MCP2515 RST pin not properly defined."
 #endif
 
-//static void can_tx_handler(struct k_work *work);
 static void can_tx_timer_handler(struct k_timer *dummy);
 static void can_tx_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
 
@@ -39,12 +38,11 @@ ZBUS_CHAN_DEFINE(can_tx_chan,                           	/* Name */
          ZBUS_MSG_INIT(0)       						/* Initial value */
 );
 
-//ZBUS_SUBSCRIBER_DEFINE(can_tx_subscriber, 4);
 ZBUS_MSG_SUBSCRIBER_DEFINE(can_tx_subscriber);
 K_THREAD_DEFINE(can_tx_subscriber_task_id, 1024, can_tx_subscriber_task, NULL, NULL, NULL, 3, 0, 0);
 
+ZBUS_CHAN_DECLARE(gopro_cmd_chan);
 
-//K_WORK_DEFINE(can_tx_work, can_tx_handler);
 K_TIMER_DEFINE(can_tx_timer, can_tx_timer_handler, NULL);
 #define CAN_TX_TIMER_START	do{k_timer_start(&can_tx_timer, K_MSEC(100), K_MSEC(100));}while(0)
 
@@ -58,18 +56,20 @@ const struct can_timing mcp2515_8mhz_500 = {
 
 static const struct gpio_dt_spec mcp_rst_switch = 	GPIO_DT_SPEC_GET_OR(DT_NODELABEL(mcp_rst_switch), gpios, {0});
 const struct device *const can_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_canbus));
-const struct can_frame heart_beat_frame = {
-			.flags = 0,
-			.id = GPCAN_HEART_BEAT_ID,
-			.dlc = 8,
-			.data = {0,0,0,0,0,0,0,0}
-	};
-	
+
+const struct can_frame err_state_frame = {
+		.flags = 0,
+		.id = GPCAN_REPLY_MSG_ID,
+		.dlc = 1,
+		.data = {0xFF,0,0,0,0,0,0,0}
+};
+
+
 #ifdef GPCAN_ENABLE_FILTER
 const struct can_filter goprocan_filter = {
         .flags = 0,
-        .id = GPCAN_INPUT_MSG_ID,
-        .mask = CAN_STD_ID_MASK
+        .id = GPCAN_INPUT_CMD_ID,
+        .mask = 0x7F8
 };
 #else
 const struct can_filter goprocan_filter = {
@@ -82,7 +82,54 @@ const struct can_filter goprocan_filter = {
 
 static void rx_callback_function(const struct device *dev, struct can_frame *frame, void *user_data)
 {
-        LOG_INF("Get CAN frame 0x%0X",frame->id);
+    int err;
+	struct gopro_cmd_t gopro_cmd;    
+	LOG_INF("Get CAN frame 0x%0X",frame->id);
+
+	memset(&gopro_cmd,0,sizeof(struct gopro_cmd_t));
+
+	switch (frame->id)
+	{
+	case GPCAN_INPUT_CMD_ID: //GoPro cmd
+		gopro_cmd.cmd_type = 72;
+		break;
+
+	case GPCAN_INPUT_SET_ID: //GoPro cmd
+		gopro_cmd.cmd_type = 74;
+		break;
+
+	case GPCAN_INPUT_QUERY_ID: //GoPro cmd
+		gopro_cmd.cmd_type = 76;
+		break;
+
+	default:
+		return;
+		break;
+	}
+
+
+	if((frame->dlc > 0) && (frame->dlc <= GOPRO_CMD_DATA_LEN)){
+
+		gopro_cmd.len = frame->dlc;
+		
+		for(uint32_t i=0; i<frame->dlc; i++){
+			gopro_cmd.data[i] = frame->data[i];
+		}
+
+		err = zbus_chan_pub(&gopro_cmd_chan, &gopro_cmd, K_NO_WAIT);
+		if(err != 0){
+			if(err == -ENOMSG){
+				LOG_ERR("Invalid Gopro state, skip cmd");
+				
+				zbus_chan_pub(&can_tx_chan, &err_state_frame, K_NO_WAIT);
+				
+				return;
+			}
+			LOG_ERR("CMD chan pub failed: %d",err);
+		}
+	}	
+
+
 }
 
 

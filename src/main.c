@@ -31,46 +31,76 @@
 #include <leds.h>
 
 LOG_MODULE_REGISTER(central_gopro, LOG_LEVEL_DBG);
-
-/* payload buffer element size. */
-#define DATA_BUF_SIZE 20
-
-#define GOPRO_WRITE_TIMEOUT K_MSEC(150)
-
 static struct k_work scan_work;
 
-K_SEM_DEFINE(gopro_write_sem, 0, 1);
-
 //#define BT_AUTO_CONNECT
-
 #ifndef BT_AUTO_CONNECT
 struct bt_conn_le_create_param *conn_params = BT_CONN_LE_CREATE_PARAM(BT_CONN_LE_OPT_CODED | BT_CONN_LE_OPT_NO_1M,BT_GAP_SCAN_FAST_INTERVAL,BT_GAP_SCAN_FAST_INTERVAL);
 #endif
 
-struct write_data_t {
-	void *fifo_reserved;
-	uint16_t len;
-	uint8_t  data[DATA_BUF_SIZE];
-};
-
-static K_FIFO_DEFINE(fifo_uart_rx_data);
-
 static struct bt_conn *default_conn;
 static struct bt_gopro_client gopro_client;
 
-static struct write_data_t cmd_buf_list[] = {
-	{.len = 4, .data={3,1,1,1}},  //shutter on
-	{.len = 4, .data={3,1,1,0}}	  //shutter off
-}; 
+// static struct write_data_t cmd_buf_list[] = {
+// 	{.len = 4, .data={3,1,1,1}},  //shutter on
+// 	{.len = 4, .data={3,1,1,0}}	  //shutter off
+// }; 
 
-static struct write_data_t cmd_hl = {.len=2, .data={1,0x18}};
+// static struct write_data_t cmd_hl = {.len=2, .data={1,0x18}};
 
 static void led_idle_handler(struct k_work *work);
 static void led_idle_timer_handler(struct k_timer *dummy);
+static void gopro_cmd_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
+bool gopro_cmd_validator(const void* msg, size_t msg_size);
 
 K_WORK_DEFINE(led_idle_work, led_idle_handler);
 K_TIMER_DEFINE(led_idle_timer, led_idle_timer_handler, NULL);
 #define LED_TIMER_START	do{k_timer_start(&led_idle_timer, K_SECONDS(5), K_SECONDS(5));}while(0)
+
+ZBUS_CHAN_DEFINE(gopro_cmd_chan,                        /* Name */
+         struct gopro_cmd_t,                       		/* Message type */
+         gopro_cmd_validator,                           /* Validator */
+         NULL,                                       	/* User Data */
+         ZBUS_OBSERVERS(gopro_cmd_subscriber),  	    /* observers */
+         ZBUS_MSG_INIT(0)       						/* Initial value */
+);
+
+ZBUS_MSG_SUBSCRIBER_DEFINE(gopro_cmd_subscriber);
+K_THREAD_DEFINE(gopro_cmd_subscriber_task_id, 1024, gopro_cmd_subscriber_task, NULL, NULL, NULL, 3, 0, 0);
+
+ZBUS_CHAN_DECLARE(can_tx_chan);
+
+static void gopro_cmd_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
+	int err;
+	struct gopro_cmd_t gopro_cmd;
+	ARG_UNUSED(ptr1);
+	ARG_UNUSED(ptr2);
+	ARG_UNUSED(ptr3);
+	const struct zbus_channel *chan;
+
+	while (!zbus_sub_wait_msg(&gopro_cmd_subscriber, &chan, &gopro_cmd, K_FOREVER)) {
+		if (&gopro_cmd_chan == chan) {
+				LOG_HEXDUMP_DBG(gopro_cmd.data, gopro_cmd.len,"CMD Data to send:");
+
+				err = bt_gopro_client_send(&gopro_client, &gopro_cmd);
+
+				if (err) {
+					LOG_WRN("Failed to send data over BLE connection (err %d)", err);
+				}
+
+			}
+	}
+};
+
+bool gopro_cmd_validator(const void* msg, size_t msg_size) {
+
+	if(gopro_client_get_state() == GPSTATE_CONNECTED){
+		return 1;
+	}else{
+		return 0;
+	}
+
+}
 
 static void ble_data_sent(struct bt_gopro_client *nus, uint8_t err, const uint8_t *const data, uint16_t len)
 {
@@ -78,7 +108,7 @@ static void ble_data_sent(struct bt_gopro_client *nus, uint8_t err, const uint8_
 	ARG_UNUSED(data);
 	ARG_UNUSED(len);
 
-	k_sem_give(&gopro_write_sem);
+	// k_sem_give(&gopro_write_sem);
 
 	if (err) {
 		LOG_WRN("ATT error code: 0x%02X", err);
@@ -87,9 +117,27 @@ static void ble_data_sent(struct bt_gopro_client *nus, uint8_t err, const uint8_
 
 static uint8_t ble_data_received(struct bt_gopro_client *nus,	const uint8_t *data, uint16_t len)
 {
+	struct can_frame tx_frame;
 	ARG_UNUSED(nus);
 
 	LOG_HEXDUMP_DBG(data,len,"Recieve data:");
+
+	if((len > 0) && (len <= GOPRO_CMD_DATA_LEN) ){
+		
+		memset(&tx_frame,0,sizeof(struct can_frame));
+		tx_frame.id = GPCAN_REPLY_MSG_ID;
+		tx_frame.dlc = len;
+		
+		for(uint32_t i=0; i<len; i++){
+			tx_frame.data[i] = data[i];
+		}
+		
+		zbus_chan_pub(&can_tx_chan, &tx_frame, K_NO_WAIT);
+
+
+	}else{
+		LOG_ERR("Can't send reply, len: %d",len);
+	}
 
 	return BT_GATT_ITER_CONTINUE;
 }
@@ -569,21 +617,5 @@ int main(void)
 
 	LOG_INF("Starting Bluetooth Central");
 
-	for (;;) {
-		/* Wait indefinitely for data to be sent over Bluetooth */
-		struct write_data_t *buf = k_fifo_get(&fifo_uart_rx_data,K_FOREVER);
-
-		LOG_HEXDUMP_INF(buf->data, buf->len,"GET Data to send:");
-
-		err = bt_gopro_client_send(&gopro_client, buf->data, buf->len);
-
-		if (err) {
-			LOG_WRN("Failed to send data over BLE connection (err %d)", err);
-		}
-
-		err = k_sem_take(&gopro_write_sem, GOPRO_WRITE_TIMEOUT);
-		if (err) {
-			LOG_WRN("Data send timeout");
-		}
-	}
+	return 0;
 }
