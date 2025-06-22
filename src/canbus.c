@@ -42,6 +42,7 @@ ZBUS_MSG_SUBSCRIBER_DEFINE(can_tx_subscriber);
 K_THREAD_DEFINE(can_tx_subscriber_task_id, 1024, can_tx_subscriber_task, NULL, NULL, NULL, 3, 0, 0);
 
 ZBUS_CHAN_DECLARE(gopro_cmd_chan);
+ZBUS_CHAN_DECLARE(gopro_state_chan);
 
 K_TIMER_DEFINE(can_tx_timer, can_tx_timer_handler, NULL);
 #define CAN_TX_TIMER_START	do{k_timer_start(&can_tx_timer, K_MSEC(100), K_MSEC(100));}while(0)
@@ -240,17 +241,27 @@ static void can_tx_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
 };
 
 static void can_tx_timer_handler(struct k_timer *dummy){
+	int err;
 	struct can_frame tx_frame;
+	struct gopro_state_t gopro_state;
+
 	memset(&tx_frame,0,sizeof(struct can_frame));
+
+	err = zbus_chan_read(&gopro_state_chan, &gopro_state, K_MSEC(20));
+
+	if(err != 0){
+		LOG_ERR("Failed to get GoPro state data");
+		return;
+	}
 
 	tx_frame.id = GPCAN_HEART_BEAT_ID;
 	tx_frame.dlc = 3;
 
-	tx_frame.data[0] = gopro_client_get_state();
+	tx_frame.data[0] = gopro_state.state;
 	tx_frame.data[1] = 0;  //rec on/off
 	tx_frame.data[2] = 85; //Battery 
 
-	zbus_chan_pub(&can_tx_chan, &tx_frame, K_NO_WAIT);
+	zbus_chan_pub(&can_tx_chan, &tx_frame, K_MSEC(20));
 };
 
 

@@ -14,6 +14,14 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(gopro_c, LOG_LEVEL_DBG);
 
+ZBUS_CHAN_DEFINE(gopro_state_chan,                     	/* Name */
+	struct gopro_state_t,                   		      	/* Message type */
+	NULL,                                       	/* Validator */
+	NULL,                                       	/* User Data */
+	ZBUS_OBSERVERS_EMPTY,  	        		/* observers */
+	ZBUS_MSG_INIT(0)       						/* Initial value */
+);
+
 
 
 static uint8_t on_received_cmd(struct bt_conn *conn, struct bt_gatt_subscribe_params *params, const void *data, uint16_t length);
@@ -98,9 +106,7 @@ int gopro_client_setname(char *name, uint8_t len){
 
 
 static void gopro_client_update_state(void){
-
-
-
+	zbus_chan_pub(&gopro_state_chan, &gopro_state, K_MSEC(10));
 };
 
 
