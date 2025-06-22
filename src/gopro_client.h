@@ -48,13 +48,29 @@ enum gopro_state_list_t{
     GPSTATE_END
 };
 
+enum gopro_handle_list_t{
+    GP_HANDLE_CMD,
+    GP_HANDLE_SETTINGS,
+    GP_HANDLE_QUERY,
+    GP_HANDLE_END,
+};
+
+enum gopro_flag_t{
+	GOPRO_C_INITIALIZED,
+	GOPRO_C_CMD_NOTIF_ENABLED,
+	GOPRO_C_SETTINGS_NOTIF_ENABLED,
+	GOPRO_C_QUERY_NOTIF_ENABLED,
+	GOPRO_C_CMD_WRITE_PENDING,
+	GOPRO_C_SETTINGS_WRITE_PENDING,
+	GOPRO_C_QUERY_WRITE_PENDING
+};
+
 struct gopro_state_t {
 	struct bt_scan_device_info device_info;
 	bt_addr_le_t addr;
 	enum gopro_state_list_t  state;
 	char name[GOPRO_NAME_LEN];
 };
-
 
 struct gopro_cmd_t {
 	uint32_t len;
@@ -68,17 +84,9 @@ struct gopro_cmd_t {
  * the device.
  */
 struct bt_gopro_client_handles {
-	uint16_t gp072;			/* Handle of the GP-0072 Command characteristic */
-	uint16_t gp073;			/* Handle of the GP-0073 characteristic */
-	uint16_t gp073_ccc; 	/* Handle of the CCC descriptor of the GP0073 characteristic */
-
-	uint16_t gp074;			/* Handle of the GP-0074 Settings characteristic */
-	uint16_t gp075;			/* Handle of the GP-0075 characteristic */
-	uint16_t gp075_ccc; 	/* Handle of the CCC descriptor of the GP0075 characteristic */
-
-	uint16_t gp076;			/* Handle of the GP-0074 Settings characteristic */
-	uint16_t gp077;			/* Handle of the GP-0075 characteristic */
-	uint16_t gp077_ccc; 	/* Handle of the CCC descriptor of the GP0075 characteristic */
+	uint16_t write;			/* Handle of the GP-0072 Command characteristic */
+	uint16_t notify;		/* Handle of the GP-0073 characteristic */
+	uint16_t notify_ccc; 	/* Handle of the CCC descriptor of the GP0073 characteristic */
 };
 
 struct bt_gopro_client;
@@ -131,17 +139,13 @@ struct bt_gopro_client {
         /** Handles on the connected peer device that are needed
          * to interact with the device.
          */
-	struct bt_gopro_client_handles handles;
+	struct bt_gopro_client_handles handles[GP_HANDLE_END];
 
         /** GATT subscribe parameters for NUS TX Characteristic. */
-	struct bt_gatt_subscribe_params cmd_notif_params;
-	struct bt_gatt_subscribe_params settings_notif_params;
-	struct bt_gatt_subscribe_params query_notif_params;
+	struct bt_gatt_subscribe_params notif_params[GP_HANDLE_END];
 
         /** GATT write parameters for NUS RX Characteristic. */
-	struct bt_gatt_write_params cmd_write_params;
-	struct bt_gatt_write_params settings_write_params;
-	struct bt_gatt_write_params query_write_params;
+	struct bt_gatt_write_params write_params[GP_HANDLE_END];
 
         /** Application callbacks. */
 	struct bt_gopro_client_cb cb;
