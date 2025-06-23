@@ -113,6 +113,8 @@ static void gopro_client_update_state(void){
 static uint8_t on_received_cmd(struct bt_conn *conn, struct bt_gatt_subscribe_params *params, const void *data, uint16_t length)
 {
 	struct bt_gopro_client *nus;
+	struct gopro_cmd_t gopro_cmd;
+	uint8_t *pdata = data;
 
 	nus = CONTAINER_OF(params, struct bt_gopro_client, notif_params[GP_HANDLE_CMD]);
 
@@ -130,8 +132,22 @@ static uint8_t on_received_cmd(struct bt_conn *conn, struct bt_gatt_subscribe_pa
 	}
 
 	LOG_DBG("[NOTIFICATION] length %u handle %d", length, params->value_handle);
+	
 	if (nus->cb.received) {
-		return nus->cb.received(nus, data, length);
+		gopro_cmd.cmd_type = GP_HANDLE_CMD;
+		
+		if(length > GOPRO_CMD_DATA_LEN){
+			gopro_cmd.len = GOPRO_CMD_DATA_LEN;
+			LOG_WRN("Reply Len > Buf Len");
+		}else{
+			gopro_cmd.len = length;
+		}
+
+		for(uint32_t i=0; i<gopro_cmd.len; i++){
+			gopro_cmd.data[i]=(uint8_t)(pdata[i]);
+		}
+
+		return nus->cb.received(nus, &gopro_cmd);
 	}
 
 	return BT_GATT_ITER_CONTINUE;
@@ -140,15 +156,16 @@ static uint8_t on_received_cmd(struct bt_conn *conn, struct bt_gatt_subscribe_pa
 static uint8_t on_received_settings(struct bt_conn *conn, struct bt_gatt_subscribe_params *params, const void *data, uint16_t length)
 {
 	struct bt_gopro_client *nus;
+	struct gopro_cmd_t gopro_cmd;
+	uint8_t *pdata = data;
 
 	nus = CONTAINER_OF(params, struct bt_gopro_client, notif_params[GP_HANDLE_SETTINGS]);
 
 	if (!data) {
 		LOG_DBG("[UNSUBSCRIBED]");
 		params->value_handle = 0;
-		
+
 		atomic_clear_bit(&nus->state, GOPRO_C_SETTINGS_NOTIF_ENABLED);
-		
 		if (nus->cb.unsubscribed) {
 			nus->cb.unsubscribed(nus);
 		}
@@ -157,8 +174,22 @@ static uint8_t on_received_settings(struct bt_conn *conn, struct bt_gatt_subscri
 	}
 
 	LOG_DBG("[NOTIFICATION] length %u handle %d", length, params->value_handle);
+	
 	if (nus->cb.received) {
-		return nus->cb.received(nus, data, length);
+			gopro_cmd.cmd_type = GP_HANDLE_SETTINGS;
+			
+			if(length > GOPRO_CMD_DATA_LEN){
+				gopro_cmd.len = GOPRO_CMD_DATA_LEN;
+				LOG_WRN("Reply Len > Buf Len");
+			}else{
+				gopro_cmd.len = length;
+			}
+
+			for(uint32_t i=0; i<gopro_cmd.len; i++){
+				gopro_cmd.data[i]=(uint8_t)(pdata[i]);
+			}
+
+		return nus->cb.received(nus, &gopro_cmd);
 	}
 
 	return BT_GATT_ITER_CONTINUE;
@@ -167,6 +198,8 @@ static uint8_t on_received_settings(struct bt_conn *conn, struct bt_gatt_subscri
 static uint8_t on_received_query(struct bt_conn *conn, struct bt_gatt_subscribe_params *params, const void *data, uint16_t length)
 {
 	struct bt_gopro_client *nus;
+	struct gopro_cmd_t gopro_cmd;
+	uint8_t *pdata = data;
 
 	nus = CONTAINER_OF(params, struct bt_gopro_client, notif_params[GP_HANDLE_QUERY]);
 
@@ -185,7 +218,20 @@ static uint8_t on_received_query(struct bt_conn *conn, struct bt_gatt_subscribe_
 
 	LOG_DBG("[NOTIFICATION] length %u handle %d", length, params->value_handle);
 	if (nus->cb.received) {
-		return nus->cb.received(nus, data, length);
+			gopro_cmd.cmd_type = GP_HANDLE_QUERY;
+			
+			if(length > GOPRO_CMD_DATA_LEN){
+				gopro_cmd.len = GOPRO_CMD_DATA_LEN;
+				LOG_WRN("Reply Len > Buf Len");
+			}else{
+				gopro_cmd.len = length;
+			}
+
+			for(uint32_t i=0; i<gopro_cmd.len; i++){
+				gopro_cmd.data[i]=(uint8_t)(pdata[i]);
+			}
+
+		return nus->cb.received(nus, &gopro_cmd);
 	}
 
 	return BT_GATT_ITER_CONTINUE;
@@ -274,23 +320,26 @@ int bt_gopro_client_send(struct bt_gopro_client *nus_c, struct gopro_cmd_t *gopr
 		return -ENOTCONN;
 	}
 
-	switch (gopro_cmd->cmd_type)
+	if(gopro_cmd->cmd_type >= GP_HANDLE_END){
+		return -ENOTSUP;
+	}
+
+	handle_index = gopro_cmd->cmd_type;
+
+	switch (handle_index)
 	{
-	case 72:
-		handle_index = 	GP_HANDLE_CMD;
+	case GP_HANDLE_CMD:
 		flag_bit = GOPRO_C_CMD_WRITE_PENDING;
 		break;
-	case 74:
-		handle_index = 	GP_HANDLE_SETTINGS;
+	case GP_HANDLE_SETTINGS:
 		flag_bit = GOPRO_C_SETTINGS_WRITE_PENDING;
 		break;
-	case 76:
-		handle_index = 	GP_HANDLE_QUERY;
+	case GP_HANDLE_QUERY:
 		flag_bit = GOPRO_C_QUERY_WRITE_PENDING;
 		break;
 	
 	default:
-		LOG_ERR("Invalid cmd type (not 72,74,76): %d",gopro_cmd->cmd_type);
+		LOG_ERR("Invalid cmd type: %d",gopro_cmd->cmd_type);
 		return -ENOTSUP;
 		break;
 	}

@@ -92,15 +92,15 @@ static void rx_callback_function(const struct device *dev, struct can_frame *fra
 	switch (frame->id)
 	{
 	case GPCAN_INPUT_CMD_ID: //GoPro cmd
-		gopro_cmd.cmd_type = 72;
+		gopro_cmd.cmd_type = GP_HANDLE_CMD;
 		break;
 
 	case GPCAN_INPUT_SET_ID: //GoPro cmd
-		gopro_cmd.cmd_type = 74;
+		gopro_cmd.cmd_type = GP_HANDLE_SETTINGS;
 		break;
 
 	case GPCAN_INPUT_QUERY_ID: //GoPro cmd
-		gopro_cmd.cmd_type = 76;
+		gopro_cmd.cmd_type = GP_HANDLE_QUERY;
 		break;
 
 	default:

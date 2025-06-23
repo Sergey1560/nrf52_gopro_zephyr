@@ -105,7 +105,7 @@ struct bt_gopro_client_cb {
 	 * @retval BT_GATT_ITER_CONTINUE To keep notifications enabled.
 	 * @retval BT_GATT_ITER_STOP To disable notifications.
 	 */
-	uint8_t (*received)(struct bt_gopro_client *nus, const uint8_t *data, uint16_t len);
+	uint8_t (*received)(struct bt_gopro_client *nus, const struct gopro_cmd_t *gopro_cmd);
 
 	/** @brief Data sent callback.
 	 *

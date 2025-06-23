@@ -259,11 +259,11 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 
 	LOG_INF("Disconnected: %s, reason 0x%02x %s", addr, reason, bt_hci_err_to_str(reason));
 
-	//gopro_led_mode_set(LED_NUM_BT,LED_MODE_BLINK_5S);
+	gopro_led_mode_set(LED_NUM_BT,LED_MODE_BLINK_5S);
 
-	// if (default_conn != conn) {
-	// 	return;
-	// }
+	if (default_conn != conn) {
+		return;
+	}
 
 	bt_conn_unref(default_conn);
 	default_conn = NULL;
