@@ -247,19 +247,20 @@ static void can_tx_timer_handler(struct k_timer *dummy){
 
 	memset(&tx_frame,0,sizeof(struct can_frame));
 
-	err = zbus_chan_read(&gopro_state_chan, &gopro_state, K_MSEC(20));
+	err = zbus_chan_read(&gopro_state_chan, &gopro_state, K_MSEC(50));
 
 	if(err != 0){
-		LOG_ERR("Failed to get GoPro state data");
+		LOG_ERR("Failed to get GoPro state data %d",err);
 		return;
 	}
 
 	tx_frame.id = GPCAN_HEART_BEAT_ID;
-	tx_frame.dlc = 3;
+	tx_frame.dlc = 4;
 
 	tx_frame.data[0] = gopro_state.state;
-	tx_frame.data[1] = 0;  //rec on/off
-	tx_frame.data[2] = 85; //Battery 
+	tx_frame.data[1] = gopro_state.record; 
+	tx_frame.data[2] = gopro_state.battery;
+	tx_frame.data[3] = gopro_state.video_count; 
 
 	zbus_chan_pub(&can_tx_chan, &tx_frame, K_MSEC(20));
 };

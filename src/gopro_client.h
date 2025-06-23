@@ -69,6 +69,9 @@ struct gopro_state_t {
 	struct bt_scan_device_info device_info;
 	bt_addr_le_t addr;
 	enum gopro_state_list_t  state;
+	uint32_t	video_count;
+	uint8_t		record;
+	uint8_t		battery;
 	char name[GOPRO_NAME_LEN];
 };
 

@@ -10,6 +10,7 @@
 #include <zephyr/zbus/zbus.h>
 
 #include <gopro_client.h>
+#include <gopro_ids.h>
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(gopro_c, LOG_LEVEL_DBG);
@@ -22,7 +23,7 @@ ZBUS_CHAN_DEFINE(gopro_state_chan,                     	/* Name */
 	ZBUS_MSG_INIT(0)       						/* Initial value */
 );
 
-
+static int gopro_parse_query_status_notify(const void *data, uint16_t length);
 
 static uint8_t on_received_cmd(struct bt_conn *conn, struct bt_gatt_subscribe_params *params, const void *data, uint16_t length);
 static uint8_t on_received_settings(struct bt_conn *conn, struct bt_gatt_subscribe_params *params, const void *data, uint16_t length);
@@ -230,6 +231,8 @@ static uint8_t on_received_query(struct bt_conn *conn, struct bt_gatt_subscribe_
 			for(uint32_t i=0; i<gopro_cmd.len; i++){
 				gopro_cmd.data[i]=(uint8_t)(pdata[i]);
 			}
+
+			gopro_parse_query_status_notify(data,length);
 
 		return nus->cb.received(nus, &gopro_cmd);
 	}
@@ -514,4 +517,76 @@ int bt_gopro_subscribe_receive(struct bt_gopro_client *nus_c)
 	err=gopro_set_subscribe(nus_c, GP_HANDLE_QUERY);
 
 	return err;
+}
+
+
+static int gopro_parse_query_status_notify(const void *data, uint16_t length){
+	uint8_t *pdata = data;
+	int total_data_len;
+	int result;
+	int id;
+	int id_len;
+	int err;
+	
+
+	if(pdata[0] != (length-1)){
+		LOG_ERR("Not REPLY FMT");
+		return -1;
+	}
+
+	total_data_len = pdata[0];
+	pdata++;
+
+	id = *pdata++;
+	result = *pdata++;
+
+	if((id != 0x93) || (result != 0)){
+		LOG_WRN("Not status notify packet. CMD: 0x%0X result: %d",id,result);
+		return -1;
+	}
+
+	total_data_len = total_data_len - 3;
+
+	while(total_data_len > 0){
+
+		id = *pdata++;
+		id_len = *pdata++;
+
+		total_data_len = total_data_len - 2;
+
+		switch (id)
+		{
+		case GOPRO_STATUS_ID_ENCODING:
+			gopro_state.record = *pdata++;
+			total_data_len--;
+			LOG_DBG("Encoding: %d",gopro_state.record);
+			break;
+
+		case GOPRO_STATUS_ID_VIDEO_NUM:
+			gopro_state.video_count = 0;
+			for(uint32_t i=0; i<id_len; i++){
+				total_data_len--;
+				gopro_state.video_count = (gopro_state.video_count*256) + *pdata++;
+			}	
+			LOG_DBG("Duration: %d",gopro_state.video_count);
+			break;
+
+		case GOPRO_STATUS_ID_BAT_PERCENT:
+			gopro_state.battery = *pdata++;
+			total_data_len--;
+			LOG_DBG("Battery: %d",gopro_state.battery);
+			break;
+	
+
+		default:
+			LOG_WRN("Unknown status %d (0x%0X)",id,id);
+			pdata += id_len;
+			total_data_len -= id_len;
+			break;
+		}
+	}
+
+	gopro_client_update_state();
+
+	return 0;
 }
