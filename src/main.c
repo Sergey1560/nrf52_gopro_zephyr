@@ -115,28 +115,29 @@ static void ble_data_sent(struct bt_gopro_client *nus, uint8_t err, const uint8_
 	}
 }
 
-static uint8_t ble_data_received(struct bt_gopro_client *nus,	const uint8_t *data, uint16_t len)
+static uint8_t ble_data_received(struct bt_gopro_client *nus, const struct gopro_cmd_t *gopro_cmd)
 {
 	struct can_frame tx_frame;
 	ARG_UNUSED(nus);
 
-	LOG_HEXDUMP_DBG(data,len,"Recieve data:");
+	LOG_INF("Get reply on %d",gopro_cmd->cmd_type);
+	LOG_HEXDUMP_DBG(gopro_cmd->data,gopro_cmd->len,"Recieve data:");
 
-	if((len > 0) && (len <= GOPRO_CMD_DATA_LEN) ){
+	if((gopro_cmd->len > 0) && (gopro_cmd->len <= GOPRO_CMD_DATA_LEN) ){
 		
 		memset(&tx_frame,0,sizeof(struct can_frame));
 		tx_frame.id = GPCAN_REPLY_MSG_ID;
-		tx_frame.dlc = len;
+		tx_frame.dlc = gopro_cmd->len;
 		
-		for(uint32_t i=0; i<len; i++){
-			tx_frame.data[i] = data[i];
+		for(uint32_t i=0; i<gopro_cmd->len; i++){
+			tx_frame.data[i] = gopro_cmd->data[i];
 		}
 		
 		zbus_chan_pub(&can_tx_chan, &tx_frame, K_NO_WAIT);
 
 
 	}else{
-		LOG_ERR("Can't send reply, len: %d",len);
+		LOG_ERR("Can't send reply, len: %d",gopro_cmd->len);
 	}
 
 	return BT_GATT_ITER_CONTINUE;
