@@ -219,7 +219,7 @@ static uint8_t on_received_query(struct bt_conn *conn, struct bt_gatt_subscribe_
 	LOG_DBG("[NOTIFICATION] length %u handle %d", length, params->value_handle);
 	if (nus->cb.received) {
 			gopro_cmd.cmd_type = GP_HANDLE_QUERY;
-			
+		
 			if(length > GOPRO_CMD_DATA_LEN){
 				gopro_cmd.len = GOPRO_CMD_DATA_LEN;
 				LOG_WRN("Reply Len > Buf Len");

@@ -118,21 +118,41 @@ static void ble_data_sent(struct bt_gopro_client *nus, uint8_t err, const uint8_
 static uint8_t ble_data_received(struct bt_gopro_client *nus, const struct gopro_cmd_t *gopro_cmd)
 {
 	struct can_frame tx_frame;
+	int data_len;
 	ARG_UNUSED(nus);
 
-	LOG_INF("Get reply on %d",gopro_cmd->cmd_type);
+	LOG_INF("Get reply on %d, len %d",gopro_cmd->cmd_type,gopro_cmd->len);
 	LOG_HEXDUMP_DBG(gopro_cmd->data,gopro_cmd->len,"Recieve data:");
 
-	if((gopro_cmd->len > 0) && (gopro_cmd->len <= GOPRO_CMD_DATA_LEN) ){
-		
+	if(gopro_cmd->len > 0){
 		memset(&tx_frame,0,sizeof(struct can_frame));
 		tx_frame.id = GPCAN_REPLY_MSG_ID;
-		tx_frame.dlc = gopro_cmd->len;
-		
-		for(uint32_t i=0; i<gopro_cmd->len; i++){
-			tx_frame.data[i] = gopro_cmd->data[i];
+
+		if(gopro_cmd->data[0] == gopro_cmd->len-1){
+			data_len = gopro_cmd->data[0];
+			LOG_DBG("Set dlc data[0] %d",data_len);
+		}else{
+			data_len = gopro_cmd->len;
+			LOG_DBG("Frame error, set dlc len %d",data_len);
 		}
 		
+		if(data_len > 8){
+			tx_frame.dlc = 8;
+
+			for(uint32_t i=0; i<tx_frame.dlc; i++){
+				tx_frame.data[i] = 0xEE;
+			}	
+
+			LOG_WRN("Reply to long: %d bytes",data_len);
+		}else{
+			tx_frame.dlc = data_len;
+			
+			for(uint32_t i=0; i<tx_frame.dlc; i++){
+				tx_frame.data[i] = gopro_cmd->data[i+1];
+			}
+			
+		}
+
 		zbus_chan_pub(&can_tx_chan, &tx_frame, K_NO_WAIT);
 
 

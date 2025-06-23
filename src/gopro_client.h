@@ -37,7 +37,7 @@ extern "C" {
 #define BT_UUID_GOPRO_QUERY_NOTIFY       	BT_UUID_DECLARE_128(BT_UUID_GOPRO_QUERY_NOTIFY_VAL)
 
 #define GOPRO_NAME_LEN	20
-#define GOPRO_CMD_DATA_LEN	8
+#define GOPRO_CMD_DATA_LEN	20
 
 enum gopro_state_list_t{
     GPSTATE_UNKNOWN,
