@@ -41,16 +41,39 @@ struct bt_conn_le_create_param *conn_params = BT_CONN_LE_CREATE_PARAM(BT_CONN_LE
 static struct bt_conn *default_conn;
 static struct bt_gopro_client gopro_client;
 
-// static struct write_data_t cmd_buf_list[] = {
-// 	{.len = 4, .data={3,1,1,1}},  //shutter on
-// 	{.len = 4, .data={3,1,1,0}}	  //shutter off
-// }; 
+const static struct gopro_cmd_t gopro_query_encoding = {
+	.len = 3,
+	.cmd_type = GP_HANDLE_QUERY,
+	.data={2,GOPRO_QUERY_STATUS_GET_STATUS,GOPRO_STATUS_ID_ENCODING}
+};
 
-// static struct write_data_t cmd_hl = {.len=2, .data={1,0x18}};
+const static struct gopro_cmd_t gopro_query_battery = {
+	.len = 3,
+	.cmd_type = GP_HANDLE_QUERY,
+	.data={2,GOPRO_QUERY_STATUS_GET_STATUS,GOPRO_STATUS_ID_BAT_PERCENT}
+};
+
+const static struct gopro_cmd_t gopro_query_video_num = {
+	.len = 3,
+	.cmd_type = GP_HANDLE_QUERY,
+	.data={2,GOPRO_QUERY_STATUS_GET_STATUS,GOPRO_STATUS_ID_VIDEO_NUM}
+};
+
+const static struct gopro_cmd_t gopro_query_register = {
+	.len = 5,
+	.cmd_type = GP_HANDLE_QUERY,
+	.data={4,GOPRO_QUERY_STATUS_REG_STATUS,GOPRO_STATUS_ID_ENCODING,GOPRO_STATUS_ID_VIDEO_NUM,GOPRO_STATUS_ID_BAT_PERCENT}
+};
+
+K_MSGQ_DEFINE(gopro_query_q, sizeof(struct gopro_cmd_t *), 10, 1);
+
+const static struct gopro_cmd_t *startup_query_list[] = {&gopro_query_register, &gopro_query_video_num, &gopro_query_battery, &gopro_query_encoding};
 
 static void led_idle_handler(struct k_work *work);
 static void led_idle_timer_handler(struct k_timer *dummy);
 static void gopro_cmd_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
+static void gopro_query_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
+
 bool gopro_cmd_validator(const void* msg, size_t msg_size);
 
 K_WORK_DEFINE(led_idle_work, led_idle_handler);
@@ -65,8 +88,20 @@ ZBUS_CHAN_DEFINE(gopro_cmd_chan,                        /* Name */
          ZBUS_MSG_INIT(0)       						/* Initial value */
 );
 
+ZBUS_CHAN_DEFINE(gopro_query_chan,                        /* Name */
+         uint8_t,                       		/* Message type */
+         NULL,                           /* Validator */
+         NULL,                                       	/* User Data */
+         ZBUS_OBSERVERS(gopro_query_subscriber),  	    /* observers */
+         ZBUS_MSG_INIT(0)       						/* Initial value */
+);
+
+
 ZBUS_MSG_SUBSCRIBER_DEFINE(gopro_cmd_subscriber);
 K_THREAD_DEFINE(gopro_cmd_subscriber_task_id, 1024, gopro_cmd_subscriber_task, NULL, NULL, NULL, 3, 0, 0);
+
+ZBUS_SUBSCRIBER_DEFINE(gopro_query_subscriber,4);
+K_THREAD_DEFINE(gopro_query_subscriber_task_id, 1024, gopro_query_subscriber_task, NULL, NULL, NULL, 7, 0, 0);
 
 ZBUS_CHAN_DECLARE(can_tx_chan);
 
@@ -92,14 +127,62 @@ static void gopro_cmd_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
 	}
 };
 
-bool gopro_cmd_validator(const void* msg, size_t msg_size) {
 
-	if(gopro_client_get_state() == GPSTATE_CONNECTED){
-		return 1;
-	}else{
+static void gopro_query_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
+	int err;
+	ARG_UNUSED(ptr1);
+	ARG_UNUSED(ptr2);
+	ARG_UNUSED(ptr3);
+	const struct zbus_channel *chan;
+	struct gopro_cmd_t *gopro_cmd;
+	int q_msg;
+
+	while (!zbus_sub_wait(&gopro_query_subscriber, &chan, K_FOREVER)) {
+		if (&gopro_query_chan == chan) {
+				
+				int q_msg = k_msgq_num_used_get(&gopro_query_q);
+				LOG_DBG("Msg in Q: %d",q_msg);
+
+				err = k_msgq_get(&gopro_query_q, &gopro_cmd, K_MSEC(50));
+
+				if(err == 0){
+					LOG_HEXDUMP_DBG(gopro_cmd->data, gopro_cmd->len,"Data from Q:");
+					err = zbus_chan_pub(&gopro_cmd_chan, gopro_cmd, K_MSEC(50));
+					if(err != 0){
+						LOG_ERR("Can't pub query command: %d",err);
+						}
+				}else{
+						LOG_ERR("Failed read Q: %d",err);
+					}
+		}
+	}
+};
+
+
+bool gopro_cmd_validator(const void* msg, size_t msg_size) {
+	struct gopro_cmd_t *gopro_cmd =  (struct gopro_cmd_t *)msg;
+
+	if(gopro_client_get_state() != GPSTATE_CONNECTED){
 		return 0;
 	}
 
+	if(gopro_cmd->len >= GOPRO_CMD_DATA_LEN){
+		return 0;
+	}
+
+	switch (gopro_cmd->cmd_type)
+	{
+	case GP_HANDLE_CMD:
+	case GP_HANDLE_SETTINGS:
+	case GP_HANDLE_QUERY:
+		break;
+	
+	default:
+		return 0;
+		break;
+	}
+
+	return 1;
 }
 
 static void ble_data_sent(struct bt_gopro_client *nus, uint8_t err, const uint8_t *const data, uint16_t len)
@@ -108,7 +191,7 @@ static void ble_data_sent(struct bt_gopro_client *nus, uint8_t err, const uint8_
 	ARG_UNUSED(data);
 	ARG_UNUSED(len);
 
-	// k_sem_give(&gopro_write_sem);
+	LOG_DBG("Data send len: %d",len);
 
 	if (err) {
 		LOG_WRN("ATT error code: 0x%02X", err);
@@ -120,6 +203,7 @@ static uint8_t ble_data_received(struct bt_gopro_client *nus, const struct gopro
 	struct can_frame tx_frame;
 	int data_len;
 	ARG_UNUSED(nus);
+	int err;
 
 	LOG_INF("Get reply on %d, len %d",gopro_cmd->cmd_type,gopro_cmd->len);
 	LOG_HEXDUMP_DBG(gopro_cmd->data,gopro_cmd->len,"Recieve data:");
@@ -160,30 +244,55 @@ static uint8_t ble_data_received(struct bt_gopro_client *nus, const struct gopro
 		LOG_ERR("Can't send reply, len: %d",gopro_cmd->len);
 	}
 
+	int q_msg = k_msgq_num_used_get(&gopro_query_q);
+
+	LOG_DBG("Msg in Q: %d",q_msg);
+
+	if(q_msg != 0){
+		err = zbus_chan_notify(&gopro_query_chan, K_MSEC(10));
+
+		if(err != 0){
+			LOG_ERR("Failed notyfy chan: %d",err);
+		}
+	}
+
+	if(err != 0){
+		LOG_ERR("Chan notify failed: %d",err);
+	}
+
+
 	return BT_GATT_ITER_CONTINUE;
 }
 
 
 static void discovery_complete(struct bt_gatt_dm *dm, void *context)
 {
+	int err;
 	struct bt_gopro_client *nus = context;
+
 	LOG_INF("Service discovery completed");
 
 	bt_security_t sec_level_str = bt_conn_get_security(default_conn);
+	LOG_DBG("Security Level now: %d",sec_level_str);
 
-	LOG_INF("Security Level now: %d",sec_level_str);
+	//bt_gatt_dm_data_print(dm);
 
-	bt_gatt_dm_data_print(dm);
-
-	LOG_INF("Assign handles");
 	bt_gopro_handles_assign(dm, nus);
-	LOG_INF("Subscribe");
 	bt_gopro_subscribe_receive(nus);
-	LOG_INF("Release data");
 	bt_gatt_dm_data_release(dm);
+
+	LOG_DBG("Set connected mode");
 
 	gopro_led_mode_set(LED_NUM_BT,LED_MODE_ON);
 	gopro_client_set_sate(GPSTATE_CONNECTED);
+	
+	k_sleep(K_MSEC(1000));
+
+	err = zbus_chan_notify(&gopro_query_chan, K_MSEC(10));
+
+	if(err != 0){
+		LOG_ERR("Chan notify failed: %d",err);
+	}
 
 }
 
@@ -427,6 +536,19 @@ static int gopro_client_init(void){
 			.unsubscribed = NULL
 		}
 	};
+
+
+	for(uint32_t i=0; i < sizeof(startup_query_list)/sizeof(startup_query_list[0]); i++){
+		
+		LOG_HEXDUMP_DBG(startup_query_list[i]->data,startup_query_list[i]->len,"Push to Q:");
+		LOG_DBG("Push pointer 0x%0X",(uint32_t)startup_query_list[i]);
+		err = k_msgq_put(&gopro_query_q, &startup_query_list[i], K_MSEC(10));
+		if(err != 0){
+			LOG_ERR("Failed put to Q: %d",err);
+		}
+	}
+
+	LOG_DBG("Start-up Q init, messages: %d", k_msgq_num_used_get(&gopro_query_q));
 
 	err = bt_gopro_client_init(&gopro_client, &init);
 	if (err) {

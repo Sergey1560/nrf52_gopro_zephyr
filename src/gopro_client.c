@@ -10,7 +10,6 @@
 #include <zephyr/zbus/zbus.h>
 
 #include <gopro_client.h>
-#include <gopro_ids.h>
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(gopro_c, LOG_LEVEL_DBG);

@@ -12,6 +12,7 @@ extern "C" {
 
 #include <bluetooth/scan.h>
 
+#include <gopro_ids.h>
 
 #define BLE_UUID16_GOPRO_SERVICE    0xFEA6      
 
