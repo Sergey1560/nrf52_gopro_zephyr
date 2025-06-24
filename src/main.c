@@ -73,7 +73,6 @@ const static struct gopro_cmd_t *startup_query_list[] = {&gopro_query_register, 
 static void led_idle_handler(struct k_work *work);
 static void led_idle_timer_handler(struct k_timer *dummy);
 static void gopro_cmd_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
-static void gopro_query_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
 
 bool gopro_cmd_validator(const void* msg, size_t msg_size);
 
@@ -169,7 +168,6 @@ static uint8_t ble_data_received(struct bt_gopro_client *nus, const struct gopro
 	struct can_frame tx_frame;
 	int data_len;
 	ARG_UNUSED(nus);
-	int err;
 
 	LOG_INF("Get reply on %d, len %d",gopro_cmd->cmd_type,gopro_cmd->len);
 	LOG_HEXDUMP_DBG(gopro_cmd->data,gopro_cmd->len,"Recieve data:");

@@ -114,7 +114,7 @@ static uint8_t on_received_cmd(struct bt_conn *conn, struct bt_gatt_subscribe_pa
 {
 	struct bt_gopro_client *nus;
 	struct gopro_cmd_t gopro_cmd;
-	uint8_t *pdata = data;
+	uint8_t *pdata = (uint8_t *)data;
 
 	nus = CONTAINER_OF(params, struct bt_gopro_client, notif_params[GP_HANDLE_CMD]);
 
@@ -157,7 +157,7 @@ static uint8_t on_received_settings(struct bt_conn *conn, struct bt_gatt_subscri
 {
 	struct bt_gopro_client *nus;
 	struct gopro_cmd_t gopro_cmd;
-	uint8_t *pdata = data;
+	uint8_t *pdata = (uint8_t *)data;
 
 	nus = CONTAINER_OF(params, struct bt_gopro_client, notif_params[GP_HANDLE_SETTINGS]);
 
@@ -199,7 +199,7 @@ static uint8_t on_received_query(struct bt_conn *conn, struct bt_gatt_subscribe_
 {
 	struct bt_gopro_client *nus;
 	struct gopro_cmd_t gopro_cmd;
-	uint8_t *pdata = data;
+	uint8_t *pdata = (uint8_t *)data;
 
 	nus = CONTAINER_OF(params, struct bt_gopro_client, notif_params[GP_HANDLE_QUERY]);
 
@@ -520,13 +520,11 @@ int bt_gopro_subscribe_receive(struct bt_gopro_client *nus_c)
 
 
 static int gopro_parse_query_status_notify(const void *data, uint16_t length){
-	uint8_t *pdata = data;
+	uint8_t *pdata = (uint8_t *)data;
 	int total_data_len;
 	int result;
 	int id;
 	int id_len;
-	int err;
-	
 
 	if(pdata[0] != (length-1)){
 		LOG_ERR("Not REPLY FMT");
