@@ -1,121 +1,119 @@
-6] <dbg> can_mcp2515: mcp2515_init: Presc: 2, BS1: 7, BS2: 2
-[00:00:00.000,946] <dbg> can_mcp2515: mcp2515_init: Sample-point err : 0
+[00:00:00.000,946] <dbg> can_mcp2515: mcp2515_init: Presc: 2, BS1: 7, BS2: 2
+[00:00:00.000,976] <dbg> can_mcp2515: mcp2515_init: Sample-point err : 0
 *** Booting nRF Connect SDK v3.0.2-89ba1294ac9b ***
 *** Using Zephyr OS v4.0.99-f791c49f492c ***
-[00:00:00.483,734] <inf> gopro_leds: Set up LED at GPIO_0 pin 28
+[00:00:00.395,599] <inf> gopro_leds: Set up LED at GPIO_0 pin 28
 
-[00:00:00.483,795] <inf> gopro_leds: Set up LED at GPIO_1 pin 11
+[00:00:00.395,629] <inf> gopro_leds: Set up LED at GPIO_1 pin 11
 
-[00:00:00.483,856] <dbg> gopro_leds: leds_callback: Get led message
-[00:00:00.483,917] <dbg> canbus_gopro: canbus_init: CAN device ready
-[00:00:00.483,947] <dbg> canbus_gopro: canbus_init: MODE NORMAL Enabled.
-[00:00:00.484,619] <inf> canbus_gopro: CAN Start
-[00:00:00.490,783] <inf> fs_nvs: 2 Sectors of 4096 bytes
-[00:00:00.490,783] <inf> fs_nvs: alloc wra: 0, e68
-[00:00:00.490,814] <inf> fs_nvs: data wra: 0, 3b8
-[00:00:00.490,966] <inf> bt_sdc_hci_driver: SoftDevice Controller build revision: 
+[00:00:00.395,690] <dbg> gopro_leds: leds_callback: Get led message
+[00:00:00.395,782] <dbg> canbus_gopro: canbus_init: CAN device ready
+[00:00:00.395,782] <dbg> canbus_gopro: canbus_init: MODE NORMAL Enabled.
+[00:00:00.396,484] <inf> canbus_gopro: CAN Start
+[00:00:00.402,740] <inf> fs_nvs: 2 Sectors of 4096 bytes
+[00:00:00.402,770] <inf> fs_nvs: alloc wra: 0, e68
+[00:00:00.402,770] <inf> fs_nvs: data wra: 0, 3b8
+[00:00:00.402,923] <inf> bt_sdc_hci_driver: SoftDevice Controller build revision: 
                                             89 9a 50 8a 95 01 9c 58  fc 39 d2 c1 10 04 ee 02 |..P....X .9......
                                             64 ce 25 be                                      |d.%.             
-[00:00:00.494,964] <inf> bt_hci_core: HW Platform: Nordic Semiconductor (0x0002)
-[00:00:00.494,995] <inf> bt_hci_core: HW Variant: nRF52x (0x0002)
-[00:00:00.495,025] <inf> bt_hci_core: Firmware: Standard Bluetooth controller (0x00) Version 137.20634 Build 2617349514
-[00:00:00.495,452] <inf> bt_hci_core: No ID address. App must call settings_load()
-[00:00:00.495,452] <inf> central_gopro: Bluetooth initialized
-[00:00:00.495,452] <inf> central_gopro: GoPro Client module initialized
-[00:00:00.497,039] <inf> bt_hci_core: Identity: F6:4F:7D:39:A8:A5 (random)
-[00:00:00.497,070] <inf> bt_hci_core: HCI: version 6.0 (0x0e) revision 0x10f3, manufacturer 0x0059
-[00:00:00.497,100] <inf> bt_hci_core: LMP: version 6.0 (0x0e) subver 0x10f3
-[00:00:00.499,023] <dbg> central_gopro: main: Settings load done
-[00:00:00.499,053] <inf> central_gopro: Scan module initialized
-[00:00:00.499,237] <inf> central_gopro: Address filter added: D3:40:26:3B:FD:55 (random)
-[00:00:00.500,366] <inf> central_gopro: Scan started
-[00:00:00.500,396] <inf> central_gopro: Starting Bluetooth Central
-[00:00:00.577,728] <dbg> central_gopro: scan_filter_match: Filters matched. Address: D3:40:26:3B:FD:55 (random) connectable: 1
-[00:00:00.577,819] <dbg> gopro_leds: leds_callback: Get led message
-[00:00:00.577,850] <dbg> gopro_c: gopro_client_set_sate: Set GoPro state: 2
-[00:00:00.577,972] <dbg> central_gopro: eir_found: Camera ON, connecting
-[00:00:00.741,424] <inf> central_gopro: Connected: D3:40:26:3B:FD:55 (random)
-[00:00:00.741,577] <inf> central_gopro: Change security
-[00:00:00.742,218] <err> central_gopro: Stop LE scan failed (err 0)
-[00:00:01.092,376] <inf> central_gopro: Security changed: D3:40:26:3B:FD:55 (random) level 2
-[00:00:01.092,407] <inf> central_gopro: Start discovery
-[00:00:01.242,523] <inf> central_gopro: MTU exchange done
-[00:00:03.542,419] <inf> central_gopro: Service discovery completed
-[00:00:03.542,449] <dbg> central_gopro: discovery_complete: Security Level now: 2
-[00:00:03.542,480] <inf> gopro_c: Found handle for Notify characteristic for 0.
-[00:00:03.542,510] <inf> gopro_c: Found handle for CCC of GoPro Notify characteristic. 0x3B
-[00:00:03.542,541] <inf> gopro_c: Found handle for Write characteristic.
-[00:00:03.542,602] <inf> gopro_c: Found handle for Notify characteristic for 1.
-[00:00:03.542,633] <inf> gopro_c: Found handle for CCC of GoPro Notify characteristic. 0x40
-[00:00:03.542,663] <inf> gopro_c: Found handle for Write characteristic.
-[00:00:03.542,755] <inf> gopro_c: Found handle for Notify characteristic for 2.
-[00:00:03.542,755] <inf> gopro_c: Found handle for CCC of GoPro Notify characteristic. 0x45
-[00:00:03.542,846] <inf> gopro_c: Found handle for Write characteristic.
-[00:00:03.542,938] <dbg> gopro_c: gopro_set_subscribe: [SUBSCRIBED]
-[00:00:03.543,029] <dbg> gopro_c: gopro_set_subscribe: [SUBSCRIBED]
-[00:00:03.543,090] <dbg> gopro_c: gopro_set_subscribe: [SUBSCRIBED]
-[00:00:03.543,151] <dbg> central_gopro: discovery_complete: Set connected mode
-[00:00:03.543,212] <dbg> gopro_leds: leds_callback: Get led message
-[00:00:03.543,273] <dbg> gopro_c: gopro_client_set_sate: Set GoPro state: 3
-[00:00:04.543,457] <dbg> central_gopro: discovery_complete: Push to TX chan:
+[00:00:00.406,890] <inf> bt_hci_core: HW Platform: Nordic Semiconductor (0x0002)
+[00:00:00.406,951] <inf> bt_hci_core: HW Variant: nRF52x (0x0002)
+[00:00:00.406,982] <inf> bt_hci_core: Firmware: Standard Bluetooth controller (0x00) Version 137.20634 Build 2617349514
+[00:00:00.407,379] <inf> bt_hci_core: No ID address. App must call settings_load()
+[00:00:00.407,379] <inf> central_gopro: Bluetooth initialized
+[00:00:00.407,409] <inf> central_gopro: GoPro Client module initialized
+[00:00:00.408,966] <inf> bt_hci_core: Identity: F6:4F:7D:39:A8:A5 (random)
+[00:00:00.408,996] <inf> bt_hci_core: HCI: version 6.0 (0x0e) revision 0x10f3, manufacturer 0x0059
+[00:00:00.409,027] <inf> bt_hci_core: LMP: version 6.0 (0x0e) subver 0x10f3
+[00:00:00.410,949] <dbg> central_gopro: main: Settings load done
+[00:00:00.410,980] <inf> central_gopro: Scan module initialized
+[00:00:00.411,163] <inf> central_gopro: Address filter added: D3:40:26:3B:FD:55 (random)
+[00:00:00.412,261] <inf> central_gopro: Scan started
+[00:00:00.412,292] <inf> central_gopro: Starting Bluetooth Central
+[00:00:00.667,877] <dbg> central_gopro: scan_filter_match: Filters matched. Address: D3:40:26:3B:FD:55 (random) connectable: 1
+[00:00:00.667,968] <dbg> gopro_leds: leds_callback: Get led message
+[00:00:00.667,999] <dbg> gopro_c: gopro_client_set_sate: Set GoPro state: 2
+[00:00:00.668,121] <dbg> central_gopro: eir_found: Camera ON, connecting
+[00:00:00.822,265] <inf> central_gopro: Connected: D3:40:26:3B:FD:55 (random)
+[00:00:00.822,448] <inf> central_gopro: Change security
+[00:00:00.823,059] <err> central_gopro: Stop LE scan failed (err 0)
+[00:00:01.173,248] <inf> central_gopro: Security changed: D3:40:26:3B:FD:55 (random) level 2
+[00:00:01.173,278] <inf> central_gopro: Start discovery
+[00:00:01.323,394] <inf> central_gopro: MTU exchange done
+[00:00:03.673,278] <inf> central_gopro: Service discovery completed
+[00:00:03.673,309] <dbg> central_gopro: discovery_complete: Security Level now: 2
+[00:00:03.673,370] <inf> gopro_c: Found handle for Notify characteristic for 0.
+[00:00:03.673,370] <inf> gopro_c: Found handle for CCC of GoPro Notify characteristic. 0x3B
+[00:00:03.673,400] <inf> gopro_c: Found handle for Write characteristic.
+[00:00:03.673,461] <inf> gopro_c: Found handle for Notify characteristic for 1.
+[00:00:03.673,492] <inf> gopro_c: Found handle for CCC of GoPro Notify characteristic. 0x40
+[00:00:03.673,522] <inf> gopro_c: Found handle for Write characteristic.
+[00:00:03.673,614] <inf> gopro_c: Found handle for Notify characteristic for 2.
+[00:00:03.673,614] <inf> gopro_c: Found handle for CCC of GoPro Notify characteristic. 0x45
+[00:00:03.673,706] <inf> gopro_c: Found handle for Write characteristic.
+[00:00:03.673,828] <dbg> gopro_c: gopro_set_subscribe: [SUBSCRIBED]
+[00:00:03.673,889] <dbg> gopro_c: gopro_set_subscribe: [SUBSCRIBED]
+[00:00:03.673,950] <dbg> gopro_c: gopro_set_subscribe: [SUBSCRIBED]
+[00:00:03.674,011] <dbg> central_gopro: discovery_complete: Set connected mode
+[00:00:03.674,072] <dbg> gopro_leds: leds_callback: Get led message
+[00:00:03.674,133] <dbg> gopro_c: gopro_client_set_sate: Set GoPro state: 3
+[00:00:04.674,316] <dbg> central_gopro: discovery_complete: Push to TX chan:
                                         04 53 0a 27 46                                   |.S.'F            
-[00:00:04.543,487] <dbg> central_gopro: discovery_complete: Push pointer 0x44884
-[00:00:04.543,640] <dbg> central_gopro: discovery_complete: Push to TX chan:
+[00:00:04.674,346] <dbg> central_gopro: discovery_complete: Push pointer 0x44D68
+[00:00:04.674,499] <dbg> central_gopro: discovery_complete: Push to TX chan:
                                         02 13 27                                         |..'              
-[00:00:04.543,670] <dbg> central_gopro: discovery_complete: Push pointer 0x448A0
-[00:00:04.543,792] <dbg> central_gopro: discovery_complete: Push to TX chan:
+[00:00:04.674,530] <dbg> central_gopro: discovery_complete: Push pointer 0x44D84
+[00:00:04.674,652] <dbg> central_gopro: discovery_complete: Push to TX chan:
                                         02 13 46                                         |..F              
-[00:00:04.543,823] <dbg> central_gopro: discovery_complete: Push pointer 0x448BC
-[00:00:04.543,975] <dbg> central_gopro: discovery_complete: Push to TX chan:
+[00:00:04.674,682] <dbg> central_gopro: discovery_complete: Push pointer 0x44DA0
+[00:00:04.674,835] <dbg> central_gopro: discovery_complete: Push to TX chan:
                                         02 13 0a                                         |...              
-[00:00:04.543,975] <dbg> central_gopro: discovery_complete: Push pointer 0x448D8
-[00:00:04.544,555] <dbg> central_gopro: gopro_cmd_subscriber_task: CMD Data to send:
+[00:00:04.674,835] <dbg> central_gopro: discovery_complete: Push pointer 0x44DBC
+[00:00:04.675,415] <dbg> central_gopro: gopro_cmd_subscriber_task: CMD Data to send:
                                         04 53 0a 27 46                                   |.S.'F            
-[00:00:04.544,586] <dbg> gopro_c: bt_gopro_client_send: Send handle: 0x0 5 bytes
-[00:00:04.842,376] <dbg> central_gopro: ble_data_sent: Data send len: 5
-[00:00:04.842,498] <dbg> central_gopro: gopro_cmd_subscriber_task: CMD Data to send:
+[00:00:04.675,445] <dbg> gopro_c: bt_gopro_client_send: Send handle: 0x0 5 bytes
+[00:00:05.023,223] <dbg> central_gopro: ble_data_sent: Data send len: 5
+[00:00:05.023,376] <dbg> central_gopro: gopro_cmd_subscriber_task: CMD Data to send:
                                         02 13 27                                         |..'              
-[00:00:04.842,529] <dbg> gopro_c: bt_gopro_client_send: Send handle: 0x42 3 bytes
-[00:00:04.843,200] <dbg> gopro_c: on_received_query: [NOTIFICATION] length 15 handle 68
-[00:00:04.843,200] <wrn> gopro_c: Not status notify packet. CMD: 0x53 result: 0
-[00:00:04.843,231] <inf> central_gopro: Get reply on 2, len 15
-[00:00:04.843,261] <dbg> central_gopro: ble_data_received: Recieve data:
-                                        0e 53 00 0a 01 00 27 04  00 00 00 27 46 01 3e    |.S....'. ...'F.> 
-[00:00:04.843,261] <dbg> central_gopro: ble_data_received: Set dlc data[0] 14
-[00:00:04.843,292] <wrn> central_gopro: Reply to long: 14 bytes
-[00:00:04.942,352] <dbg> central_gopro: ble_data_sent: Data send len: 3
-[00:00:04.942,504] <dbg> central_gopro: gopro_cmd_subscriber_task: CMD Data to send:
+[00:00:05.023,406] <dbg> gopro_c: bt_gopro_client_send: Send handle: 0x42 3 bytes
+[00:00:05.024,047] <dbg> gopro_c: on_received_query: [NOTIFICATION] length 15 handle 68
+[00:00:05.024,078] <dbg> gopro_c: gopro_parse_query_status_notify: Encoding: 0
+[00:00:05.024,078] <dbg> gopro_c: gopro_parse_query_status_notify: Video Count: 39
+[00:00:05.024,108] <dbg> gopro_c: gopro_parse_query_status_notify: Battery: 98
+[00:00:05.024,230] <inf> central_gopro: Get reply on 2, len 15
+[00:00:05.024,261] <dbg> central_gopro: ble_data_received: Recieve data:
+                                        0e 53 00 0a 01 00 27 04  00 00 00 27 46 01 62    |.S....'. ...'F.b 
+[00:00:05.024,383] <dbg> gopro_c: gopro_parse_query_reply: Parse Query reply
+[00:00:05.024,414] <dbg> gopro_c: gopro_parse_query_status_notify: Encoding: 0
+[00:00:05.024,444] <dbg> gopro_c: gopro_parse_query_status_notify: Video Count: 39
+[00:00:05.024,444] <dbg> gopro_c: gopro_parse_query_status_notify: Battery: 98
+[00:00:05.123,229] <dbg> central_gopro: ble_data_sent: Data send len: 3
+[00:00:05.123,382] <dbg> central_gopro: gopro_cmd_subscriber_task: CMD Data to send:
                                         02 13 46                                         |..F              
-[00:00:04.942,535] <dbg> gopro_c: bt_gopro_client_send: Send handle: 0x42 3 bytes
-[00:00:04.943,176] <dbg> gopro_c: on_received_query: [NOTIFICATION] length 9 handle 68
-[00:00:04.943,176] <wrn> gopro_c: Not status notify packet. CMD: 0x13 result: 0
-[00:00:04.943,176] <inf> central_gopro: Get reply on 2, len 9
-[00:00:04.943,206] <dbg> central_gopro: ble_data_received: Recieve data:
+[00:00:05.123,382] <dbg> gopro_c: bt_gopro_client_send: Send handle: 0x42 3 bytes
+[00:00:05.124,023] <dbg> gopro_c: on_received_query: [NOTIFICATION] length 9 handle 68
+[00:00:05.124,023] <wrn> gopro_c: Not REG packet. CMD: 0x13 result: 0
+[00:00:05.124,053] <inf> central_gopro: Get reply on 2, len 9
+[00:00:05.124,084] <dbg> central_gopro: ble_data_received: Recieve data:
                                         08 13 00 27 04 00 00 00  27                      |...'.... '       
-[00:00:04.943,237] <dbg> central_gopro: ble_data_received: Set dlc data[0] 8
-[00:00:05.042,358] <dbg> central_gopro: ble_data_sent: Data send len: 3
-[00:00:05.042,510] <dbg> central_gopro: gopro_cmd_subscriber_task: CMD Data to send:
+[00:00:05.124,206] <dbg> gopro_c: gopro_parse_query_reply: Parse Query reply
+[00:00:05.124,237] <dbg> gopro_c: gopro_parse_query_status_reply: Video count: 39
+[00:00:05.223,236] <dbg> central_gopro: ble_data_sent: Data send len: 3
+[00:00:05.223,388] <dbg> central_gopro: gopro_cmd_subscriber_task: CMD Data to send:
                                         02 13 0a                                         |...              
-[00:00:05.042,541] <dbg> gopro_c: bt_gopro_client_send: Send handle: 0x42 3 bytes
-[00:00:05.042,999] <dbg> gopro_c: on_received_query: [NOTIFICATION] length 6 handle 68
-[00:00:05.042,999] <wrn> gopro_c: Not status notify packet. CMD: 0x13 result: 0
-[00:00:05.043,029] <inf> central_gopro: Get reply on 2, len 6
-[00:00:05.043,060] <dbg> central_gopro: ble_data_received: Recieve data:
-                                        05 13 00 46 01 3e                                |...F.>           
-[00:00:05.043,060] <dbg> central_gopro: ble_data_received: Set dlc data[0] 5
-[00:00:05.142,364] <dbg> central_gopro: ble_data_sent: Data send len: 3
-[00:00:05.142,974] <dbg> gopro_c: on_received_query: [NOTIFICATION] length 6 handle 68
-[00:00:05.143,005] <wrn> gopro_c: Not status notify packet. CMD: 0x13 result: 0
-[00:00:05.143,035] <inf> central_gopro: Get reply on 2, len 6
-[00:00:05.143,066] <dbg> central_gopro: ble_data_received: Recieve data:
+[00:00:05.223,388] <dbg> gopro_c: bt_gopro_client_send: Send handle: 0x42 3 bytes
+[00:00:05.224,029] <dbg> gopro_c: on_received_query: [NOTIFICATION] length 6 handle 68
+[00:00:05.224,029] <wrn> gopro_c: Not REG packet. CMD: 0x13 result: 0
+[00:00:05.224,060] <inf> central_gopro: Get reply on 2, len 6
+[00:00:05.224,090] <dbg> central_gopro: ble_data_received: Recieve data:
+                                        05 13 00 46 01 62                                |...F.b           
+[00:00:05.224,212] <dbg> gopro_c: gopro_parse_query_reply: Parse Query reply
+[00:00:05.224,243] <dbg> gopro_c: gopro_parse_query_status_reply: Battery: 98
+[00:00:05.323,211] <dbg> central_gopro: ble_data_sent: Data send len: 3
+[00:00:05.323,852] <dbg> gopro_c: on_received_query: [NOTIFICATION] length 6 handle 68
+[00:00:05.323,852] <wrn> gopro_c: Not REG packet. CMD: 0x13 result: 0
+[00:00:05.323,883] <inf> central_gopro: Get reply on 2, len 6
+[00:00:05.323,913] <dbg> central_gopro: ble_data_received: Recieve data:
                                         05 13 00 0a 01 00                                |......           
-[00:00:05.143,066] <dbg> central_gopro: ble_data_received: Set dlc data[0] 5
-[00:00:11.442,535] <dbg> gopro_c: on_received_query: [NOTIFICATION] length 15 handle 68
-[00:00:11.442,565] <dbg> gopro_c: gopro_parse_query_status_notify: Encoding: 0
-[00:00:11.442,596] <dbg> gopro_c: gopro_parse_query_status_notify: Duration: 39
-[00:00:11.442,596] <dbg> gopro_c: gopro_parse_query_status_notify: Battery: 61
-[00:00:11.442,718] <inf> central_gopro: Get reply on 2, len 15
-[00:00:11.442,749] <dbg> central_gopro: ble_data_received: Recieve data:
-                                        0e 93 00 0a 01 00 27 04  00 00 00 27 46 01 3d    |......'. ...'F.= 
-[00:00:11.442,749] <dbg> central_gopro: ble_data_received: Set dlc data[0] 14
-[00:00:11.442,779] <wrn> central_gopro: Reply to long: 14 bytes
+[00:00:05.324,035] <dbg> gopro_c: gopro_parse_query_reply: Parse Query reply
+[00:00:05.324,066] <dbg> gopro_c: gopro_parse_query_status_reply: Encoding: 0

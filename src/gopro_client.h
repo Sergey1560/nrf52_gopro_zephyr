@@ -169,6 +169,10 @@ int gopro_client_set_sate(enum gopro_state_list_t  state);
 enum gopro_state_list_t gopro_client_get_state(void);
 int gopro_client_setname(char *name, uint8_t len);
 
+int	gopro_parse_query_reply(struct gopro_cmd_t *gopro_cmd);
+int gopro_parse_settings_reply(struct gopro_cmd_t *gopro_cmd);
+int gopro_parse_cmd_reply(struct gopro_cmd_t *gopro_cmd);
+
 /** @brief Initialize the GoPro Client module.
  *
  * This function initializes the GoPro Client module with callbacks provided by

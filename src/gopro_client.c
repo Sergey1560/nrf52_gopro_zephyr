@@ -23,6 +23,7 @@ ZBUS_CHAN_DEFINE(gopro_state_chan,                     	/* Name */
 );
 
 static int gopro_parse_query_status_notify(const void *data, uint16_t length);
+static int gopro_check_reply(struct gopro_cmd_t *gopro_cmd);
 
 static uint8_t on_received_cmd(struct bt_conn *conn, struct bt_gatt_subscribe_params *params, const void *data, uint16_t length);
 static uint8_t on_received_settings(struct bt_conn *conn, struct bt_gatt_subscribe_params *params, const void *data, uint16_t length);
@@ -537,8 +538,13 @@ static int gopro_parse_query_status_notify(const void *data, uint16_t length){
 	id = *pdata++;
 	result = *pdata++;
 
-	if((id != 0x93) || (result != 0)){
-		LOG_WRN("Not status notify packet. CMD: 0x%0X result: %d",id,result);
+	if( (id != GOPRO_QUERY_STATUS_REG_STATUS_NOTIFY) && (id != GOPRO_QUERY_STATUS_REG_STATUS) ){
+		LOG_WRN("Not REG packet. CMD: 0x%0X result: %d",(int)id);
+		return -1;
+	}
+
+	if((result != 0)){
+		LOG_WRN("Not valid result. CMD: 0x%0X result: %d",id,result);
 		return -1;
 	}
 
@@ -565,7 +571,7 @@ static int gopro_parse_query_status_notify(const void *data, uint16_t length){
 				total_data_len--;
 				gopro_state.video_count = (gopro_state.video_count*256) + *pdata++;
 			}	
-			LOG_DBG("Duration: %d",gopro_state.video_count);
+			LOG_DBG("Video Count: %d",gopro_state.video_count);
 			break;
 
 		case GOPRO_STATUS_ID_BAT_PERCENT:
@@ -587,3 +593,113 @@ static int gopro_parse_query_status_notify(const void *data, uint16_t length){
 
 	return 0;
 }
+
+
+static int gopro_parse_query_status_reply(const void *data, uint16_t length){
+	uint8_t *pdata = (uint8_t *)data;
+	int total_data_len;
+	int result;
+	int id;
+
+	if(pdata[0] != (length-1)){
+		LOG_ERR("Not REPLY FMT");
+		return -1;
+	}
+
+	total_data_len = pdata[0];
+	id = pdata[1];
+	result = pdata[2];
+
+	uint8_t status_id = pdata[3];
+	uint8_t status_len = pdata[4];
+
+	switch (status_id)
+	{
+	case GOPRO_STATUS_ID_VIDEO_NUM:
+		gopro_state.video_count = 0;
+		for(uint32_t i=0; i<status_len; i++){
+			gopro_state.video_count = (gopro_state.video_count*256) + pdata[5+i];
+		}	
+		LOG_DBG("Video count: %d",gopro_state.video_count);
+		break;
+
+	case GOPRO_STATUS_ID_BAT_PERCENT:
+		gopro_state.battery = pdata[5];
+		LOG_DBG("Battery: %d",gopro_state.battery);
+		break;
+
+	case GOPRO_STATUS_ID_ENCODING:
+		gopro_state.record = pdata[5];
+		LOG_DBG("Encoding: %d",gopro_state.record);
+		break;
+
+	default:
+		LOG_WRN("Unknown status %d (0x%0X)",id,id);
+		break;
+	}
+
+	gopro_client_update_state();
+
+	return 0;
+}
+
+static int gopro_check_reply(struct gopro_cmd_t *gopro_cmd){
+
+	if(gopro_cmd->len == (gopro_cmd->data[0]+1) ){
+		return 0;
+	}
+
+
+	return -1;
+}
+
+
+int	gopro_parse_query_reply(struct gopro_cmd_t *gopro_cmd){
+
+	LOG_DBG("Parse Query reply");
+
+	if(gopro_check_reply(gopro_cmd) != 0){
+		LOG_ERR("Not valid reply");
+		return -1;
+	}
+
+	switch (gopro_cmd->data[1])
+	{
+	case GOPRO_QUERY_STATUS_REG_STATUS:
+	case GOPRO_QUERY_STATUS_REG_STATUS_NOTIFY:
+		if(gopro_cmd->data[2] == 0){
+			gopro_parse_query_status_notify(gopro_cmd->data,gopro_cmd->len);
+		}else{
+			LOG_ERR("REG Result not OK: %d",gopro_cmd->data[2]);
+		}	
+		return 0;
+		break;
+
+	case GOPRO_QUERY_STATUS_GET_STATUS:
+		if(gopro_cmd->data[2] == 0){
+			gopro_parse_query_status_reply(gopro_cmd->data,gopro_cmd->len);
+		}else{
+			LOG_ERR("REG Result not OK: %d",gopro_cmd->data[2]);
+		}	
+
+		break;
+
+	default:
+		break;
+	}
+
+
+	return 0;
+};
+
+int gopro_parse_settings_reply(struct gopro_cmd_t *gopro_cmd){
+	LOG_DBG("SETTINGS reply");
+
+	return 0;
+};
+
+int gopro_parse_cmd_reply(struct gopro_cmd_t *gopro_cmd){
+
+	LOG_DBG("CMD reply");
+	return 0;
+};

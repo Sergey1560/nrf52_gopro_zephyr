@@ -28,7 +28,7 @@ LOG_MODULE_REGISTER(canbus_gopro, LOG_LEVEL_DBG);
 
 static void can_tx_timer_handler(struct k_timer *dummy);
 static void can_tx_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
-
+static void can_data_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
 
 ZBUS_CHAN_DEFINE(can_tx_chan,                           	/* Name */
          struct can_frame,                       		      	/* Message type */
@@ -40,6 +40,19 @@ ZBUS_CHAN_DEFINE(can_tx_chan,                           	/* Name */
 
 ZBUS_MSG_SUBSCRIBER_DEFINE(can_tx_subscriber);
 K_THREAD_DEFINE(can_tx_subscriber_task_id, 1024, can_tx_subscriber_task, NULL, NULL, NULL, 3, 0, 0);
+
+ZBUS_CHAN_DEFINE(can_txdata_chan,                           	/* Name */
+         struct gopro_cmd_t,                       		      	/* Message type */
+         NULL,                                       	/* Validator */
+         NULL,                                       	/* User Data */
+         ZBUS_OBSERVERS(can_data_subscriber),  	        		/* observers */
+         ZBUS_MSG_INIT(0)       						/* Initial value */
+);
+
+ZBUS_MSG_SUBSCRIBER_DEFINE(can_data_subscriber);
+K_THREAD_DEFINE(can_data_subscriber_task_id, 1024, can_data_subscriber_task, NULL, NULL, NULL, 3, 0, 0);
+
+
 
 ZBUS_CHAN_DECLARE(gopro_cmd_chan);
 ZBUS_CHAN_DECLARE(gopro_state_chan);
@@ -60,7 +73,7 @@ const struct device *const can_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_canbus));
 
 const struct can_frame err_state_frame = {
 		.flags = 0,
-		.id = GPCAN_REPLY_MSG_ID,
+		.id = GPCAN_REPLY_MSG_ERR_ID,
 		.dlc = 1,
 		.data = {0xFF,0,0,0,0,0,0,0}
 };
@@ -264,6 +277,65 @@ static void can_tx_timer_handler(struct k_timer *dummy){
 
 	zbus_chan_pub(&can_tx_chan, &tx_frame, K_MSEC(20));
 };
+
+
+static void can_data_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
+	struct gopro_cmd_t gopro_cmd;
+	struct can_frame tx_frame;
+	const struct zbus_channel *chan;
+	int data_len;
+	ARG_UNUSED(ptr1);
+	ARG_UNUSED(ptr2);
+	ARG_UNUSED(ptr3);
+
+	while (!zbus_sub_wait_msg(&can_data_subscriber, &chan, &gopro_cmd, K_FOREVER)) {
+		if (&can_tx_chan == chan) {
+			if(gopro_cmd.len > 0){
+				memset(&tx_frame,0,sizeof(struct can_frame));
+
+				switch (gopro_cmd.cmd_type)
+				{
+				case GP_HANDLE_CMD:
+					tx_frame.id = GPCAN_REPLY_MSG_CMD_ID;
+					break;
+
+				case GP_HANDLE_SETTINGS:
+					tx_frame.id = GPCAN_REPLY_MSG_SETTINGS_ID;
+					break;
+				
+				case GP_HANDLE_QUERY:
+					tx_frame.id = GPCAN_REPLY_MSG_QUERY_ID;
+					break;
+
+				default:
+					LOG_ERR("Unknown cmd type: %d",gopro_cmd.cmd_type);
+					continue;
+					break;
+				}
+
+				if(gopro_cmd.data[0] == gopro_cmd.len-1){
+					data_len = gopro_cmd.data[0];
+					LOG_DBG("Set dlc data[0] %d",data_len);
+				}else{
+					data_len = gopro_cmd.len;
+					LOG_DBG("Frame error, set dlc len %d",data_len);
+				}
+
+				if(data_len > 8){
+					tx_frame = err_state_frame;
+					LOG_WRN("Reply to long: %d bytes",data_len);
+				}else{
+					tx_frame.dlc = data_len;
+					for(uint32_t i=0; i<tx_frame.dlc; i++){
+						tx_frame.data[i] = gopro_cmd.data[i+1];
+					}
+				}
+				
+				zbus_chan_pub(&can_tx_chan, &tx_frame, K_MSEC(20));
+			}
+		}
+	}
+}
 
 
 

@@ -93,6 +93,7 @@ ZBUS_MSG_SUBSCRIBER_DEFINE(gopro_cmd_subscriber);
 K_THREAD_DEFINE(gopro_cmd_subscriber_task_id, 1024, gopro_cmd_subscriber_task, NULL, NULL, NULL, 3, 0, 0);
 
 ZBUS_CHAN_DECLARE(can_tx_chan);
+ZBUS_CHAN_DECLARE(can_txdata_chan);
 
 static void gopro_cmd_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
 	int err;
@@ -165,48 +166,31 @@ static void ble_data_sent(struct bt_gopro_client *nus, uint8_t err, const uint8_
 
 static uint8_t ble_data_received(struct bt_gopro_client *nus, const struct gopro_cmd_t *gopro_cmd)
 {
-	struct can_frame tx_frame;
-	int data_len;
 	ARG_UNUSED(nus);
 
 	LOG_INF("Get reply on %d, len %d",gopro_cmd->cmd_type,gopro_cmd->len);
 	LOG_HEXDUMP_DBG(gopro_cmd->data,gopro_cmd->len,"Recieve data:");
 
-	if(gopro_cmd->len > 0){
-		memset(&tx_frame,0,sizeof(struct can_frame));
-		tx_frame.id = GPCAN_REPLY_MSG_ID;
+	zbus_chan_pub(&can_txdata_chan, &gopro_cmd, K_MSEC(20));
 
-		if(gopro_cmd->data[0] == gopro_cmd->len-1){
-			data_len = gopro_cmd->data[0];
-			LOG_DBG("Set dlc data[0] %d",data_len);
-		}else{
-			data_len = gopro_cmd->len;
-			LOG_DBG("Frame error, set dlc len %d",data_len);
-		}
+	switch (gopro_cmd->cmd_type)
+	{
+	case GP_HANDLE_CMD:
+		gopro_parse_cmd_reply((struct gopro_cmd_t *)gopro_cmd);
+		break;
+
+	case GP_HANDLE_SETTINGS:
+		gopro_parse_settings_reply((struct gopro_cmd_t *)gopro_cmd);
+		break;
 		
-		if(data_len > 8){
-			tx_frame.dlc = 8;
+	case GP_HANDLE_QUERY:
+		gopro_parse_query_reply((struct gopro_cmd_t *)gopro_cmd);
+		break;
 
-			for(uint32_t i=0; i<tx_frame.dlc; i++){
-				tx_frame.data[i] = 0xEE;
-			}	
-
-			LOG_WRN("Reply to long: %d bytes",data_len);
-		}else{
-			tx_frame.dlc = data_len;
-			
-			for(uint32_t i=0; i<tx_frame.dlc; i++){
-				tx_frame.data[i] = gopro_cmd->data[i+1];
-			}
-			
-		}
-
-		zbus_chan_pub(&can_tx_chan, &tx_frame, K_NO_WAIT);
-
-
-	}else{
-		LOG_ERR("Can't send reply, len: %d",gopro_cmd->len);
+	default:
+		break;
 	}
+
 
 	return BT_GATT_ITER_CONTINUE;
 }

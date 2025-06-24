@@ -16,6 +16,7 @@ https://gopro.github.io/OpenGoPro/ble/features/query.html#
 #define GOPRO_QUERY_STATUS_GET_SETTING_CAP      0x32
 #define GOPRO_QUERY_STATUS_REG_SETTING          0x52
 #define GOPRO_QUERY_STATUS_REG_STATUS           0x53
+#define GOPRO_QUERY_STATUS_REG_STATUS_NOTIFY    0x93
 #define GOPRO_QUERY_STATUS_REG_SETTING_CAP      0x62
 #define GOPRO_QUERY_STATUS_UNREG_SETTING        0x72
 #define GOPRO_QUERY_STATUS_UNREG_STATUS         0x73
