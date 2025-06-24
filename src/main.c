@@ -65,7 +65,8 @@ const static struct gopro_cmd_t gopro_query_register = {
 	.data={4,GOPRO_QUERY_STATUS_REG_STATUS,GOPRO_STATUS_ID_ENCODING,GOPRO_STATUS_ID_VIDEO_NUM,GOPRO_STATUS_ID_BAT_PERCENT}
 };
 
-K_MSGQ_DEFINE(gopro_query_q, sizeof(struct gopro_cmd_t *), 10, 1);
+K_SEM_DEFINE(ble_write_sem, 0, 1);
+#define BLE_WRITE_TIMEOUT	K_MSEC(1200)
 
 const static struct gopro_cmd_t *startup_query_list[] = {&gopro_query_register, &gopro_query_video_num, &gopro_query_battery, &gopro_query_encoding};
 
@@ -88,20 +89,9 @@ ZBUS_CHAN_DEFINE(gopro_cmd_chan,                        /* Name */
          ZBUS_MSG_INIT(0)       						/* Initial value */
 );
 
-ZBUS_CHAN_DEFINE(gopro_query_chan,                        /* Name */
-         uint8_t,                       		/* Message type */
-         NULL,                           /* Validator */
-         NULL,                                       	/* User Data */
-         ZBUS_OBSERVERS(gopro_query_subscriber),  	    /* observers */
-         ZBUS_MSG_INIT(0)       						/* Initial value */
-);
-
 
 ZBUS_MSG_SUBSCRIBER_DEFINE(gopro_cmd_subscriber);
 K_THREAD_DEFINE(gopro_cmd_subscriber_task_id, 1024, gopro_cmd_subscriber_task, NULL, NULL, NULL, 3, 0, 0);
-
-ZBUS_SUBSCRIBER_DEFINE(gopro_query_subscriber,4);
-K_THREAD_DEFINE(gopro_query_subscriber_task_id, 1024, gopro_query_subscriber_task, NULL, NULL, NULL, 7, 0, 0);
 
 ZBUS_CHAN_DECLARE(can_tx_chan);
 
@@ -123,39 +113,16 @@ static void gopro_cmd_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
 					LOG_WRN("Failed to send data over BLE connection (err %d)", err);
 				}
 
+				err = k_sem_take(&ble_write_sem, BLE_WRITE_TIMEOUT);
+				if (err) {
+					LOG_WRN("Data send timeout");
+				}
+
+
+
 			}
 	}
 };
-
-
-static void gopro_query_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
-	int err;
-	ARG_UNUSED(ptr1);
-	ARG_UNUSED(ptr2);
-	ARG_UNUSED(ptr3);
-	const struct zbus_channel *chan;
-	struct gopro_cmd_t *gopro_cmd;
-	int q_msg;
-
-	while (!zbus_sub_wait(&gopro_query_subscriber, &chan, K_FOREVER)) {
-		if (&gopro_query_chan == chan) {
-				
-				int q_msg = k_msgq_num_used_get(&gopro_query_q);
-
-				err = k_msgq_get(&gopro_query_q, &gopro_cmd, K_MSEC(50));
-
-				if((err == 0) && (q_msg > 0)){
-					err = zbus_chan_pub(&gopro_cmd_chan, gopro_cmd, K_MSEC(50));
-					if(err != 0){
-						LOG_ERR("Can't pub query command: %d",err);
-						}
-				}else{
-						LOG_ERR("Failed read Q: %d",err);
-					}
-		}
-	}
-};
-
 
 bool gopro_cmd_validator(const void* msg, size_t msg_size) {
 	struct gopro_cmd_t *gopro_cmd =  (struct gopro_cmd_t *)msg;
@@ -190,6 +157,7 @@ static void ble_data_sent(struct bt_gopro_client *nus, uint8_t err, const uint8_
 	ARG_UNUSED(len);
 
 	LOG_DBG("Data send len: %d",len);
+	k_sem_give(&ble_write_sem);
 
 	if (err) {
 		LOG_WRN("ATT error code: 0x%02X", err);
@@ -242,15 +210,6 @@ static uint8_t ble_data_received(struct bt_gopro_client *nus, const struct gopro
 		LOG_ERR("Can't send reply, len: %d",gopro_cmd->len);
 	}
 
-	int q_msg = k_msgq_num_used_get(&gopro_query_q);
-	if(q_msg != 0){
-		err = zbus_chan_notify(&gopro_query_chan, K_MSEC(10));
-
-		if(err != 0){
-			LOG_ERR("Failed notyfy chan: %d, MSG Q: %d",err,q_msg);
-		}
-	}
-
 	return BT_GATT_ITER_CONTINUE;
 }
 
@@ -278,12 +237,18 @@ static void discovery_complete(struct bt_gatt_dm *dm, void *context)
 	
 	k_sleep(K_MSEC(1000));
 
-	err = zbus_chan_notify(&gopro_query_chan, K_MSEC(10));
+	for(uint32_t i=0; i < sizeof(startup_query_list)/sizeof(startup_query_list[0]); i++){
+		
+		LOG_HEXDUMP_DBG(startup_query_list[i]->data,startup_query_list[i]->len,"Push to TX chan:");
+		LOG_DBG("Push pointer 0x%0X",(uint32_t)startup_query_list[i]);
 
-	if(err != 0){
-		LOG_ERR("Chan notify failed: %d",err);
+		err = zbus_chan_pub(&gopro_cmd_chan, startup_query_list[i], K_MSEC(100));
+
+		if(err != 0){
+			LOG_ERR("Chan pub failed: %d",err);
+		}
+
 	}
-
 }
 
 static void discovery_service_not_found(struct bt_conn *conn, void *context)
@@ -528,17 +493,17 @@ static int gopro_client_init(void){
 	};
 
 
-	for(uint32_t i=0; i < sizeof(startup_query_list)/sizeof(startup_query_list[0]); i++){
+	// for(uint32_t i=0; i < sizeof(startup_query_list)/sizeof(startup_query_list[0]); i++){
 		
-		LOG_HEXDUMP_DBG(startup_query_list[i]->data,startup_query_list[i]->len,"Push to Q:");
-		LOG_DBG("Push pointer 0x%0X",(uint32_t)startup_query_list[i]);
-		err = k_msgq_put(&gopro_query_q, &startup_query_list[i], K_MSEC(10));
-		if(err != 0){
-			LOG_ERR("Failed put to Q: %d",err);
-		}
-	}
+	// 	LOG_HEXDUMP_DBG(startup_query_list[i]->data,startup_query_list[i]->len,"Push to Q:");
+	// 	LOG_DBG("Push pointer 0x%0X",(uint32_t)startup_query_list[i]);
+	// 	err = k_msgq_put(&gopro_query_q, &startup_query_list[i], K_MSEC(10));
+	// 	if(err != 0){
+	// 		LOG_ERR("Failed put to Q: %d",err);
+	// 	}
+	// }
 
-	LOG_DBG("Start-up Q init, messages: %d", k_msgq_num_used_get(&gopro_query_q));
+	// LOG_DBG("Start-up Q init, messages: %d", k_msgq_num_used_get(&gopro_query_q));
 
 	err = bt_gopro_client_init(&gopro_client, &init);
 	if (err) {
