@@ -141,12 +141,10 @@ static void gopro_query_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
 		if (&gopro_query_chan == chan) {
 				
 				int q_msg = k_msgq_num_used_get(&gopro_query_q);
-				LOG_DBG("Msg in Q: %d",q_msg);
 
 				err = k_msgq_get(&gopro_query_q, &gopro_cmd, K_MSEC(50));
 
-				if(err == 0){
-					LOG_HEXDUMP_DBG(gopro_cmd->data, gopro_cmd->len,"Data from Q:");
+				if((err == 0) && (q_msg > 0)){
 					err = zbus_chan_pub(&gopro_cmd_chan, gopro_cmd, K_MSEC(50));
 					if(err != 0){
 						LOG_ERR("Can't pub query command: %d",err);
@@ -245,21 +243,13 @@ static uint8_t ble_data_received(struct bt_gopro_client *nus, const struct gopro
 	}
 
 	int q_msg = k_msgq_num_used_get(&gopro_query_q);
-
-	LOG_DBG("Msg in Q: %d",q_msg);
-
 	if(q_msg != 0){
 		err = zbus_chan_notify(&gopro_query_chan, K_MSEC(10));
 
 		if(err != 0){
-			LOG_ERR("Failed notyfy chan: %d",err);
+			LOG_ERR("Failed notyfy chan: %d, MSG Q: %d",err,q_msg);
 		}
 	}
-
-	if(err != 0){
-		LOG_ERR("Chan notify failed: %d",err);
-	}
-
 
 	return BT_GATT_ITER_CONTINUE;
 }
