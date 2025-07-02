@@ -10,6 +10,7 @@
 #include <zephyr/zbus/zbus.h>
 
 #include <gopro_client.h>
+#include <leds.h>
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(gopro_c, LOG_LEVEL_DBG);
@@ -370,8 +371,8 @@ int bt_gopro_client_send(struct bt_gopro_client *nus_c, struct gopro_cmd_t *gopr
 static int gopro_set_handle(struct bt_gatt_dm *dm, struct bt_gopro_client *nus_c, enum gopro_handle_list_t gopro_handle){
 	const struct bt_gatt_dm_attr *gatt_chrc;
 	const struct bt_gatt_dm_attr *gatt_desc;
-	struct bt_uuid *notify_uuid = NULL;
-	struct bt_uuid *write_uuid = NULL;
+	static struct bt_uuid *notify_uuid = NULL;
+	static struct bt_uuid *write_uuid = NULL;
 
 	switch (gopro_handle)
 	{
@@ -407,7 +408,7 @@ static int gopro_set_handle(struct bt_gatt_dm *dm, struct bt_gopro_client *nus_c
 		return -EINVAL;
 	}
 	
-	LOG_INF("Found handle for Notify characteristic for %d.",gopro_handle);
+	LOG_DBG("Found handle for Notify characteristic for %d.",gopro_handle);
 	nus_c->handles[gopro_handle].notify = gatt_desc->handle;
 
 	gatt_desc = bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GATT_CCC);
@@ -415,7 +416,7 @@ static int gopro_set_handle(struct bt_gatt_dm *dm, struct bt_gopro_client *nus_c
 		LOG_ERR("Missing GoPro Notify CCC in characteristic.");
 		return -EINVAL;
 	}
-	LOG_INF("Found handle for CCC of GoPro Notify characteristic. 0x%0X",gatt_desc->handle);
+	LOG_DBG("Found handle for CCC of GoPro Notify characteristic. 0x%0X",gatt_desc->handle);
 	nus_c->handles[gopro_handle].notify_ccc = gatt_desc->handle;
 
 	gatt_chrc = bt_gatt_dm_char_by_uuid(dm, write_uuid);
@@ -429,9 +430,10 @@ static int gopro_set_handle(struct bt_gatt_dm *dm, struct bt_gopro_client *nus_c
 		LOG_ERR("Missing GoPro Write value descriptor in characteristic.");
 		return -EINVAL;
 	}
-	LOG_INF("Found handle for Write characteristic.");
+	LOG_DBG("Found handle for Write characteristic.");
 	nus_c->handles[gopro_handle].write = gatt_desc->handle;
 
+	LOG_INF("Handles assigned succesfull.");
 	return 0;
 }
 
@@ -500,7 +502,7 @@ static int gopro_set_subscribe(struct bt_gopro_client *nus_c, enum gopro_handle_
 		LOG_ERR("Subscribe failed (err %d)", err);
 		atomic_clear_bit(&nus_c->state, flag_bit);
 	} else {
-		LOG_DBG("[SUBSCRIBED]");
+		LOG_DBG("[SUBSCRIBED] for %d handle",handle_index);
 	}
 
 	return 0;
@@ -539,7 +541,7 @@ static int gopro_parse_query_status_notify(const void *data, uint16_t length){
 	result = *pdata++;
 
 	if( (id != GOPRO_QUERY_STATUS_REG_STATUS_NOTIFY) && (id != GOPRO_QUERY_STATUS_REG_STATUS) ){
-		LOG_WRN("Not REG packet. CMD: 0x%0X result: %d",(int)id);
+		LOG_WRN("Not REG packet. CMD: 0x%0X",(int)id);
 		return -1;
 	}
 
@@ -563,6 +565,13 @@ static int gopro_parse_query_status_notify(const void *data, uint16_t length){
 			gopro_state.record = *pdata++;
 			total_data_len--;
 			LOG_DBG("Encoding: %d",gopro_state.record);
+
+			if(gopro_state.record > 0){
+				gopro_led_mode_set(LED_NUM_REC,LED_MODE_ON);
+			}else{
+				gopro_led_mode_set(LED_NUM_REC,LED_MODE_OFF);
+			}
+
 			break;
 
 		case GOPRO_STATUS_ID_VIDEO_NUM:
@@ -631,6 +640,13 @@ static int gopro_parse_query_status_reply(const void *data, uint16_t length){
 	case GOPRO_STATUS_ID_ENCODING:
 		gopro_state.record = pdata[5];
 		LOG_DBG("Encoding: %d",gopro_state.record);
+
+		if(gopro_state.record > 0){
+			gopro_led_mode_set(LED_NUM_REC,LED_MODE_ON);
+		}else{
+			gopro_led_mode_set(LED_NUM_REC,LED_MODE_OFF);
+		}
+
 		break;
 
 	default:

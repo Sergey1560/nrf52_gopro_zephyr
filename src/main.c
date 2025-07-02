@@ -298,6 +298,7 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
 	LOG_INF("Connected: %s", addr);
 	
 	k_timer_stop(&led_idle_timer);
+	gopro_led_mode_set(LED_NUM_REC,LED_MODE_OFF);
 
 	exchange_params.func = exchange_func;
 	err = bt_gatt_exchange_mtu(conn, &exchange_params);
@@ -327,6 +328,7 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 	LOG_INF("Disconnected: %s, reason 0x%02x %s", addr, reason, bt_hci_err_to_str(reason));
 
 	gopro_led_mode_set(LED_NUM_BT,LED_MODE_BLINK_5S);
+	gopro_led_mode_set(LED_NUM_REC,LED_MODE_OFF);
 
 	if (default_conn != conn) {
 		return;
@@ -334,6 +336,8 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 
 	bt_conn_unref(default_conn);
 	default_conn = NULL;
+
+	k_sleep(K_MSEC(3000));
 
 	(void)k_work_submit(&scan_work);
 }
@@ -351,7 +355,9 @@ static void security_changed(struct bt_conn *conn, bt_security_t level,enum bt_s
 			bt_security_err_to_str(err));
 	
 			if(err == BT_SECURITY_ERR_PIN_OR_KEY_MISSING){
-				LOG_INF("Remove bonding, start new pair");
+				gopro_client_set_sate(GPSTATE_NEED_PAIRING);
+				gopro_led_mode_set(LED_NUM_REC,LED_MODE_BLINK_300MS);
+				LOG_WRN("Remove bonding, start new pair");
 				bt_unpair(BT_ID_DEFAULT,BT_ADDR_LE_ANY);
 			}
 		
@@ -474,19 +480,6 @@ static int gopro_client_init(void){
 		}
 	};
 
-
-	// for(uint32_t i=0; i < sizeof(startup_query_list)/sizeof(startup_query_list[0]); i++){
-		
-	// 	LOG_HEXDUMP_DBG(startup_query_list[i]->data,startup_query_list[i]->len,"Push to Q:");
-	// 	LOG_DBG("Push pointer 0x%0X",(uint32_t)startup_query_list[i]);
-	// 	err = k_msgq_put(&gopro_query_q, &startup_query_list[i], K_MSEC(10));
-	// 	if(err != 0){
-	// 		LOG_ERR("Failed put to Q: %d",err);
-	// 	}
-	// }
-
-	// LOG_DBG("Start-up Q init, messages: %d", k_msgq_num_used_get(&gopro_query_q));
-
 	err = bt_gopro_client_init(&gopro_client, &init);
 	if (err) {
 		LOG_ERR("GoPro Client initialization failed (err %d)", err);
@@ -497,12 +490,10 @@ static int gopro_client_init(void){
 	return err;
 }
 
-
 static void scan_filter_no_match(struct bt_scan_device_info *device_info, bool connectable){
 	char addr[BT_ADDR_LE_STR_LEN];
 	
 	bt_addr_le_to_str(device_info->recv_info->addr, addr,  sizeof(addr));
-	//LOG_DBG("Scan no match %s",addr);
 }
 
 BT_SCAN_CB_INIT(scan_cb, scan_filter_match, scan_filter_no_match, scan_connecting_error, scan_connecting);
@@ -572,17 +563,17 @@ static int scan_start(void)
 }
 
 static void led_idle_handler(struct k_work *work){
-	LOG_DBG("Set LED to idle state");
-	gopro_led_mode_set(LED_NUM_BT,LED_MODE_BLINK_5S);
-	gopro_client_set_sate(GPSTATE_UNKNOWN);
-	gopro_client_setname(NULL,0);
+	if(gopro_client_get_state() != GPSTATE_UNKNOWN){
+		LOG_DBG("Set LED to idle state");
+		gopro_led_mode_set(LED_NUM_BT,LED_MODE_BLINK_5S);
+		gopro_client_set_sate(GPSTATE_UNKNOWN);
+		gopro_client_setname(NULL,0);
+	}
 }
-
 
 static void led_idle_timer_handler(struct k_timer *dummy){
     k_work_submit(&led_idle_work);
 }
-
 
 static void scan_work_handler(struct k_work *item)
 {
@@ -617,7 +608,6 @@ static void auth_cancel(struct bt_conn *conn)
 	LOG_INF("Pairing cancelled: %s", addr);
 }
 
-
 static void pairing_complete(struct bt_conn *conn, bool bonded)
 {
 	char addr[BT_ADDR_LE_STR_LEN];
@@ -627,7 +617,6 @@ static void pairing_complete(struct bt_conn *conn, bool bonded)
 	LOG_INF("Pairing completed: %s, bonded: %d", addr, bonded);
 	settings_save();
 }
-
 
 static void pairing_failed(struct bt_conn *conn, enum bt_security_err reason)
 {
@@ -694,8 +683,6 @@ int main(void)
 	if (err) {
 		return 0;
 	}
-
-	LOG_INF("Starting Bluetooth Central");
 
 	return 0;
 }
