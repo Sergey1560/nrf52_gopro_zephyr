@@ -267,7 +267,7 @@ static void can_tx_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
 
 	while (!zbus_sub_wait_msg(&can_tx_subscriber, &chan, &tx_frame, K_FOREVER)) {
 		if (&can_tx_chan == chan) {
-				LOG_DBG("Msg to send: 0x%0X len: %d", tx_frame.id,tx_frame.dlc);
+				//LOG_DBG("Msg to send: 0x%0X len: %d", tx_frame.id,tx_frame.dlc);
 
 				err = can_send(can_dev, &tx_frame, K_NO_WAIT, NULL, NULL);
 
