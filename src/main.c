@@ -73,6 +73,7 @@ const static struct gopro_cmd_t *startup_query_list[] = {&gopro_query_register, 
 static void led_idle_handler(struct k_work *work);
 static void led_idle_timer_handler(struct k_timer *dummy);
 static void gopro_cmd_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
+static void discovery_work_handler(struct k_work *work);
 
 bool gopro_cmd_validator(const void* msg, size_t msg_size);
 
@@ -94,6 +95,8 @@ K_THREAD_DEFINE(gopro_cmd_subscriber_task_id, 1024, gopro_cmd_subscriber_task, N
 
 ZBUS_CHAN_DECLARE(can_tx_chan);
 ZBUS_CHAN_DECLARE(can_txdata_chan);
+
+K_WORK_DEFINE(discovery_work, discovery_work_handler);
 
 static void gopro_cmd_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
 	int err;
@@ -171,7 +174,7 @@ static uint8_t ble_data_received(struct bt_gopro_client *nus, const struct gopro
 	LOG_INF("Get reply on %d, len %d",gopro_cmd->cmd_type,gopro_cmd->len);
 	LOG_HEXDUMP_DBG(gopro_cmd->data,gopro_cmd->len,"Recieve data:");
 
-	zbus_chan_pub(&can_txdata_chan, &gopro_cmd, K_MSEC(20));
+	zbus_chan_pub(&can_txdata_chan, &gopro_cmd, K_NO_WAIT);
 
 	switch (gopro_cmd->cmd_type)
 	{
@@ -196,27 +199,14 @@ static uint8_t ble_data_received(struct bt_gopro_client *nus, const struct gopro
 }
 
 
-static void discovery_complete(struct bt_gatt_dm *dm, void *context)
-{
+static void discovery_work_handler(struct k_work *work){
 	int err;
-	struct bt_gopro_client *nus = context;
-
-	LOG_INF("Service discovery completed");
-
-	bt_security_t sec_level_str = bt_conn_get_security(default_conn);
-	LOG_DBG("Security Level now: %d",sec_level_str);
-
-	//bt_gatt_dm_data_print(dm);
-
-	bt_gopro_handles_assign(dm, nus);
-	bt_gopro_subscribe_receive(nus);
-	bt_gatt_dm_data_release(dm);
 
 	LOG_DBG("Set connected mode");
 
 	gopro_led_mode_set(LED_NUM_BT,LED_MODE_ON);
 	gopro_client_set_sate(GPSTATE_CONNECTED);
-	
+
 	k_sleep(K_MSEC(1000));
 
 	for(uint32_t i=0; i < sizeof(startup_query_list)/sizeof(startup_query_list[0]); i++){
@@ -229,8 +219,24 @@ static void discovery_complete(struct bt_gatt_dm *dm, void *context)
 		if(err != 0){
 			LOG_ERR("Chan pub failed: %d",err);
 		}
-
 	}
+}
+
+static void discovery_complete(struct bt_gatt_dm *dm, void *context){
+	struct bt_gopro_client *nus = context;
+
+	LOG_INF("Service discovery completed");
+
+	bt_security_t sec_level_str = bt_conn_get_security(default_conn);
+	LOG_DBG("Security Level now: %d",sec_level_str);
+
+	//bt_gatt_dm_data_print(dm);
+
+	bt_gopro_handles_assign(dm, nus);
+	bt_gopro_subscribe_receive(nus);
+	bt_gatt_dm_data_release(dm);
+		
+	k_work_submit(&discovery_work);
 }
 
 static void discovery_service_not_found(struct bt_conn *conn, void *context)
@@ -337,7 +343,7 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 	bt_conn_unref(default_conn);
 	default_conn = NULL;
 
-	k_sleep(K_MSEC(3000));
+	//k_sleep(K_MSEC(3000));
 
 	(void)k_work_submit(&scan_work);
 }

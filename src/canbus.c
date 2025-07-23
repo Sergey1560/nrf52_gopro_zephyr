@@ -29,6 +29,7 @@ LOG_MODULE_REGISTER(canbus_gopro, LOG_LEVEL_DBG);
 static void can_tx_timer_handler(struct k_timer *dummy);
 static void can_tx_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
 static void can_data_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
+static void can_tx_work_handler(struct k_work *work);
 
 ZBUS_CHAN_DEFINE(can_tx_chan,                           	/* Name */
          struct can_frame,                       		      	/* Message type */
@@ -39,7 +40,7 @@ ZBUS_CHAN_DEFINE(can_tx_chan,                           	/* Name */
 );
 
 ZBUS_MSG_SUBSCRIBER_DEFINE(can_tx_subscriber);
-K_THREAD_DEFINE(can_tx_subscriber_task_id, 1024, can_tx_subscriber_task, NULL, NULL, NULL, 3, 0, 0);
+K_THREAD_DEFINE(can_tx_subscriber_task_id, 2048, can_tx_subscriber_task, NULL, NULL, NULL, 3, 0, 0);
 
 ZBUS_CHAN_DEFINE(can_txdata_chan,                           	/* Name */
          struct gopro_cmd_t,                       		      	/* Message type */
@@ -50,15 +51,16 @@ ZBUS_CHAN_DEFINE(can_txdata_chan,                           	/* Name */
 );
 
 ZBUS_MSG_SUBSCRIBER_DEFINE(can_data_subscriber);
-K_THREAD_DEFINE(can_data_subscriber_task_id, 1024, can_data_subscriber_task, NULL, NULL, NULL, 3, 0, 0);
-
-
+K_THREAD_DEFINE(can_data_subscriber_task_id, 2048, can_data_subscriber_task, NULL, NULL, NULL, 3, 0, 0);
 
 ZBUS_CHAN_DECLARE(gopro_cmd_chan);
 ZBUS_CHAN_DECLARE(gopro_state_chan);
 
 K_TIMER_DEFINE(can_tx_timer, can_tx_timer_handler, NULL);
 #define CAN_TX_TIMER_START	do{k_timer_start(&can_tx_timer, K_MSEC(100), K_MSEC(100));}while(0)
+
+K_WORK_DEFINE(can_tx_work, can_tx_work_handler);
+
 
 const struct can_timing mcp2515_8mhz_500 = {
 	.sjw = 2,
@@ -67,6 +69,23 @@ const struct can_timing mcp2515_8mhz_500 = {
 	.phase_seg2 = 2,
 	.prescaler = 1
 };
+
+const struct can_timing mcp2515_16mhz_500 = {
+	.sjw = 2,
+	.prop_seg = 2,
+	.phase_seg1 = 3,
+	.phase_seg2 = 2,
+	.prescaler = 2
+};
+
+const struct can_timing mcp2515_16mhz_1000 = {
+	.sjw = 2,
+	.prop_seg = 2,
+	.phase_seg1 = 3,
+	.phase_seg2 = 2,
+	.prescaler = 1
+};
+
 
 static const struct gpio_dt_spec mcp_rst_switch = 	GPIO_DT_SPEC_GET_OR(DT_NODELABEL(mcp_rst_switch), gpios, {0});
 const struct device *const can_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_canbus));
@@ -194,17 +213,24 @@ int canbus_init(void){
     	LOG_DBG("MODE NORMAL Enabled.");
 	}
 
-	// LOG_DBG("Can bitrate MIN: %d MAX: %d",can_get_bitrate_min(can_dev),can_get_bitrate_max(can_dev));
-	// mcp2515_get_timing(&timing, 0x40, 0x91, 0x01);
-	// const struct can_timing *min = can_get_timing_min(can_dev);
-  	// const struct can_timing *max = can_get_timing_max(can_dev);
-	// LOG_DBG("SWJ: %d  MIN: %d MAX: %d",timing.sjw,min->sjw,max->sjw);
-	// LOG_DBG("Prescaler: %d  MIN: %d MAX: %d",timing.prescaler,min->prescaler,max->prescaler);
-	// LOG_DBG("Pseg1: %d  MIN: %d MAX: %d",timing.phase_seg1,min->phase_seg1,max->phase_seg1);
-	// LOG_DBG("Pseg2: %d  MIN: %d MAX: %d",timing.phase_seg2,min->phase_seg2,max->phase_seg2);
-	// LOG_DBG("Propseg: %d  MIN: %d MAX: %d",timing.prop_seg,min->prop_seg,max->prop_seg);
+	#if 0
+	struct can_timing timing;
 
-	err = can_set_timing(can_dev, &mcp2515_8mhz_500);
+	LOG_DBG("Can bitrate MIN: %d MAX: %d",can_get_bitrate_min(can_dev),can_get_bitrate_max(can_dev));
+	
+	mcp2515_get_timing(&timing, 0x40, 0x91, 0x01);
+	const struct can_timing *min = can_get_timing_min(can_dev);
+  	const struct can_timing *max = can_get_timing_max(can_dev);
+	
+	LOG_DBG("SWJ: %d  MIN: %d MAX: %d",timing.sjw,min->sjw,max->sjw);
+	LOG_DBG("Prescaler: %d  MIN: %d MAX: %d",timing.prescaler,min->prescaler,max->prescaler);
+	LOG_DBG("Pseg1: %d  MIN: %d MAX: %d",timing.phase_seg1,min->phase_seg1,max->phase_seg1);
+	LOG_DBG("Pseg2: %d  MIN: %d MAX: %d",timing.phase_seg2,min->phase_seg2,max->phase_seg2);
+	LOG_DBG("Propseg: %d  MIN: %d MAX: %d",timing.prop_seg,min->prop_seg,max->prop_seg);
+
+	#endif
+
+	err = can_set_timing(can_dev, &mcp2515_16mhz_1000);
 	
 	if (err != 0) {
 		LOG_ERR("Failed to set timing: %d",err);
@@ -241,9 +267,9 @@ static void can_tx_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
 
 	while (!zbus_sub_wait_msg(&can_tx_subscriber, &chan, &tx_frame, K_FOREVER)) {
 		if (&can_tx_chan == chan) {
-				//LOG_DBG("Msg to send: 0x%0X len: %d", tx_frame.id,tx_frame.dlc);
+				LOG_DBG("Msg to send: 0x%0X len: %d", tx_frame.id,tx_frame.dlc);
 
-				err = can_send(can_dev, &tx_frame, K_MSEC(10), NULL, NULL);
+				err = can_send(can_dev, &tx_frame, K_NO_WAIT, NULL, NULL);
 
 				if (err != 0) {
 					LOG_ERR("CAN Sending failed [%d]", err);
@@ -253,7 +279,8 @@ static void can_tx_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
 	}
 };
 
-static void can_tx_timer_handler(struct k_timer *dummy){
+static void can_tx_work_handler(struct k_work *work)
+{
 	int err;
 	struct can_frame tx_frame;
 	struct gopro_state_t gopro_state;
@@ -275,7 +302,12 @@ static void can_tx_timer_handler(struct k_timer *dummy){
 	tx_frame.data[2] = gopro_state.battery;
 	tx_frame.data[3] = gopro_state.video_count; 
 
-	zbus_chan_pub(&can_tx_chan, &tx_frame, K_MSEC(20));
+	zbus_chan_pub(&can_tx_chan, &tx_frame, K_NO_WAIT);
+
+}
+
+static void can_tx_timer_handler(struct k_timer *dummy){
+	k_work_submit(&can_tx_work);
 };
 
 
@@ -331,7 +363,7 @@ static void can_data_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
 					}
 				}
 				
-				zbus_chan_pub(&can_tx_chan, &tx_frame, K_MSEC(20));
+				zbus_chan_pub(&can_tx_chan, &tx_frame, K_NO_WAIT);
 			}
 		}
 	}
