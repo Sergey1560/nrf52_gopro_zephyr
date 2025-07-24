@@ -75,16 +75,16 @@ const static struct gopro_cmd_t gopro_query_register = {
 K_SEM_DEFINE(ble_write_sem, 0, 1);
 #define BLE_WRITE_TIMEOUT	K_MSEC(1200)
 
-// const static struct gopro_cmd_t *startup_query_list[] = {
-// 	&gopro_query_register, 
-// 	&gopro_query_video_num, 
-// 	&gopro_query_battery, 
-// 	&gopro_query_encoding
-// };
-
 const static struct gopro_cmd_t *startup_query_list[] = {
-	&gopro_query_hw_info
+	&gopro_query_register, 
+	&gopro_query_video_num, 
+	&gopro_query_battery, 
+	&gopro_query_encoding
 };
+
+// const static struct gopro_cmd_t *startup_query_list[] = {
+// 	&gopro_query_hw_info
+// };
 
 
 static void led_idle_handler(struct k_work *work);
@@ -190,6 +190,39 @@ static uint8_t ble_data_received(struct bt_gopro_client *nus, const struct gopro
 
 	LOG_INF("Get reply on %d, len %d",gopro_cmd->cmd_type,gopro_cmd->len);
 	LOG_HEXDUMP_DBG(gopro_cmd->data,gopro_cmd->len,"Recieve data:");
+
+	if(gopro_cmd->data[0] & 0x80){
+
+		uint8_t packet_num = gopro_cmd->data[0] & 0x0F;
+		LOG_DBG("Continuation Packet number %d",packet_num);
+
+	}else{
+
+		uint8_t packet_type = ((gopro_cmd->data[0] & 0x60) >> 5);
+		uint16_t packet_data_len = 0;
+
+		switch (packet_type)
+		{
+		case 0:
+			packet_data_len = (gopro_cmd->data[0] & 0x1F);
+			LOG_DBG("General 5-bit Packet. Data Len: %d",packet_data_len);
+			break;
+
+		case 1:
+			packet_data_len = ((gopro_cmd->data[0] & 0x1F) << 8)|gopro_cmd->data[1];
+			LOG_DBG("Extended 13-bit Packet. Data Len: %d",packet_data_len);
+			break;
+
+		case 2:
+			packet_data_len = (gopro_cmd->data[1] << 8)|gopro_cmd->data[2];
+			LOG_DBG("Extended 16-bit Packet. Data Len: %d",packet_data_len);
+			break;
+		
+		default:
+			break;
+		}
+
+	}
 
 	zbus_chan_pub(&can_txdata_chan, &gopro_cmd, K_NO_WAIT);
 
