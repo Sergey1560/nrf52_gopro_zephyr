@@ -41,6 +41,13 @@ struct bt_conn_le_create_param *conn_params = BT_CONN_LE_CREATE_PARAM(BT_CONN_LE
 static struct bt_conn *default_conn;
 static struct bt_gopro_client gopro_client;
 
+const static struct gopro_cmd_t gopro_query_hw_info = {
+	.len = 2,
+	.cmd_type = GP_HANDLE_CMD,
+	.data={01,0x3C}
+};
+
+
 const static struct gopro_cmd_t gopro_query_encoding = {
 	.len = 3,
 	.cmd_type = GP_HANDLE_QUERY,
@@ -68,7 +75,17 @@ const static struct gopro_cmd_t gopro_query_register = {
 K_SEM_DEFINE(ble_write_sem, 0, 1);
 #define BLE_WRITE_TIMEOUT	K_MSEC(1200)
 
-const static struct gopro_cmd_t *startup_query_list[] = {&gopro_query_register, &gopro_query_video_num, &gopro_query_battery, &gopro_query_encoding};
+// const static struct gopro_cmd_t *startup_query_list[] = {
+// 	&gopro_query_register, 
+// 	&gopro_query_video_num, 
+// 	&gopro_query_battery, 
+// 	&gopro_query_encoding
+// };
+
+const static struct gopro_cmd_t *startup_query_list[] = {
+	&gopro_query_hw_info
+};
+
 
 static void led_idle_handler(struct k_work *work);
 static void led_idle_timer_handler(struct k_timer *dummy);
@@ -207,13 +224,12 @@ static void discovery_work_handler(struct k_work *work){
 	gopro_led_mode_set(LED_NUM_BT,LED_MODE_ON);
 	gopro_client_set_sate(GPSTATE_CONNECTED);
 
+	LOG_DBG("Dummy wait");
 	k_sleep(K_MSEC(1000));
 
 	for(uint32_t i=0; i < sizeof(startup_query_list)/sizeof(startup_query_list[0]); i++){
 		
 		LOG_HEXDUMP_DBG(startup_query_list[i]->data,startup_query_list[i]->len,"Push to TX chan:");
-		LOG_DBG("Push pointer 0x%0X",(uint32_t)startup_query_list[i]);
-
 		err = zbus_chan_pub(&gopro_cmd_chan, startup_query_list[i], K_MSEC(100));
 
 		if(err != 0){
