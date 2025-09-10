@@ -30,6 +30,16 @@
 #include <buttons.h>
 #include <leds.h>
 
+#include <pb_encode.h>
+#include <pb_decode.h>
+#include "src/simple.pb.h"
+
+
+#if DT_NODE_HAS_STATUS_OKAY(CAN_MCP_NODE)
+#define CANBUS_PRESENT
+#endif
+
+
 LOG_MODULE_REGISTER(central_gopro, LOG_LEVEL_DBG);
 static struct k_work scan_work;
 
@@ -91,6 +101,7 @@ static void led_idle_handler(struct k_work *work);
 static void led_idle_timer_handler(struct k_timer *dummy);
 static void gopro_cmd_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
 static void discovery_work_handler(struct k_work *work);
+static void print_bond_info(const struct bt_bond_info *info, void *user_data);
 
 bool gopro_cmd_validator(const void* msg, size_t msg_size);
 
@@ -110,8 +121,10 @@ ZBUS_CHAN_DEFINE(gopro_cmd_chan,                        /* Name */
 ZBUS_MSG_SUBSCRIBER_DEFINE(gopro_cmd_subscriber);
 K_THREAD_DEFINE(gopro_cmd_subscriber_task_id, 1024, gopro_cmd_subscriber_task, NULL, NULL, NULL, 3, 0, 0);
 
+#ifdef CANBUS_PRESENT
 ZBUS_CHAN_DECLARE(can_tx_chan);
 ZBUS_CHAN_DECLARE(can_txdata_chan);
+#endif
 
 K_WORK_DEFINE(discovery_work, discovery_work_handler);
 
@@ -223,9 +236,9 @@ static uint8_t ble_data_received(struct bt_gopro_client *nus, const struct gopro
 		}
 
 	}
-
+	#ifdef CANBUS_PRESENT
 	zbus_chan_pub(&can_txdata_chan, &gopro_cmd, K_NO_WAIT);
-
+	#endif
 	switch (gopro_cmd->cmd_type)
 	{
 	case GP_HANDLE_CMD:
@@ -412,8 +425,8 @@ static void security_changed(struct bt_conn *conn, bt_security_t level,enum bt_s
 			if(err == BT_SECURITY_ERR_PIN_OR_KEY_MISSING){
 				gopro_client_set_sate(GPSTATE_NEED_PAIRING);
 				gopro_led_mode_set(LED_NUM_REC,LED_MODE_BLINK_300MS);
-				LOG_WRN("Remove bonding, start new pair");
-				bt_unpair(BT_ID_DEFAULT,BT_ADDR_LE_ANY);
+				// LOG_WRN("Remove bonding, start new pair");
+				// bt_unpair(BT_ID_DEFAULT,BT_ADDR_LE_ANY);
 			}
 		
 		}
@@ -553,13 +566,14 @@ static void scan_filter_no_match(struct bt_scan_device_info *device_info, bool c
 
 BT_SCAN_CB_INIT(scan_cb, scan_filter_match, scan_filter_no_match, scan_connecting_error, scan_connecting);
 
-static void try_add_address_filter(const struct bt_bond_info *info, void *user_data)
-{
+static void try_add_address_filter(const struct bt_bond_info *info, void *user_data){
 	int err;
 	char addr[BT_ADDR_LE_STR_LEN];
 	uint8_t *filter_mode = user_data;
 
 	bt_addr_le_to_str(&info->addr, addr, sizeof(addr));
+
+	LOG_DBG("Saved bond found: %s",addr);
 
 	struct bt_conn *conn = bt_conn_lookup_addr_le(BT_ID_DEFAULT, &info->addr);
 
@@ -567,7 +581,7 @@ static void try_add_address_filter(const struct bt_bond_info *info, void *user_d
 		bt_conn_unref(conn);
 		return;
 	}
-
+	
 	err = bt_scan_filter_add(BT_SCAN_FILTER_TYPE_ADDR, &info->addr);
 	if (err) {
 		LOG_ERR("Address filter cannot be added (err %d): %s", err, addr);
@@ -590,15 +604,18 @@ static int scan_start(void)
 	}
 
 	bt_scan_filter_remove_all();
-
-	err = bt_scan_filter_add(BT_SCAN_FILTER_TYPE_UUID, BT_UUID_GOPRO_SERVICE);
-	if (err) {
-		LOG_ERR("UUID filter cannot be added (err %d", err);
-		return err;
-	}
-	filter_mode |= BT_SCAN_UUID_FILTER;
-
 	bt_foreach_bond(BT_ID_DEFAULT, try_add_address_filter, &filter_mode);
+
+	if((filter_mode & BT_SCAN_ADDR_FILTER) == 0){
+		LOG_DBG("Saved bonds not found, filter by UUID");
+		filter_mode = BT_SCAN_UUID_FILTER;	
+
+		err = bt_scan_filter_add(BT_SCAN_FILTER_TYPE_UUID, BT_UUID_GOPRO_SERVICE);
+		if (err) {
+			LOG_ERR("UUID filter cannot be added (err %d", err);
+			return err;
+		}
+	}
 
 	err = bt_scan_filter_enable(filter_mode, false);
 	if (err) {
@@ -670,7 +687,7 @@ static void pairing_complete(struct bt_conn *conn, bool bonded)
 	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
 
 	LOG_INF("Pairing completed: %s, bonded: %d", addr, bonded);
-	settings_save();
+	//settings_save();
 }
 
 static void pairing_failed(struct bt_conn *conn, enum bt_security_err reason)
@@ -692,9 +709,19 @@ static struct bt_conn_auth_info_cb conn_auth_info_callbacks = {
 	.pairing_failed = pairing_failed
 };
 
+
+static void print_bond_info(const struct bt_bond_info *info, void *user_data){
+
+	LOG_DBG("Bond ADDR [%0X:%0X:%0X:%0X:%0X:%0X]", info->addr.a.val[0],info->addr.a.val[1],info->addr.a.val[2],info->addr.a.val[3],info->addr.a.val[4],info->addr.a.val[5]);
+};
+
+
 int main(void)
 {
 	int err=0;
+
+	uint8_t buffer[SimpleMessage_size];
+	size_t message_length;
 
 	gopro_gpio_init();
 	gopro_leds_init();	
@@ -719,18 +746,18 @@ int main(void)
 	}
 	LOG_INF("Bluetooth initialized");
 
-	err = gopro_client_init();
-	if (err != 0) {
-		LOG_ERR("gopro_client_init failed (err %d)", err);
-		return 0;
-	}
-
-	settings_subsys_init();
+	//settings_subsys_init();
 	err=settings_load();
 	if(err != 0){
 		LOG_ERR("Settings load err: %d",err);
 	}else{
 		LOG_DBG("Settings load done");
+	}
+
+	err = gopro_client_init();
+	if (err != 0) {
+		LOG_ERR("gopro_client_init failed (err %d)", err);
+		return 0;
 	}
 
 	scan_init();
