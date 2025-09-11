@@ -63,11 +63,11 @@ enum gopro_state_list_t{
     GPSTATE_END
 };
 
-enum gopro_handle_list_t{
-    GP_HANDLE_CMD,
-    GP_HANDLE_SETTINGS,
-    GP_HANDLE_QUERY,
-    GP_HANDLE_END,
+enum gopro_control_handle_list_t{
+    GP_CNTRL_HANDLE_CMD,
+    GP_CNTRL_HANDLE_SETTINGS,
+    GP_CNTRL_HANDLE_QUERY,
+	GP_CNTRL_HANDLE_END,
 };
 
 enum gopro_wifi_handle_list_t{
@@ -78,6 +78,10 @@ enum gopro_wifi_handle_list_t{
     GP_WIFI_HANDLE_END,
 };
 
+enum gopro_net_handle_list_t{
+    GP_NET_HANDLE_CMD,
+    GP_NET_HANDLE_END,
+};
 
 enum gopro_flag_t{
 	GOPRO_C_INITIALIZED,
@@ -166,14 +170,14 @@ struct bt_gopro_client {
         /** Handles on the connected peer device that are needed
          * to interact with the device.
          */
-	struct bt_gopro_client_handles handles[GP_HANDLE_END];
+	struct bt_gopro_client_handles handles[GP_CNTRL_HANDLE_END];
 	uint16_t wifihandles[GP_WIFI_HANDLE_END];
 
-        /** GATT subscribe parameters for NUS TX Characteristic. */
-	struct bt_gatt_subscribe_params notif_params[GP_HANDLE_END];
+	/** GATT subscribe parameters for NUS TX Characteristic. */
+	struct bt_gatt_subscribe_params notif_params[GP_CNTRL_HANDLE_END];
 
         /** GATT write parameters for NUS RX Characteristic. */
-	struct bt_gatt_write_params write_params[GP_HANDLE_END];
+	struct bt_gatt_write_params write_params[GP_CNTRL_HANDLE_END];
 
 	struct bt_gatt_read_params read_wifi_params[GP_WIFI_HANDLE_END];
 
@@ -227,6 +231,8 @@ int bt_gopro_client_init(struct bt_gopro_client *nus, const struct bt_gopro_clie
  *           Otherwise, a negative error code is returned.
  */
 int bt_gopro_client_send(struct bt_gopro_client *nus, struct gopro_cmd_t *gopro_cmd);
+int bt_gopro_client_get(struct bt_gopro_client *nus_c, uint16_t handle);
+
 
 /** @brief Assign handles to the GoPro Client instance.
  *

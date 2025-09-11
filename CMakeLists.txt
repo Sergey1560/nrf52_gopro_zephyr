@@ -25,6 +25,7 @@ zephyr_nanopb_sources(app src/protobuf/turbo_transfer.proto)
 target_sources(app PRIVATE
   src/main.c
   src/gopro_client.c
+  src/gopro_protobuf.c
   src/canbus.c
   src/buttons.c
   src/leds.c

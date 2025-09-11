@@ -124,15 +124,15 @@ static void rx_callback_function(const struct device *dev, struct can_frame *fra
 	switch (frame->id)
 	{
 	case GPCAN_INPUT_CMD_ID: //GoPro cmd
-		gopro_cmd.cmd_type = GP_HANDLE_CMD;
+		gopro_cmd.cmd_type = GP_CNTRL_HANDLE_CMD;
 		break;
 
 	case GPCAN_INPUT_SET_ID: //GoPro cmd
-		gopro_cmd.cmd_type = GP_HANDLE_SETTINGS;
+		gopro_cmd.cmd_type = GP_CNTRL_HANDLE_SETTINGS;
 		break;
 
 	case GPCAN_INPUT_QUERY_ID: //GoPro cmd
-		gopro_cmd.cmd_type = GP_HANDLE_QUERY;
+		gopro_cmd.cmd_type = GP_CNTRL_HANDLE_QUERY;
 		break;
 
 	default:
@@ -327,15 +327,15 @@ static void can_data_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
 
 				switch (gopro_cmd.cmd_type)
 				{
-				case GP_HANDLE_CMD:
+				case GP_CNTRL_HANDLE_CMD:
 					tx_frame.id = GPCAN_REPLY_MSG_CMD_ID;
 					break;
 
-				case GP_HANDLE_SETTINGS:
+				case GP_CNTRL_HANDLE_SETTINGS:
 					tx_frame.id = GPCAN_REPLY_MSG_SETTINGS_ID;
 					break;
 				
-				case GP_HANDLE_QUERY:
+				case GP_CNTRL_HANDLE_QUERY:
 					tx_frame.id = GPCAN_REPLY_MSG_QUERY_ID;
 					break;
 

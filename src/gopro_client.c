@@ -30,13 +30,13 @@ static uint8_t on_received_cmd(struct bt_conn *conn, struct bt_gatt_subscribe_pa
 static uint8_t on_received_settings(struct bt_conn *conn, struct bt_gatt_subscribe_params *params, const void *data, uint16_t length);
 static uint8_t on_received_query(struct bt_conn *conn, struct bt_gatt_subscribe_params *params, const void *data, uint16_t length);
 
-uint8_t (*notify_func[GP_HANDLE_END])(struct bt_conn *conn, struct bt_gatt_subscribe_params *params, const void *data, uint16_t length) = {on_received_cmd, on_received_settings, on_received_query};
+uint8_t (*notify_func[GP_CNTRL_HANDLE_END])(struct bt_conn *conn, struct bt_gatt_subscribe_params *params, const void *data, uint16_t length) = {on_received_cmd, on_received_settings, on_received_query};
 
 static void on_sent_cmd(struct bt_conn *conn, uint8_t err, struct bt_gatt_write_params *params);
 static void on_sent_settings(struct bt_conn *conn, uint8_t err, struct bt_gatt_write_params *params);
 static void on_sent_query(struct bt_conn *conn, uint8_t err, struct bt_gatt_write_params *params);
 
-void (*sent_func[GP_HANDLE_END])(struct bt_conn *conn, uint8_t err, struct bt_gatt_write_params *params) = {on_sent_cmd,on_sent_settings,on_sent_query};
+void (*sent_func[GP_CNTRL_HANDLE_END])(struct bt_conn *conn, uint8_t err, struct bt_gatt_write_params *params) = {on_sent_cmd,on_sent_settings,on_sent_query};
 
 static void gopro_client_update_state(void);
 
@@ -118,7 +118,7 @@ static uint8_t on_received_cmd(struct bt_conn *conn, struct bt_gatt_subscribe_pa
 	struct gopro_cmd_t gopro_cmd;
 	uint8_t *pdata = (uint8_t *)data;
 
-	nus = CONTAINER_OF(params, struct bt_gopro_client, notif_params[GP_HANDLE_CMD]);
+	nus = CONTAINER_OF(params, struct bt_gopro_client, notif_params[GP_CNTRL_HANDLE_CMD]);
 
 	if (!data) {
 		LOG_DBG("[UNSUBSCRIBED]");
@@ -136,7 +136,7 @@ static uint8_t on_received_cmd(struct bt_conn *conn, struct bt_gatt_subscribe_pa
 	LOG_DBG("[NOTIFICATION] length %u handle %d", length, params->value_handle);
 	
 	if (nus->cb.received) {
-		gopro_cmd.cmd_type = GP_HANDLE_CMD;
+		gopro_cmd.cmd_type = GP_CNTRL_HANDLE_CMD;
 		
 		if(length > GOPRO_CMD_DATA_LEN){
 			gopro_cmd.len = GOPRO_CMD_DATA_LEN;
@@ -161,7 +161,7 @@ static uint8_t on_received_settings(struct bt_conn *conn, struct bt_gatt_subscri
 	struct gopro_cmd_t gopro_cmd;
 	uint8_t *pdata = (uint8_t *)data;
 
-	nus = CONTAINER_OF(params, struct bt_gopro_client, notif_params[GP_HANDLE_SETTINGS]);
+	nus = CONTAINER_OF(params, struct bt_gopro_client, notif_params[GP_CNTRL_HANDLE_SETTINGS]);
 
 	if (!data) {
 		LOG_DBG("[UNSUBSCRIBED]");
@@ -178,7 +178,7 @@ static uint8_t on_received_settings(struct bt_conn *conn, struct bt_gatt_subscri
 	LOG_DBG("[NOTIFICATION] length %u handle %d", length, params->value_handle);
 	
 	if (nus->cb.received) {
-			gopro_cmd.cmd_type = GP_HANDLE_SETTINGS;
+			gopro_cmd.cmd_type = GP_CNTRL_HANDLE_SETTINGS;
 			
 			if(length > GOPRO_CMD_DATA_LEN){
 				gopro_cmd.len = GOPRO_CMD_DATA_LEN;
@@ -203,7 +203,7 @@ static uint8_t on_received_query(struct bt_conn *conn, struct bt_gatt_subscribe_
 	struct gopro_cmd_t gopro_cmd;
 	uint8_t *pdata = (uint8_t *)data;
 
-	nus = CONTAINER_OF(params, struct bt_gopro_client, notif_params[GP_HANDLE_QUERY]);
+	nus = CONTAINER_OF(params, struct bt_gopro_client, notif_params[GP_CNTRL_HANDLE_QUERY]);
 
 	if (!data) {
 		LOG_DBG("[UNSUBSCRIBED]");
@@ -220,7 +220,7 @@ static uint8_t on_received_query(struct bt_conn *conn, struct bt_gatt_subscribe_
 
 	LOG_DBG("[NOTIFICATION] length %u handle %d", length, params->value_handle);
 	if (nus->cb.received) {
-			gopro_cmd.cmd_type = GP_HANDLE_QUERY;
+			gopro_cmd.cmd_type = GP_CNTRL_HANDLE_QUERY;
 		
 			if(length > GOPRO_CMD_DATA_LEN){
 				gopro_cmd.len = GOPRO_CMD_DATA_LEN;
@@ -247,7 +247,7 @@ static void on_sent_cmd(struct bt_conn *conn, uint8_t err, struct bt_gatt_write_
 	uint16_t length;
 
 	/* Retrieve module context. */
-	nus_c = CONTAINER_OF(params, struct bt_gopro_client, write_params[GP_HANDLE_CMD]);
+	nus_c = CONTAINER_OF(params, struct bt_gopro_client, write_params[GP_CNTRL_HANDLE_CMD]);
 
 	/* Make a copy of volatile data that is required by the callback. */
 	data = params->data;
@@ -266,7 +266,7 @@ static void on_sent_settings(struct bt_conn *conn, uint8_t err, struct bt_gatt_w
 	uint16_t length;
 
 	/* Retrieve module context. */
-	nus_c = CONTAINER_OF(params, struct bt_gopro_client, write_params[GP_HANDLE_SETTINGS]);
+	nus_c = CONTAINER_OF(params, struct bt_gopro_client, write_params[GP_CNTRL_HANDLE_SETTINGS]);
 
 	/* Make a copy of volatile data that is required by the callback. */
 	data = params->data;
@@ -285,7 +285,7 @@ static void on_sent_query(struct bt_conn *conn, uint8_t err, struct bt_gatt_writ
 	uint16_t length;
 
 	/* Retrieve module context. */
-	nus_c = CONTAINER_OF(params, struct bt_gopro_client, write_params[GP_HANDLE_QUERY]);
+	nus_c = CONTAINER_OF(params, struct bt_gopro_client, write_params[GP_CNTRL_HANDLE_QUERY]);
 
 	/* Make a copy of volatile data that is required by the callback. */
 	data = params->data;
@@ -324,7 +324,7 @@ int bt_gopro_client_send(struct bt_gopro_client *nus_c, struct gopro_cmd_t *gopr
 		return -ENOTCONN;
 	}
 
-	if(gopro_cmd->cmd_type >= GP_HANDLE_END){
+	if(gopro_cmd->cmd_type >= GP_CNTRL_HANDLE_END){
 		return -ENOTSUP;
 	}
 
@@ -332,13 +332,13 @@ int bt_gopro_client_send(struct bt_gopro_client *nus_c, struct gopro_cmd_t *gopr
 
 	switch (handle_index)
 	{
-	case GP_HANDLE_CMD:
+	case GP_CNTRL_HANDLE_CMD:
 		flag_bit = GOPRO_C_CMD_WRITE_PENDING;
 		break;
-	case GP_HANDLE_SETTINGS:
+	case GP_CNTRL_HANDLE_SETTINGS:
 		flag_bit = GOPRO_C_SETTINGS_WRITE_PENDING;
 		break;
-	case GP_HANDLE_QUERY:
+	case GP_CNTRL_HANDLE_QUERY:
 		flag_bit = GOPRO_C_QUERY_WRITE_PENDING;
 		break;
 	
@@ -368,6 +368,44 @@ int bt_gopro_client_send(struct bt_gopro_client *nus_c, struct gopro_cmd_t *gopr
 	return err;
 }
 
+static uint8_t bt_cts_read_callback(struct bt_conn *conn, uint8_t err,
+				    struct bt_gatt_read_params *params,
+				    const void *data, uint16_t length)
+{
+	if (!err) {
+		LOG_HEXDUMP_DBG(data,length,"Read CHAR data:");
+	} else {
+		LOG_ERR("Read char error %d",err);
+	}
+
+
+	return BT_GATT_ITER_STOP;
+}
+
+
+int bt_gopro_client_get(struct bt_gopro_client *nus_c, uint16_t handle){
+	int err;
+
+	if (!nus_c->conn) {
+		return -ENOTCONN;
+	}
+
+	LOG_DBG("Read handle: 0x%0X",nus_c->read_wifi_params[handle].single.handle);
+
+	nus_c->read_wifi_params[handle].func=bt_cts_read_callback;
+	nus_c->read_wifi_params[handle].single.handle=nus_c->wifihandles[handle];
+	nus_c->read_wifi_params[handle].single.offset=0;
+	nus_c->read_wifi_params[handle].handle_count=1;
+
+	err = bt_gatt_read(nus_c->conn,&nus_c->read_wifi_params[handle]);
+	if(err){
+		LOG_ERR("Failed read gatt, err (%d) %s", err, bt_gatt_err_to_str(err));
+	}
+
+	return err;
+}
+
+/*
 static int gopro_set_handle(struct bt_gatt_dm *dm, struct bt_gopro_client *nus_c, enum gopro_handle_list_t gopro_handle){
 	const struct bt_gatt_dm_attr *gatt_chrc;
 	const struct bt_gatt_dm_attr *gatt_desc;
@@ -438,7 +476,7 @@ static int gopro_set_handle(struct bt_gatt_dm *dm, struct bt_gopro_client *nus_c
 	LOG_INF("Handles assigned succesfull.");
 	return 0;
 }
-
+*/
 int bt_gopro_wifi_handles_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client *nus_c){
 	const struct bt_gatt_dm_attr *gatt_service_attr = bt_gatt_dm_service_get(dm);
 	const struct bt_gatt_service_val *gatt_service = bt_gatt_dm_attr_service_val(gatt_service_attr);
@@ -454,17 +492,16 @@ int bt_gopro_wifi_handles_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client 
 
 
 	/* SSID */
-	gatt_chrc = bt_gatt_dm_char_by_uuid(dm, BT_UUID_GOPRO_WIFI_SSID);
+	gatt_chrc = (struct bt_gatt_dm_attr *)bt_gatt_dm_char_by_uuid(dm, BT_UUID_GOPRO_WIFI_SSID);
 	LOG_DBG("DM: 0x%0X UUID: 0x%0X",(uint32_t)dm,(uint32_t)BT_UUID_GOPRO_WIFI_SSID);
-	LOG_DBG("CMD Char by uuid = %d",gatt_chrc);
 	if (!gatt_chrc) {
 		LOG_ERR("Missing characteristic for SSID");
 		return -EINVAL;
 	}
 
-	gatt_desc = bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GOPRO_WIFI_SSID);
+	gatt_desc = (struct bt_gatt_dm_attr *)bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GOPRO_WIFI_SSID);
 	if (!gatt_desc) {
-		LOG_ERR("Missing Notify value descriptor in characteristic for CMD.");
+		LOG_ERR("Missing descriptor in characteristic for SSID.");
 		return -EINVAL;
 	}
 	
@@ -472,9 +509,63 @@ int bt_gopro_wifi_handles_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client 
 	nus_c->wifihandles[GP_WIFI_HANDLE_SSID] = gatt_desc->handle;
 
 
-}
+	/* PASS */
+	gatt_chrc = (struct bt_gatt_dm_attr *)bt_gatt_dm_char_by_uuid(dm, BT_UUID_GOPRO_WIFI_PASS);
+	LOG_DBG("DM: 0x%0X UUID: 0x%0X",(uint32_t)dm,(uint32_t)BT_UUID_GOPRO_WIFI_PASS);
+	if (!gatt_chrc) {
+		LOG_ERR("Missing characteristic for PASS");
+		return -EINVAL;
+	}
+
+	gatt_desc = (struct bt_gatt_dm_attr *)bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GOPRO_WIFI_PASS);
+	if (!gatt_desc) {
+		LOG_ERR("Missing descriptor in characteristic for PASS.");
+		return -EINVAL;
+	}
+	
+	LOG_DBG("Found handle for PASS characteristic");
+	nus_c->wifihandles[GP_WIFI_HANDLE_PASS] = gatt_desc->handle;
 
 
+	/* POWER */
+	gatt_chrc = (struct bt_gatt_dm_attr *)bt_gatt_dm_char_by_uuid(dm, BT_UUID_GOPRO_WIFI_POWER);
+	LOG_DBG("DM: 0x%0X UUID: 0x%0X",(uint32_t)dm,(uint32_t)BT_UUID_GOPRO_WIFI_POWER);
+	if (!gatt_chrc) {
+		LOG_ERR("Missing characteristic for POWER");
+		return -EINVAL;
+	}
+
+	gatt_desc = (struct bt_gatt_dm_attr *)bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GOPRO_WIFI_POWER);
+	if (!gatt_desc) {
+		LOG_ERR("Missing descriptor in characteristic for POWER.");
+		return -EINVAL;
+	}
+	
+	LOG_DBG("Found handle for POWER characteristic");
+	nus_c->wifihandles[GP_WIFI_HANDLE_POWER] = gatt_desc->handle;
+
+	/* STATE */
+	gatt_chrc = (struct bt_gatt_dm_attr *)bt_gatt_dm_char_by_uuid(dm, BT_UUID_GOPRO_WIFI_STATE);
+	LOG_DBG("DM: 0x%0X UUID: 0x%0X",(uint32_t)dm,(uint32_t)BT_UUID_GOPRO_WIFI_STATE);
+	if (!gatt_chrc) {
+		LOG_ERR("Missing characteristic for STATE");
+		return -EINVAL;
+	}
+
+	gatt_desc = (struct bt_gatt_dm_attr *)bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GOPRO_WIFI_STATE);
+	if (!gatt_desc) {
+		LOG_ERR("Missing descriptor in characteristic for STATE.");
+		return -EINVAL;
+	}
+	
+	LOG_DBG("Found handle for STATE characteristic");
+	nus_c->wifihandles[GP_WIFI_HANDLE_STATE] = gatt_desc->handle;
+
+
+
+	nus_c->conn = bt_gatt_dm_conn_get(dm);
+	return 0;
+};
 
 int bt_gopro_handles_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client *nus_c){
 	const struct bt_gatt_dm_attr *gatt_service_attr = bt_gatt_dm_service_get(dm);
@@ -493,44 +584,43 @@ int bt_gopro_handles_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client *nus_
 	// LOG_DBG("Char by uuid = %d",gatt_chrc);
 
 	/* CMD */
-	gatt_chrc = bt_gatt_dm_char_by_uuid(dm, BT_UUID_GOPRO_CMD_NOTIFY);
+	gatt_chrc = (struct bt_gatt_dm_attr *)bt_gatt_dm_char_by_uuid(dm, BT_UUID_GOPRO_CMD_NOTIFY);
 	LOG_DBG("DM: 0x%0X UUID: 0x%0X",(uint32_t)dm,(uint32_t)BT_UUID_GOPRO_CMD_NOTIFY);
-	LOG_DBG("CMD Char by uuid = %d",gatt_chrc);
 	if (!gatt_chrc) {
 		LOG_ERR("Missing Notify characteristic for CMD");
 		return -EINVAL;
 	}
 
-	gatt_desc = bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GOPRO_CMD_NOTIFY);
+	gatt_desc = (struct bt_gatt_dm_attr *)bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GOPRO_CMD_NOTIFY);
 	if (!gatt_desc) {
 		LOG_ERR("Missing Notify value descriptor in characteristic for CMD.");
 		return -EINVAL;
 	}
 	
 	LOG_DBG("Found handle for Notify characteristic for CMD.");
-	nus_c->handles[GP_HANDLE_CMD].notify = gatt_desc->handle;
+	nus_c->handles[GP_CNTRL_HANDLE_CMD].notify = gatt_desc->handle;
 
-	gatt_desc = bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GATT_CCC);
+	gatt_desc = (struct bt_gatt_dm_attr *)bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GATT_CCC);
 	if (!gatt_desc) {
 		LOG_ERR("Missing GoPro Notify CCC in characteristic.");
 		return -EINVAL;
 	}
 	LOG_DBG("Found handle for CCC of GoPro Notify characteristic. 0x%0X",gatt_desc->handle);
-	nus_c->handles[GP_HANDLE_CMD].notify_ccc = gatt_desc->handle;
+	nus_c->handles[GP_CNTRL_HANDLE_CMD].notify_ccc = gatt_desc->handle;
 
-	gatt_chrc = bt_gatt_dm_char_by_uuid(dm, BT_UUID_GOPRO_CMD_WRITE);
+	gatt_chrc = (struct bt_gatt_dm_attr *)bt_gatt_dm_char_by_uuid(dm, BT_UUID_GOPRO_CMD_WRITE);
 	if (!gatt_chrc) {
 		LOG_ERR("Missing Write characteristic.");
 		return -EINVAL;
 	}
 
-	gatt_desc = bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GOPRO_CMD_WRITE);
+	gatt_desc = (struct bt_gatt_dm_attr *)bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GOPRO_CMD_WRITE);
 	if (!gatt_desc) {
 		LOG_ERR("Missing GoPro Write value descriptor in characteristic.");
 		return -EINVAL;
 	}
 	LOG_DBG("Found handle for Write characteristic.");
-	nus_c->handles[GP_HANDLE_CMD].write = gatt_desc->handle;
+	nus_c->handles[GP_CNTRL_HANDLE_CMD].write = gatt_desc->handle;
 
 	LOG_INF("CMD Handles assigned succesfull.");
 	/* CMD */
@@ -538,44 +628,43 @@ int bt_gopro_handles_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client *nus_
 	
 	
 	/* SETTINGS */
-	gatt_chrc = bt_gatt_dm_char_by_uuid(dm, BT_UUID_GOPRO_SETTINGS_NOTIFY);
+	gatt_chrc = (struct bt_gatt_dm_attr *)bt_gatt_dm_char_by_uuid(dm, BT_UUID_GOPRO_SETTINGS_NOTIFY);
 	LOG_DBG("DM: 0x%0X UUID: 0x%0X",(uint32_t)dm,(uint32_t)BT_UUID_GOPRO_SETTINGS_NOTIFY);
-	LOG_DBG("SETTINGS Char by uuid = %d",gatt_chrc);
 	if (!gatt_chrc) {
 		LOG_ERR("Missing Notify characteristic for SETTINGS");
 		return -EINVAL;
 	}
 
-	gatt_desc = bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GOPRO_SETTINGS_NOTIFY);
+	gatt_desc = (struct bt_gatt_dm_attr *)bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GOPRO_SETTINGS_NOTIFY);
 	if (!gatt_desc) {
 		LOG_ERR("Missing Notify value descriptor in characteristic for SETTINGS.");
 		return -EINVAL;
 	}
 	
 	LOG_DBG("Found handle for Notify characteristic for SETTINGS.");
-	nus_c->handles[GP_HANDLE_SETTINGS].notify = gatt_desc->handle;
+	nus_c->handles[GP_CNTRL_HANDLE_SETTINGS].notify = gatt_desc->handle;
 
-	gatt_desc = bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GATT_CCC);
+	gatt_desc = (struct bt_gatt_dm_attr *)bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GATT_CCC);
 	if (!gatt_desc) {
 		LOG_ERR("Missing GoPro Notify CCC in characteristic.");
 		return -EINVAL;
 	}
 	LOG_DBG("Found handle for CCC of GoPro Notify characteristic. 0x%0X",gatt_desc->handle);
-	nus_c->handles[GP_HANDLE_SETTINGS].notify_ccc = gatt_desc->handle;
+	nus_c->handles[GP_CNTRL_HANDLE_SETTINGS].notify_ccc = gatt_desc->handle;
 
-	gatt_chrc = bt_gatt_dm_char_by_uuid(dm, BT_UUID_GOPRO_SETTINGS_WRITE);
+	gatt_chrc = (struct bt_gatt_dm_attr *)bt_gatt_dm_char_by_uuid(dm, BT_UUID_GOPRO_SETTINGS_WRITE);
 	if (!gatt_chrc) {
 		LOG_ERR("Missing Write characteristic.");
 		return -EINVAL;
 	}
 
-	gatt_desc = bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GOPRO_SETTINGS_WRITE);
+	gatt_desc = (struct bt_gatt_dm_attr *)bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GOPRO_SETTINGS_WRITE);
 	if (!gatt_desc) {
 		LOG_ERR("Missing GoPro Write value descriptor in characteristic.");
 		return -EINVAL;
 	}
 	LOG_DBG("Found handle for Write characteristic.");
-	nus_c->handles[GP_HANDLE_SETTINGS].write = gatt_desc->handle;
+	nus_c->handles[GP_CNTRL_HANDLE_SETTINGS].write = gatt_desc->handle;
 
 	LOG_INF("SETTINGS Handles assigned succesfull.");
 	/* SETTINGS */
@@ -584,44 +673,43 @@ int bt_gopro_handles_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client *nus_
 
 
 	/* QUERY */
-	gatt_chrc = bt_gatt_dm_char_by_uuid(dm, BT_UUID_GOPRO_QUERY_NOTIFY);
+	gatt_chrc = (struct bt_gatt_dm_attr *)bt_gatt_dm_char_by_uuid(dm, BT_UUID_GOPRO_QUERY_NOTIFY);
 	LOG_DBG("DM: 0x%0X UUID: 0x%0X",(uint32_t)dm,(uint32_t)BT_UUID_GOPRO_QUERY_NOTIFY);
-	LOG_DBG("QUERY Char by uuid = %d",gatt_chrc);
 	if (!gatt_chrc) {
 		LOG_ERR("Missing Notify characteristic for QUERY");
 		return -EINVAL;
 	}
 
-	gatt_desc = bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GOPRO_QUERY_NOTIFY);
+	gatt_desc = (struct bt_gatt_dm_attr *)bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GOPRO_QUERY_NOTIFY);
 	if (!gatt_desc) {
 		LOG_ERR("Missing Notify value descriptor in characteristic for QUERY.");
 		return -EINVAL;
 	}
 	
 	LOG_DBG("Found handle for Notify characteristic for QUERY.");
-	nus_c->handles[GP_HANDLE_QUERY].notify = gatt_desc->handle;
+	nus_c->handles[GP_CNTRL_HANDLE_QUERY].notify = gatt_desc->handle;
 
-	gatt_desc = bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GATT_CCC);
+	gatt_desc = (struct bt_gatt_dm_attr *)bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GATT_CCC);
 	if (!gatt_desc) {
 		LOG_ERR("Missing GoPro Notify CCC in characteristic.");
 		return -EINVAL;
 	}
 	LOG_DBG("Found handle for CCC of GoPro Notify characteristic. 0x%0X",gatt_desc->handle);
-	nus_c->handles[GP_HANDLE_QUERY].notify_ccc = gatt_desc->handle;
+	nus_c->handles[GP_CNTRL_HANDLE_QUERY].notify_ccc = gatt_desc->handle;
 
-	gatt_chrc = bt_gatt_dm_char_by_uuid(dm, BT_UUID_GOPRO_QUERY_WRITE);
+	gatt_chrc = (struct bt_gatt_dm_attr *)bt_gatt_dm_char_by_uuid(dm, BT_UUID_GOPRO_QUERY_WRITE);
 	if (!gatt_chrc) {
 		LOG_ERR("Missing Write characteristic.");
 		return -EINVAL;
 	}
 
-	gatt_desc = bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GOPRO_QUERY_WRITE);
+	gatt_desc = (struct bt_gatt_dm_attr *)bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GOPRO_QUERY_WRITE);
 	if (!gatt_desc) {
 		LOG_ERR("Missing GoPro Write value descriptor in characteristic.");
 		return -EINVAL;
 	}
 	LOG_DBG("Found handle for Write characteristic.");
-	nus_c->handles[GP_HANDLE_QUERY].write = gatt_desc->handle;
+	nus_c->handles[GP_CNTRL_HANDLE_QUERY].write = gatt_desc->handle;
 
 	LOG_INF("QUERY Handles assigned succesfull.");
 	/* CMD */
@@ -633,26 +721,26 @@ int bt_gopro_handles_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client *nus_
 }
 
 
-static int gopro_set_subscribe(struct bt_gopro_client *nus_c, enum gopro_handle_list_t gopro_handle){
+static int gopro_set_subscribe(struct bt_gopro_client *nus_c, enum gopro_control_handle_list_t gopro_handle){
 	int flag_bit;
 	int handle_index;
 	int err;
 
 	switch (gopro_handle)
 	{
-	case GP_HANDLE_CMD:
+	case GP_CNTRL_HANDLE_CMD:
 		flag_bit = GOPRO_C_CMD_NOTIF_ENABLED;
-		handle_index = GP_HANDLE_CMD;
+		handle_index = GP_CNTRL_HANDLE_CMD;
 		break;
 	
-	case GP_HANDLE_SETTINGS:
+	case GP_CNTRL_HANDLE_SETTINGS:
 		flag_bit = GOPRO_C_SETTINGS_NOTIF_ENABLED;
-		handle_index = GP_HANDLE_SETTINGS;
+		handle_index = GP_CNTRL_HANDLE_SETTINGS;
 		break;
 	
-	case GP_HANDLE_QUERY:
+	case GP_CNTRL_HANDLE_QUERY:
 		flag_bit = GOPRO_C_QUERY_NOTIF_ENABLED;
-		handle_index = GP_HANDLE_QUERY;
+		handle_index = GP_CNTRL_HANDLE_QUERY;
 		break;
 	
 	default:
@@ -688,11 +776,11 @@ int bt_gopro_subscribe_receive(struct bt_gopro_client *nus_c)
 {
 	int err;
 
-	err=gopro_set_subscribe(nus_c, GP_HANDLE_CMD);
+	err=gopro_set_subscribe(nus_c, GP_CNTRL_HANDLE_CMD);
 	
-	err=gopro_set_subscribe(nus_c, GP_HANDLE_SETTINGS);
+	err=gopro_set_subscribe(nus_c, GP_CNTRL_HANDLE_SETTINGS);
 	
-	err=gopro_set_subscribe(nus_c, GP_HANDLE_QUERY);
+	err=gopro_set_subscribe(nus_c, GP_CNTRL_HANDLE_QUERY);
 
 	return err;
 }

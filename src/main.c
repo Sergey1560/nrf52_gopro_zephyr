@@ -29,10 +29,7 @@
 #include <canbus.h>
 #include <buttons.h>
 #include <leds.h>
-
-#include <pb_encode.h>
-#include <pb_decode.h>
-
+#include "gopro_protobuf.h"
 
 #if DT_NODE_HAS_STATUS_OKAY(CAN_MCP_NODE)
 #define CANBUS_PRESENT
@@ -50,34 +47,33 @@ struct bt_conn_le_create_param *conn_params = BT_CONN_LE_CREATE_PARAM(BT_CONN_LE
 static struct bt_conn *default_conn;
 static struct bt_gopro_client gopro_client;
 
-const static struct gopro_cmd_t gopro_query_hw_info = {
-	.len = 2,
-	.cmd_type = GP_HANDLE_CMD,
-	.data={01,0x3C}
-};
-
+// const static struct gopro_cmd_t gopro_query_hw_info = {
+// 	.len = 2,
+// 	.cmd_type = GP_HANDLE_CMD,
+// 	.data={01,0x3C}
+// };
 
 const static struct gopro_cmd_t gopro_query_encoding = {
 	.len = 3,
-	.cmd_type = GP_HANDLE_QUERY,
+	.cmd_type = GP_CNTRL_HANDLE_QUERY,
 	.data={2,GOPRO_QUERY_STATUS_GET_STATUS,GOPRO_STATUS_ID_ENCODING}
 };
 
 const static struct gopro_cmd_t gopro_query_battery = {
 	.len = 3,
-	.cmd_type = GP_HANDLE_QUERY,
+	.cmd_type = GP_CNTRL_HANDLE_QUERY,
 	.data={2,GOPRO_QUERY_STATUS_GET_STATUS,GOPRO_STATUS_ID_BAT_PERCENT}
 };
 
 const static struct gopro_cmd_t gopro_query_video_num = {
 	.len = 3,
-	.cmd_type = GP_HANDLE_QUERY,
+	.cmd_type = GP_CNTRL_HANDLE_QUERY,
 	.data={2,GOPRO_QUERY_STATUS_GET_STATUS,GOPRO_STATUS_ID_VIDEO_NUM}
 };
 
 const static struct gopro_cmd_t gopro_query_register = {
 	.len = 5,
-	.cmd_type = GP_HANDLE_QUERY,
+	.cmd_type = GP_CNTRL_HANDLE_QUERY,
 	.data={4,GOPRO_QUERY_STATUS_REG_STATUS,GOPRO_STATUS_ID_ENCODING,GOPRO_STATUS_ID_VIDEO_NUM,GOPRO_STATUS_ID_BAT_PERCENT}
 };
 
@@ -100,7 +96,6 @@ static void led_idle_handler(struct k_work *work);
 static void led_idle_timer_handler(struct k_timer *dummy);
 static void gopro_cmd_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
 static void discovery_work_handler(struct k_work *work);
-static void print_bond_info(const struct bt_bond_info *info, void *user_data);
 
 bool gopro_cmd_validator(const void* msg, size_t msg_size);
 
@@ -187,9 +182,9 @@ bool gopro_cmd_validator(const void* msg, size_t msg_size) {
 
 	switch (gopro_cmd->cmd_type)
 	{
-	case GP_HANDLE_CMD:
-	case GP_HANDLE_SETTINGS:
-	case GP_HANDLE_QUERY:
+	case GP_CNTRL_HANDLE_CMD:
+	case GP_CNTRL_HANDLE_SETTINGS:
+	case GP_CNTRL_HANDLE_QUERY:
 		break;
 	
 	default:
@@ -258,15 +253,15 @@ static uint8_t ble_data_received(struct bt_gopro_client *nus, const struct gopro
 	#endif
 	switch (gopro_cmd->cmd_type)
 	{
-	case GP_HANDLE_CMD:
+	case GP_CNTRL_HANDLE_CMD:
 		gopro_parse_cmd_reply((struct gopro_cmd_t *)gopro_cmd);
 		break;
 
-	case GP_HANDLE_SETTINGS:
+	case GP_CNTRL_HANDLE_SETTINGS:
 		gopro_parse_settings_reply((struct gopro_cmd_t *)gopro_cmd);
 		break;
 		
-	case GP_HANDLE_QUERY:
+	case GP_CNTRL_HANDLE_QUERY:
 		gopro_parse_query_reply((struct gopro_cmd_t *)gopro_cmd);
 		break;
 
@@ -278,41 +273,23 @@ static uint8_t ble_data_received(struct bt_gopro_client *nus, const struct gopro
 	return BT_GATT_ITER_CONTINUE;
 }
 
-
-static uint8_t bt_cts_read_callback(struct bt_conn *conn, uint8_t err,
-				    struct bt_gatt_read_params *params,
-				    const void *data, uint16_t length)
-{
-	int err_cb;
-
-	if (!err) {
-		LOG_HEXDUMP_DBG(data,length,"Read CHAR data:");
-	} else {
-		LOG_ERR("Read char error %d",err);
-	}
-
-
-	return BT_GATT_ITER_STOP;
-}
-
-
 static void discovery_wifi_complete(struct bt_gatt_dm *dm, void *context){
-	int err; 
+	int err;
 	struct bt_gopro_client *nus = context;
 	LOG_INF("WIFI Service discovery completed");
 
 	bt_gatt_dm_data_print(dm);
-
 	bt_gopro_wifi_handles_assign(dm, nus);
-
 	bt_gatt_dm_data_release(dm);
+
+	bt_gopro_client_get(nus,GP_WIFI_HANDLE_SSID);
+	bt_gopro_client_get(nus,GP_WIFI_HANDLE_PASS);
 
 	LOG_DBG("Start main GoPro service discovery");
 	err = bt_gatt_dm_start(default_conn, BT_UUID_GOPRO_SERVICE, &discovery_cb, &gopro_client);
 	if (err) {
 		LOG_ERR("could not start the discovery procedure, error code: %d", err);
 	}
-
 }
 
 static void discovery_work_handler(struct k_work *work){
@@ -324,17 +301,7 @@ static void discovery_work_handler(struct k_work *work){
 	gopro_client_set_sate(GPSTATE_CONNECTED);
 
 	LOG_DBG("Read char with handle %d",gopro_client.wifihandles[0]);
-
-	gopro_client.read_wifi_params[0].func=bt_cts_read_callback;
-	gopro_client.read_wifi_params[0].single.handle=gopro_client.wifihandles[0];
-	gopro_client.read_wifi_params[0].single.offset=0;
-	gopro_client.read_wifi_params[0].handle_count=1;
-
-	err = bt_gatt_read(default_conn,&gopro_client.read_wifi_params[0]);
-	if(err){
-		LOG_ERR("Failed read gatt, err %d",err);
-	}
-
+	
 
 	LOG_DBG("Dummy wait");
 	k_sleep(K_MSEC(1000));
@@ -769,12 +736,6 @@ static struct bt_conn_auth_cb conn_auth_callbacks = {
 static struct bt_conn_auth_info_cb conn_auth_info_callbacks = {
 	.pairing_complete = pairing_complete,
 	.pairing_failed = pairing_failed
-};
-
-
-static void print_bond_info(const struct bt_bond_info *info, void *user_data){
-
-	LOG_DBG("Bond ADDR [%0X:%0X:%0X:%0X:%0X:%0X]", info->addr.a.val[0],info->addr.a.val[1],info->addr.a.val[2],info->addr.a.val[3],info->addr.a.val[4],info->addr.a.val[5]);
 };
 
 
