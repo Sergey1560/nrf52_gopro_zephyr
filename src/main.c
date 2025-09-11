@@ -32,7 +32,6 @@
 
 #include <pb_encode.h>
 #include <pb_decode.h>
-#include "src/simple.pb.h"
 
 
 #if DT_NODE_HAS_STATUS_OKAY(CAN_MCP_NODE)
@@ -104,6 +103,24 @@ static void discovery_work_handler(struct k_work *work);
 static void print_bond_info(const struct bt_bond_info *info, void *user_data);
 
 bool gopro_cmd_validator(const void* msg, size_t msg_size);
+
+static void discovery_complete(struct bt_gatt_dm *dm, void *context);
+static void discovery_service_not_found(struct bt_conn *conn, void *context);
+static void discovery_error(struct bt_conn *conn, int err,void *context);
+static void discovery_wifi_complete(struct bt_gatt_dm *dm, void *context);
+
+struct bt_gatt_dm_cb discovery_wifi_cb = {
+	.completed         = discovery_wifi_complete,
+	.service_not_found = discovery_service_not_found,
+	.error_found       = discovery_error,
+};
+
+struct bt_gatt_dm_cb discovery_cb = {
+	.completed         = discovery_complete,
+	.service_not_found = discovery_service_not_found,
+	.error_found       = discovery_error,
+};
+
 
 K_WORK_DEFINE(led_idle_work, led_idle_handler);
 K_TIMER_DEFINE(led_idle_timer, led_idle_timer_handler, NULL);
@@ -262,6 +279,42 @@ static uint8_t ble_data_received(struct bt_gopro_client *nus, const struct gopro
 }
 
 
+static uint8_t bt_cts_read_callback(struct bt_conn *conn, uint8_t err,
+				    struct bt_gatt_read_params *params,
+				    const void *data, uint16_t length)
+{
+	int err_cb;
+
+	if (!err) {
+		LOG_HEXDUMP_DBG(data,length,"Read CHAR data:");
+	} else {
+		LOG_ERR("Read char error %d",err);
+	}
+
+
+	return BT_GATT_ITER_STOP;
+}
+
+
+static void discovery_wifi_complete(struct bt_gatt_dm *dm, void *context){
+	int err; 
+	struct bt_gopro_client *nus = context;
+	LOG_INF("WIFI Service discovery completed");
+
+	bt_gatt_dm_data_print(dm);
+
+	bt_gopro_wifi_handles_assign(dm, nus);
+
+	bt_gatt_dm_data_release(dm);
+
+	LOG_DBG("Start main GoPro service discovery");
+	err = bt_gatt_dm_start(default_conn, BT_UUID_GOPRO_SERVICE, &discovery_cb, &gopro_client);
+	if (err) {
+		LOG_ERR("could not start the discovery procedure, error code: %d", err);
+	}
+
+}
+
 static void discovery_work_handler(struct k_work *work){
 	int err;
 
@@ -269,6 +322,19 @@ static void discovery_work_handler(struct k_work *work){
 
 	gopro_led_mode_set(LED_NUM_BT,LED_MODE_ON);
 	gopro_client_set_sate(GPSTATE_CONNECTED);
+
+	LOG_DBG("Read char with handle %d",gopro_client.wifihandles[0]);
+
+	gopro_client.read_wifi_params[0].func=bt_cts_read_callback;
+	gopro_client.read_wifi_params[0].single.handle=gopro_client.wifihandles[0];
+	gopro_client.read_wifi_params[0].single.offset=0;
+	gopro_client.read_wifi_params[0].handle_count=1;
+
+	err = bt_gatt_read(default_conn,&gopro_client.read_wifi_params[0]);
+	if(err){
+		LOG_ERR("Failed read gatt, err %d",err);
+	}
+
 
 	LOG_DBG("Dummy wait");
 	k_sleep(K_MSEC(1000));
@@ -311,11 +377,6 @@ static void discovery_error(struct bt_conn *conn, int err,void *context)
 	LOG_WRN("Error while discovering GATT database: (%d)", err);
 }
 
-struct bt_gatt_dm_cb discovery_cb = {
-	.completed         = discovery_complete,
-	.service_not_found = discovery_service_not_found,
-	.error_found       = discovery_error,
-};
 
 static void gatt_discover(struct bt_conn *conn)
 {
@@ -327,7 +388,8 @@ static void gatt_discover(struct bt_conn *conn)
 		return;
 	}
 
-	err = bt_gatt_dm_start(conn, BT_UUID_GOPRO_SERVICE, &discovery_cb, &gopro_client);
+	err = bt_gatt_dm_start(default_conn, BT_UUID_GOPRO_WIFI_SERVICE, &discovery_wifi_cb, &gopro_client);
+
 	if (err) {
 		LOG_ERR("could not start the discovery procedure, error code: %d", err);
 	}
@@ -719,9 +781,6 @@ static void print_bond_info(const struct bt_bond_info *info, void *user_data){
 int main(void)
 {
 	int err=0;
-
-	uint8_t buffer[SimpleMessage_size];
-	size_t message_length;
 
 	gopro_gpio_init();
 	gopro_leds_init();	

@@ -25,8 +25,15 @@ extern "C" {
 #define BT_UUID_GOPRO_QUERY_WRITE_VAL 		BT_UUID_128_ENCODE(0xb5f90076, 0xaa8d, 0x11e3, 0x9046, 0x0002a5d5c51b)
 #define BT_UUID_GOPRO_QUERY_NOTIFY_VAL 		BT_UUID_128_ENCODE(0xb5f90077, 0xaa8d, 0x11e3, 0x9046, 0x0002a5d5c51b)
 
+#define BT_UUID_GOPRO_WIFI_SERVICE_VAL		BT_UUID_128_ENCODE(0xb5f90001, 0xaa8d, 0x11e3, 0x9046, 0x0002a5d5c51b)
+#define BT_UUID_GOPRO_WIFI_SSID_VAL			BT_UUID_128_ENCODE(0xb5f90002, 0xaa8d, 0x11e3, 0x9046, 0x0002a5d5c51b)
+#define BT_UUID_GOPRO_WIFI_PASS_VAL			BT_UUID_128_ENCODE(0xb5f90003, 0xaa8d, 0x11e3, 0x9046, 0x0002a5d5c51b)
+#define BT_UUID_GOPRO_WIFI_POWER_VAL		BT_UUID_128_ENCODE(0xb5f90004, 0xaa8d, 0x11e3, 0x9046, 0x0002a5d5c51b)
+#define BT_UUID_GOPRO_WIFI_STATE_VAL		BT_UUID_128_ENCODE(0xb5f90005, 0xaa8d, 0x11e3, 0x9046, 0x0002a5d5c51b)
+
 
 #define BT_UUID_GOPRO_SERVICE	   			BT_UUID_DECLARE_16(BLE_UUID16_GOPRO_SERVICE)
+#define BT_UUID_GOPRO_WIFI_SERVICE	   		BT_UUID_DECLARE_128(BT_UUID_GOPRO_WIFI_SERVICE_VAL)
 
 #define BT_UUID_GOPRO_CMD_WRITE        		BT_UUID_DECLARE_128(BT_UUID_GOPRO_CMD_WRITE_VAL)
 #define BT_UUID_GOPRO_CMD_NOTIFY       		BT_UUID_DECLARE_128(BT_UUID_GOPRO_CMD_NOTIFY_VAL)
@@ -36,6 +43,12 @@ extern "C" {
 
 #define BT_UUID_GOPRO_QUERY_WRITE        	BT_UUID_DECLARE_128(BT_UUID_GOPRO_QUERY_WRITE_VAL)
 #define BT_UUID_GOPRO_QUERY_NOTIFY       	BT_UUID_DECLARE_128(BT_UUID_GOPRO_QUERY_NOTIFY_VAL)
+
+#define BT_UUID_GOPRO_WIFI_SSID				BT_UUID_DECLARE_128(BT_UUID_GOPRO_WIFI_SSID_VAL)
+#define BT_UUID_GOPRO_WIFI_PASS				BT_UUID_DECLARE_128(BT_UUID_GOPRO_WIFI_PASS_VAL)
+#define BT_UUID_GOPRO_WIFI_POWER			BT_UUID_DECLARE_128(BT_UUID_GOPRO_WIFI_POWER_VAL)
+#define BT_UUID_GOPRO_WIFI_STATE			BT_UUID_DECLARE_128(BT_UUID_GOPRO_WIFI_STATE_VAL)
+
 
 #define GOPRO_NAME_LEN	20
 #define GOPRO_CMD_DATA_LEN	20
@@ -56,6 +69,15 @@ enum gopro_handle_list_t{
     GP_HANDLE_QUERY,
     GP_HANDLE_END,
 };
+
+enum gopro_wifi_handle_list_t{
+    GP_WIFI_HANDLE_SSID,
+    GP_WIFI_HANDLE_PASS,
+    GP_WIFI_HANDLE_POWER,
+    GP_WIFI_HANDLE_STATE,
+    GP_WIFI_HANDLE_END,
+};
+
 
 enum gopro_flag_t{
 	GOPRO_C_INITIALIZED,
@@ -145,12 +167,15 @@ struct bt_gopro_client {
          * to interact with the device.
          */
 	struct bt_gopro_client_handles handles[GP_HANDLE_END];
+	uint16_t wifihandles[GP_WIFI_HANDLE_END];
 
         /** GATT subscribe parameters for NUS TX Characteristic. */
 	struct bt_gatt_subscribe_params notif_params[GP_HANDLE_END];
 
         /** GATT write parameters for NUS RX Characteristic. */
 	struct bt_gatt_write_params write_params[GP_HANDLE_END];
+
+	struct bt_gatt_read_params read_wifi_params[GP_WIFI_HANDLE_END];
 
         /** Application callbacks. */
 	struct bt_gopro_client_cb cb;
@@ -233,6 +258,8 @@ int bt_gopro_handles_assign(struct bt_gatt_dm *dm, struct bt_gopro_client *nus);
  *           Otherwise, a negative error code is returned.
  */
 int bt_gopro_subscribe_receive(struct bt_gopro_client *nus);
+
+int bt_gopro_wifi_handles_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client *nus_c);
 
 #ifdef __cplusplus
 }

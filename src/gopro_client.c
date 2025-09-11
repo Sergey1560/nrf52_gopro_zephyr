@@ -439,6 +439,43 @@ static int gopro_set_handle(struct bt_gatt_dm *dm, struct bt_gopro_client *nus_c
 	return 0;
 }
 
+int bt_gopro_wifi_handles_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client *nus_c){
+	const struct bt_gatt_dm_attr *gatt_service_attr = bt_gatt_dm_service_get(dm);
+	const struct bt_gatt_service_val *gatt_service = bt_gatt_dm_attr_service_val(gatt_service_attr);
+	struct bt_gatt_dm_attr *gatt_chrc;
+	struct bt_gatt_dm_attr *gatt_desc;
+
+
+	if (bt_uuid_cmp(gatt_service->uuid, BT_UUID_GOPRO_WIFI_SERVICE)) {
+		LOG_ERR("Not valid GoPro WIFI Service UUID");
+		return -ENOTSUP;
+	}
+	memset(&nus_c->wifihandles, 0xFF, sizeof(nus_c->wifihandles));
+
+
+	/* SSID */
+	gatt_chrc = bt_gatt_dm_char_by_uuid(dm, BT_UUID_GOPRO_WIFI_SSID);
+	LOG_DBG("DM: 0x%0X UUID: 0x%0X",(uint32_t)dm,(uint32_t)BT_UUID_GOPRO_WIFI_SSID);
+	LOG_DBG("CMD Char by uuid = %d",gatt_chrc);
+	if (!gatt_chrc) {
+		LOG_ERR("Missing characteristic for SSID");
+		return -EINVAL;
+	}
+
+	gatt_desc = bt_gatt_dm_desc_by_uuid(dm, gatt_chrc, BT_UUID_GOPRO_WIFI_SSID);
+	if (!gatt_desc) {
+		LOG_ERR("Missing Notify value descriptor in characteristic for CMD.");
+		return -EINVAL;
+	}
+	
+	LOG_DBG("Found handle for SSID characteristic");
+	nus_c->wifihandles[GP_WIFI_HANDLE_SSID] = gatt_desc->handle;
+
+
+}
+
+
+
 int bt_gopro_handles_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client *nus_c){
 	const struct bt_gatt_dm_attr *gatt_service_attr = bt_gatt_dm_service_get(dm);
 	const struct bt_gatt_service_val *gatt_service = bt_gatt_dm_attr_service_val(gatt_service_attr);
