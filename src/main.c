@@ -30,6 +30,7 @@
 #include <buttons.h>
 #include <leds.h>
 #include "gopro_protobuf.h"
+#include "gopro_ble_discovery.h"
 
 #if DT_NODE_HAS_STATUS_OKAY(CAN_MCP_NODE)
 #define CANBUS_PRESENT
@@ -53,39 +54,39 @@ static struct bt_gopro_client gopro_client;
 // 	.data={01,0x3C}
 // };
 
-const static struct gopro_cmd_t gopro_query_encoding = {
-	.len = 3,
-	.cmd_type = GP_CNTRL_HANDLE_QUERY,
-	.data={2,GOPRO_QUERY_STATUS_GET_STATUS,GOPRO_STATUS_ID_ENCODING}
-};
+// const static struct gopro_cmd_t gopro_query_encoding = {
+// 	.len = 3,
+// 	.cmd_type = GP_CNTRL_HANDLE_QUERY,
+// 	.data={2,GOPRO_QUERY_STATUS_GET_STATUS,GOPRO_STATUS_ID_ENCODING}
+// };
 
-const static struct gopro_cmd_t gopro_query_battery = {
-	.len = 3,
-	.cmd_type = GP_CNTRL_HANDLE_QUERY,
-	.data={2,GOPRO_QUERY_STATUS_GET_STATUS,GOPRO_STATUS_ID_BAT_PERCENT}
-};
+// const static struct gopro_cmd_t gopro_query_battery = {
+// 	.len = 3,
+// 	.cmd_type = GP_CNTRL_HANDLE_QUERY,
+// 	.data={2,GOPRO_QUERY_STATUS_GET_STATUS,GOPRO_STATUS_ID_BAT_PERCENT}
+// };
 
-const static struct gopro_cmd_t gopro_query_video_num = {
-	.len = 3,
-	.cmd_type = GP_CNTRL_HANDLE_QUERY,
-	.data={2,GOPRO_QUERY_STATUS_GET_STATUS,GOPRO_STATUS_ID_VIDEO_NUM}
-};
+// const static struct gopro_cmd_t gopro_query_video_num = {
+// 	.len = 3,
+// 	.cmd_type = GP_CNTRL_HANDLE_QUERY,
+// 	.data={2,GOPRO_QUERY_STATUS_GET_STATUS,GOPRO_STATUS_ID_VIDEO_NUM}
+// };
 
-const static struct gopro_cmd_t gopro_query_register = {
-	.len = 5,
-	.cmd_type = GP_CNTRL_HANDLE_QUERY,
-	.data={4,GOPRO_QUERY_STATUS_REG_STATUS,GOPRO_STATUS_ID_ENCODING,GOPRO_STATUS_ID_VIDEO_NUM,GOPRO_STATUS_ID_BAT_PERCENT}
-};
+// const static struct gopro_cmd_t gopro_query_register = {
+// 	.len = 5,
+// 	.cmd_type = GP_CNTRL_HANDLE_QUERY,
+// 	.data={4,GOPRO_QUERY_STATUS_REG_STATUS,GOPRO_STATUS_ID_ENCODING,GOPRO_STATUS_ID_VIDEO_NUM,GOPRO_STATUS_ID_BAT_PERCENT}
+// };
 
 K_SEM_DEFINE(ble_write_sem, 0, 1);
 #define BLE_WRITE_TIMEOUT	K_MSEC(1200)
 
-const static struct gopro_cmd_t *startup_query_list[] = {
-	&gopro_query_register, 
-	&gopro_query_video_num, 
-	&gopro_query_battery, 
-	&gopro_query_encoding
-};
+// const static struct gopro_cmd_t *startup_query_list[] = {
+// 	&gopro_query_register, 
+// 	&gopro_query_video_num, 
+// 	&gopro_query_battery, 
+// 	&gopro_query_encoding
+// };
 
 // const static struct gopro_cmd_t *startup_query_list[] = {
 // 	&gopro_query_hw_info
@@ -95,26 +96,26 @@ const static struct gopro_cmd_t *startup_query_list[] = {
 static void led_idle_handler(struct k_work *work);
 static void led_idle_timer_handler(struct k_timer *dummy);
 static void gopro_cmd_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
-static void discovery_work_handler(struct k_work *work);
+//static void discovery_work_handler(struct k_work *work);
 
 bool gopro_cmd_validator(const void* msg, size_t msg_size);
 
-static void discovery_complete(struct bt_gatt_dm *dm, void *context);
-static void discovery_service_not_found(struct bt_conn *conn, void *context);
-static void discovery_error(struct bt_conn *conn, int err,void *context);
-static void discovery_wifi_complete(struct bt_gatt_dm *dm, void *context);
+// static void discovery_complete(struct bt_gatt_dm *dm, void *context);
+// static void discovery_service_not_found(struct bt_conn *conn, void *context);
+// static void discovery_error(struct bt_conn *conn, int err,void *context);
+// static void discovery_wifi_complete(struct bt_gatt_dm *dm, void *context);
 
-struct bt_gatt_dm_cb discovery_wifi_cb = {
-	.completed         = discovery_wifi_complete,
-	.service_not_found = discovery_service_not_found,
-	.error_found       = discovery_error,
-};
+// struct bt_gatt_dm_cb discovery_wifi_cb = {
+// 	.completed         = discovery_wifi_complete,
+// 	.service_not_found = discovery_service_not_found,
+// 	.error_found       = discovery_error,
+// };
 
-struct bt_gatt_dm_cb discovery_cb = {
-	.completed         = discovery_complete,
-	.service_not_found = discovery_service_not_found,
-	.error_found       = discovery_error,
-};
+// struct bt_gatt_dm_cb discovery_cb = {
+// 	.completed         = discovery_complete,
+// 	.service_not_found = discovery_service_not_found,
+// 	.error_found       = discovery_error,
+// };
 
 
 K_WORK_DEFINE(led_idle_work, led_idle_handler);
@@ -138,7 +139,7 @@ ZBUS_CHAN_DECLARE(can_tx_chan);
 ZBUS_CHAN_DECLARE(can_txdata_chan);
 #endif
 
-K_WORK_DEFINE(discovery_work, discovery_work_handler);
+//K_WORK_DEFINE(discovery_work, discovery_work_handler);
 
 static void gopro_cmd_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
 	int err;
@@ -273,81 +274,81 @@ static uint8_t ble_data_received(struct bt_gopro_client *nus, const struct gopro
 	return BT_GATT_ITER_CONTINUE;
 }
 
-static void discovery_wifi_complete(struct bt_gatt_dm *dm, void *context){
-	int err;
-	struct bt_gopro_client *nus = context;
-	LOG_INF("WIFI Service discovery completed");
+// static void discovery_wifi_complete(struct bt_gatt_dm *dm, void *context){
+// 	int err;
+// 	struct bt_gopro_client *nus = context;
+// 	LOG_INF("WIFI Service discovery completed");
 
-	bt_gatt_dm_data_print(dm);
-	bt_gopro_wifi_handles_assign(dm, nus);
-	bt_gatt_dm_data_release(dm);
+// 	bt_gatt_dm_data_print(dm);
+// 	bt_gopro_wifi_handles_assign(dm, nus);
+// 	bt_gatt_dm_data_release(dm);
 
-	bt_gopro_client_get(nus,GP_WIFI_HANDLE_SSID);
-	bt_gopro_client_get(nus,GP_WIFI_HANDLE_PASS);
+// 	bt_gopro_client_get(nus,GP_WIFI_HANDLE_SSID);
+// 	bt_gopro_client_get(nus,GP_WIFI_HANDLE_PASS);
 
-	LOG_DBG("Start main GoPro service discovery");
-	err = bt_gatt_dm_start(default_conn, BT_UUID_GOPRO_SERVICE, &discovery_cb, &gopro_client);
-	if (err) {
-		LOG_ERR("could not start the discovery procedure, error code: %d", err);
-	}
-}
+// 	LOG_DBG("Start main GoPro service discovery");
+// 	err = bt_gatt_dm_start(default_conn, BT_UUID_GOPRO_SERVICE, &discovery_cb, &gopro_client);
+// 	if (err) {
+// 		LOG_ERR("could not start the discovery procedure, error code: %d", err);
+// 	}
+// }
 
-static void discovery_work_handler(struct k_work *work){
-	int err;
+// static void discovery_work_handler(struct k_work *work){
+// 	int err;
 
-	LOG_DBG("Set connected mode");
+// 	LOG_DBG("Set connected mode");
 
-	gopro_led_mode_set(LED_NUM_BT,LED_MODE_ON);
-	gopro_client_set_sate(GPSTATE_CONNECTED);
+// 	gopro_led_mode_set(LED_NUM_BT,LED_MODE_ON);
+// 	gopro_client_set_sate(GPSTATE_CONNECTED);
 
-	LOG_DBG("Read char with handle %d",gopro_client.wifihandles[0]);
+// 	LOG_DBG("Read char with handle %d",gopro_client.wifihandles[0]);
 	
 
-	LOG_DBG("Dummy wait");
-	k_sleep(K_MSEC(1000));
+// 	LOG_DBG("Dummy wait");
+// 	k_sleep(K_MSEC(1000));
 
-	for(uint32_t i=0; i < sizeof(startup_query_list)/sizeof(startup_query_list[0]); i++){
+// 	for(uint32_t i=0; i < sizeof(startup_query_list)/sizeof(startup_query_list[0]); i++){
 		
-		LOG_HEXDUMP_DBG(startup_query_list[i]->data,startup_query_list[i]->len,"Push to TX chan:");
-		err = zbus_chan_pub(&gopro_cmd_chan, startup_query_list[i], K_MSEC(100));
+// 		LOG_HEXDUMP_DBG(startup_query_list[i]->data,startup_query_list[i]->len,"Push to TX chan:");
+// 		err = zbus_chan_pub(&gopro_cmd_chan, startup_query_list[i], K_MSEC(100));
 
-		if(err != 0){
-			LOG_ERR("Chan pub failed: %d",err);
-		}
-	}
-}
+// 		if(err != 0){
+// 			LOG_ERR("Chan pub failed: %d",err);
+// 		}
+// 	}
+// }
 
-static void discovery_complete(struct bt_gatt_dm *dm, void *context){
-	struct bt_gopro_client *nus = context;
+// static void discovery_complete(struct bt_gatt_dm *dm, void *context){
+// 	struct bt_gopro_client *nus = context;
 
-	LOG_INF("Service discovery completed");
+// 	LOG_INF("Service discovery completed");
 
-	bt_security_t sec_level_str = bt_conn_get_security(default_conn);
-	LOG_DBG("Security Level now: %d",sec_level_str);
+// 	bt_security_t sec_level_str = bt_conn_get_security(default_conn);
+// 	LOG_DBG("Security Level now: %d",sec_level_str);
 
-	//bt_gatt_dm_data_print(dm);
+// 	//bt_gatt_dm_data_print(dm);
 
-	bt_gopro_handles_assign(dm, nus);
-	bt_gopro_subscribe_receive(nus);
-	bt_gatt_dm_data_release(dm);
+// 	bt_gopro_handles_assign(dm, nus);
+// 	bt_gopro_subscribe_receive(nus);
+// 	bt_gatt_dm_data_release(dm);
 		
-	k_work_submit(&discovery_work);
-}
+// 	k_work_submit(&discovery_work);
+// }
 
-static void discovery_service_not_found(struct bt_conn *conn, void *context)
-{
-	LOG_WRN("Service not found");
-}
+// static void discovery_service_not_found(struct bt_conn *conn, void *context)
+// {
+// 	LOG_WRN("Service not found");
+// }
 
-static void discovery_error(struct bt_conn *conn, int err,void *context)
-{
-	LOG_WRN("Error while discovering GATT database: (%d)", err);
-}
+// static void discovery_error(struct bt_conn *conn, int err,void *context)
+// {
+// 	LOG_WRN("Error while discovering GATT database: (%d)", err);
+// }
 
 
 static void gatt_discover(struct bt_conn *conn)
 {
-	int err;
+	//int err;
 
 	LOG_INF("Start discovery");
 
@@ -355,11 +356,13 @@ static void gatt_discover(struct bt_conn *conn)
 		return;
 	}
 
-	err = bt_gatt_dm_start(default_conn, BT_UUID_GOPRO_WIFI_SERVICE, &discovery_wifi_cb, &gopro_client);
+	gopro_start_discovery(conn, &gopro_client);
 
-	if (err) {
-		LOG_ERR("could not start the discovery procedure, error code: %d", err);
-	}
+// 	err = bt_gatt_dm_start(default_conn, BT_UUID_GOPRO_WIFI_SERVICE, &discovery_wifi_cb, &gopro_client);
+
+// 	if (err) {
+// 		LOG_ERR("could not start the discovery procedure, error code: %d", err);
+// 	}
 }
 
 static void exchange_func(struct bt_conn *conn, uint8_t err, struct bt_gatt_exchange_params *params)
@@ -434,7 +437,8 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 	bt_conn_unref(default_conn);
 	default_conn = NULL;
 
-	//k_sleep(K_MSEC(3000));
+	LOG_DBG("Pause for 3 sec");
+	k_sleep(K_MSEC(3000));
 
 	(void)k_work_submit(&scan_work);
 }

@@ -101,6 +101,8 @@ struct gopro_state_t {
 	uint8_t		record;
 	uint8_t		battery;
 	char name[GOPRO_NAME_LEN];
+	char wifi_ssid[20];
+	char wifi_pass[20];
 };
 
 struct gopro_cmd_t {

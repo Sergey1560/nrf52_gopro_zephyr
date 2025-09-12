@@ -368,7 +368,7 @@ int bt_gopro_client_send(struct bt_gopro_client *nus_c, struct gopro_cmd_t *gopr
 	return err;
 }
 
-static uint8_t bt_cts_read_callback(struct bt_conn *conn, uint8_t err,
+static uint8_t bt_read_callback(struct bt_conn *conn, uint8_t err,
 				    struct bt_gatt_read_params *params,
 				    const void *data, uint16_t length)
 {
@@ -392,7 +392,7 @@ int bt_gopro_client_get(struct bt_gopro_client *nus_c, uint16_t handle){
 
 	LOG_DBG("Read handle: 0x%0X",nus_c->read_wifi_params[handle].single.handle);
 
-	nus_c->read_wifi_params[handle].func=bt_cts_read_callback;
+	nus_c->read_wifi_params[handle].func=bt_read_callback;
 	nus_c->read_wifi_params[handle].single.handle=nus_c->wifihandles[handle];
 	nus_c->read_wifi_params[handle].single.offset=0;
 	nus_c->read_wifi_params[handle].handle_count=1;
@@ -578,10 +578,6 @@ int bt_gopro_handles_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client *nus_
 		return -ENOTSUP;
 	}
 	memset(&nus_c->handles, 0xFF, sizeof(nus_c->handles));
-
-	// LOG_DBG("DM: 0x%0X UUID: 0x%0X",(uint32_t)dm,(uint32_t)BT_UUID_GOPRO_CMD_NOTIFY);
-	// const struct bt_gatt_dm_attr *gatt_chrc = bt_gatt_dm_char_by_uuid(dm, BT_UUID_GOPRO_CMD_NOTIFY);
-	// LOG_DBG("Char by uuid = %d",gatt_chrc);
 
 	/* CMD */
 	gatt_chrc = (struct bt_gatt_dm_attr *)bt_gatt_dm_char_by_uuid(dm, BT_UUID_GOPRO_CMD_NOTIFY);
