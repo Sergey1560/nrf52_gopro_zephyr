@@ -10,6 +10,8 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/zbus/zbus.h>
 
+#include "gopro_client.h"
+
 #define LED0_NODE	DT_ALIAS(led0)
 #if DT_NODE_HAS_STATUS_OKAY(LED0_NODE)
 #define LED_PRESENT
@@ -41,6 +43,9 @@ static void leds_callback(const struct zbus_channel *chan);
 static void gopro_led_set_bt(uint8_t val);
 static void gopro_led_set_rec(uint8_t val);
 
+static void led_idle_handler(struct k_work *work);
+static void led_idle_timer_handler(struct k_timer *dummy);
+
 ZBUS_CHAN_DEFINE(leds_chan,                           	/* Name */
          struct led_message_t,                       		      	/* Message type */
          NULL,                                       	/* Validator */
@@ -53,6 +58,10 @@ ZBUS_LISTENER_DEFINE(leds_listener, leds_callback);
 
 K_THREAD_DEFINE(led_bt_task_id, 512, leds_bt_task, NULL, NULL, NULL, 7, 0, 0);
 K_THREAD_DEFINE(led_rec_task_id, 512, leds_rec_task, NULL, NULL, NULL, 7, 0, 0);
+
+K_WORK_DEFINE(led_idle_work, led_idle_handler);
+K_TIMER_DEFINE(led_idle_timer, led_idle_timer_handler, NULL);
+//#define LED_TIMER_START	do{k_timer_start(&led_idle_timer, K_SECONDS(5), K_SECONDS(5));}while(0)
 
 static void leds_callback(const struct zbus_channel *chan)
 {
@@ -189,6 +198,29 @@ static void gopro_led_set_rec(uint8_t val){
 	}
 }
 
+static void led_idle_handler(struct k_work *work){
+	if(gopro_client_get_state() != GPSTATE_UNKNOWN){
+		LOG_DBG("Set LED to idle state");
+		gopro_led_mode_set(LED_NUM_BT,LED_MODE_BLINK_5S);
+		gopro_client_set_sate(GPSTATE_UNKNOWN);
+		gopro_client_setname(NULL,0);
+	}
+}
+
+static void led_idle_timer_handler(struct k_timer *dummy){
+    k_work_submit(&led_idle_work);
+}
+
+void led_idle_timer_start(uint8_t enable){
+
+	if(enable == 1){
+		k_timer_start(&led_idle_timer, K_SECONDS(5), K_SECONDS(5));
+	}else if(enable == 0){
+		k_timer_stop(&led_idle_timer);	
+	}
+	
+}
+
 
 #else
 int gopro_leds_init(void){
@@ -198,3 +230,4 @@ int gopro_led_mode_set(enum led_mode_t mode, enum led_number_t led_num){
 	return 0;
 }
 #endif
+

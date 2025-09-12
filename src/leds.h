@@ -39,5 +39,6 @@ struct led_message_t{
 
 int gopro_leds_init(void);
 int gopro_led_mode_set(enum led_number_t led_num, enum led_mode_t mode);
+void led_idle_timer_start(uint8_t enable);
 
 #endif
