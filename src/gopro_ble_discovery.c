@@ -8,7 +8,7 @@
 
 LOG_MODULE_REGISTER(gopro_discovery, LOG_LEVEL_DBG);
 
-const struct bt_uuid *uuid_list[] = {BT_UUID_GOPRO_WIFI_SERVICE,BT_UUID_GOPRO_SERVICE};
+const struct bt_uuid *uuid_list[] = {BT_UUID_GOPRO_WIFI_SERVICE,BT_UUID_GOPRO_SERVICE,BT_UUID_GOPRO_NET_SERVICE};
 #define UUID_COUNT  (sizeof(uuid_list)/sizeof(uuid_list[0]))
 
 static void discovery_complete(struct bt_gatt_dm *dm, void *context);
