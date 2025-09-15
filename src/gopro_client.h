@@ -25,6 +25,9 @@ extern "C" {
 #define BT_UUID_GOPRO_QUERY_WRITE_VAL 		BT_UUID_128_ENCODE(0xb5f90076, 0xaa8d, 0x11e3, 0x9046, 0x0002a5d5c51b)
 #define BT_UUID_GOPRO_QUERY_NOTIFY_VAL 		BT_UUID_128_ENCODE(0xb5f90077, 0xaa8d, 0x11e3, 0x9046, 0x0002a5d5c51b)
 
+#define BT_UUID_GOPRO_NET_WRITE_VAL 		BT_UUID_128_ENCODE(0xb5f90091, 0xaa8d, 0x11e3, 0x9046, 0x0002a5d5c51b)
+#define BT_UUID_GOPRO_NET_NOTIFY_VAL 		BT_UUID_128_ENCODE(0xb5f90092, 0xaa8d, 0x11e3, 0x9046, 0x0002a5d5c51b)
+
 #define BT_UUID_GOPRO_WIFI_SERVICE_VAL		BT_UUID_128_ENCODE(0xb5f90001, 0xaa8d, 0x11e3, 0x9046, 0x0002a5d5c51b)
 #define BT_UUID_GOPRO_NET_SERVICE_VAL		BT_UUID_128_ENCODE(0xb5f90090, 0xaa8d, 0x11e3, 0x9046, 0x0002a5d5c51b)
 #define BT_UUID_GOPRO_WIFI_SSID_VAL			BT_UUID_128_ENCODE(0xb5f90002, 0xaa8d, 0x11e3, 0x9046, 0x0002a5d5c51b)
@@ -45,6 +48,9 @@ extern "C" {
 
 #define BT_UUID_GOPRO_QUERY_WRITE        	BT_UUID_DECLARE_128(BT_UUID_GOPRO_QUERY_WRITE_VAL)
 #define BT_UUID_GOPRO_QUERY_NOTIFY       	BT_UUID_DECLARE_128(BT_UUID_GOPRO_QUERY_NOTIFY_VAL)
+
+#define BT_UUID_GOPRO_NET_WRITE        		BT_UUID_DECLARE_128(BT_UUID_GOPRO_NET_WRITE_VAL)
+#define BT_UUID_GOPRO_NET_NOTIFY       		BT_UUID_DECLARE_128(BT_UUID_GOPRO_NET_NOTIFY_VAL)
 
 #define BT_UUID_GOPRO_WIFI_SSID				BT_UUID_DECLARE_128(BT_UUID_GOPRO_WIFI_SSID_VAL)
 #define BT_UUID_GOPRO_WIFI_PASS				BT_UUID_DECLARE_128(BT_UUID_GOPRO_WIFI_PASS_VAL)
@@ -90,9 +96,11 @@ enum gopro_flag_t{
 	GOPRO_C_CMD_NOTIF_ENABLED,
 	GOPRO_C_SETTINGS_NOTIF_ENABLED,
 	GOPRO_C_QUERY_NOTIF_ENABLED,
+	GOPRO_C_NET_NOTIF_ENABLED,
 	GOPRO_C_CMD_WRITE_PENDING,
 	GOPRO_C_SETTINGS_WRITE_PENDING,
-	GOPRO_C_QUERY_WRITE_PENDING
+	GOPRO_C_QUERY_WRITE_PENDING,
+	GOPRO_C_NET_WRITE_PENDING
 };
 
 struct gopro_state_t {
@@ -175,10 +183,12 @@ struct bt_gopro_client {
          * to interact with the device.
          */
 	struct bt_gopro_client_handles handles[GP_CNTRL_HANDLE_END];
+	struct bt_gopro_client_handles net_handle;
 	uint16_t wifihandles[GP_WIFI_HANDLE_END];
 
 	/** GATT subscribe parameters for NUS TX Characteristic. */
 	struct bt_gatt_subscribe_params notif_params[GP_CNTRL_HANDLE_END];
+	struct bt_gatt_subscribe_params net_notif_params;
 
         /** GATT write parameters for NUS RX Characteristic. */
 	struct bt_gatt_write_params write_params[GP_CNTRL_HANDLE_END];
@@ -206,6 +216,10 @@ int gopro_client_setname(char *name, uint8_t len);
 int	gopro_parse_query_reply(struct gopro_cmd_t *gopro_cmd);
 int gopro_parse_settings_reply(struct gopro_cmd_t *gopro_cmd);
 int gopro_parse_cmd_reply(struct gopro_cmd_t *gopro_cmd);
+
+int bt_gopro_net_handle_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client *nus_c);
+
+extern struct k_sem ble_read_sem;
 
 /** @brief Initialize the GoPro Client module.
  *

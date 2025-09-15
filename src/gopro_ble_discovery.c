@@ -113,6 +113,14 @@ K_SEM_DEFINE(ble_write_sem, 0, 1);
 struct bt_conn_le_create_param *conn_params = BT_CONN_LE_CREATE_PARAM(BT_CONN_LE_OPT_CODED | BT_CONN_LE_OPT_NO_1M,BT_GAP_SCAN_FAST_INTERVAL,BT_GAP_SCAN_FAST_INTERVAL);
 #endif
 
+#define MY_STACK_SIZE 2048
+#define MY_PRIORITY 5
+
+K_THREAD_STACK_DEFINE(my_stack_area, MY_STACK_SIZE);
+
+struct k_work_q my_work_q;
+
+
 ZBUS_CHAN_DEFINE(gopro_cmd_chan,                        /* Name */
          struct gopro_cmd_t,                       		/* Message type */
          gopro_cmd_validator,                           /* Validator */
@@ -127,6 +135,9 @@ K_THREAD_DEFINE(gopro_cmd_subscriber_task_id, 1024, gopro_cmd_subscriber_task, N
 
 int gopro_bt_start(void){
 	int err;
+
+	k_work_queue_init(&my_work_q);
+	k_work_queue_start(&my_work_q, my_stack_area, K_THREAD_STACK_SIZEOF(my_stack_area), MY_PRIORITY, NULL);
 
 	err = bt_conn_auth_cb_register(&conn_auth_callbacks);
 	if (err) {
@@ -177,7 +188,8 @@ static void discovery_start_work_handler(struct k_work *work){
 
 	if(uuid_index >= (sizeof(uuid_list)/sizeof(uuid_list[0]))){
 		LOG_DBG("List end, stop discovery");
-		k_work_submit(&discovery_finish_work);
+//		k_work_submit(&discovery_finish_work);
+		k_work_submit_to_queue	(&my_work_q,&discovery_finish_work);
 		return;
 	}
 
@@ -205,6 +217,14 @@ static void discovery_complete(struct bt_gatt_dm *dm, void *context){
 static void discovery_finish_work_handler(struct k_work *work){
 	int err;
 
+	LOG_DBG("Read WIFI SSID chars");
+	bt_gopro_client_get(&gopro_client,GP_WIFI_HANDLE_SSID);
+	k_sem_take(&ble_read_sem,K_FOREVER);
+
+	LOG_DBG("Read WIFI PASS chars");
+	bt_gopro_client_get(&gopro_client,GP_WIFI_HANDLE_PASS);
+	k_sem_take(&ble_read_sem,K_FOREVER);
+
 	LOG_DBG("Start subscribe");
 	bt_gopro_subscribe_receive(&gopro_client);
 
@@ -215,9 +235,6 @@ static void discovery_finish_work_handler(struct k_work *work){
 	LOG_DBG("Dummy wait");
 	k_sleep(K_MSEC(1000));
 
-	bt_gopro_client_get(&gopro_client, gopro_client.wifihandles[0]);
-	bt_gopro_client_get(&gopro_client, gopro_client.wifihandles[1]);
-	
 	for(uint32_t i=0; i < sizeof(startup_query_list)/sizeof(startup_query_list[0]); i++){
 		
 		LOG_HEXDUMP_DBG(startup_query_list[i]->data,startup_query_list[i]->len,"Push to TX chan:");
@@ -251,6 +268,9 @@ static int handles_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client *nus_c)
 	}else if(bt_uuid_cmp(gatt_service->uuid, BT_UUID_GOPRO_WIFI_SERVICE) == 0){
 		LOG_DBG("Gopro wifi service");
 		ret_val=bt_gopro_wifi_handles_assign(dm, nus_c);
+	}else if(bt_uuid_cmp(gatt_service->uuid, BT_UUID_GOPRO_NET_SERVICE) == 0){
+		LOG_DBG("Gopro net service");
+		ret_val=bt_gopro_net_handle_assign(dm, nus_c);
 	}else{
 		bt_uuid_to_str(gatt_service->uuid, uuid_str, 50);
 		LOG_WRN("No worker for UUID %s",uuid_str);
@@ -668,6 +688,7 @@ static uint8_t ble_data_received(struct bt_gopro_client *nus, const struct gopro
 		break;
 
 	default:
+		LOG_WRN("No action for cmd_type %d",gopro_cmd->cmd_type);
 		break;
 	}
 
