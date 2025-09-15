@@ -215,6 +215,9 @@ static void discovery_finish_work_handler(struct k_work *work){
 	LOG_DBG("Dummy wait");
 	k_sleep(K_MSEC(1000));
 
+	bt_gopro_client_get(&gopro_client, gopro_client.wifihandles[0]);
+	bt_gopro_client_get(&gopro_client, gopro_client.wifihandles[1]);
+	
 	for(uint32_t i=0; i < sizeof(startup_query_list)/sizeof(startup_query_list[0]); i++){
 		
 		LOG_HEXDUMP_DBG(startup_query_list[i]->data,startup_query_list[i]->len,"Push to TX chan:");

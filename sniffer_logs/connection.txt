@@ -1,0 +1,211 @@
+[00:00:00.000,976] <dbg> can_mcp2515: mcp2515_init: Presc: 2, BS1: 7, BS2: 2
+[00:00:00.001,007] <dbg> can_mcp2515: mcp2515_init: Sample-point err : 0
+*** Booting nRF Connect SDK v3.1.0-6c6e5b32496e ***
+*** Using Zephyr OS v4.1.99-1612683d4010 ***
+[00:00:00.502,532] <inf> gopro_leds: Set up LED at GPIO_0 pin 28
+
+[00:00:00.502,593] <inf> gopro_leds: Set up LED at GPIO_1 pin 11
+
+[00:00:00.502,655] <dbg> gopro_leds: leds_callback: Get led message
+[00:00:00.502,716] <dbg> canbus_gopro: canbus_init: CAN device ready
+[00:00:00.502,746] <dbg> canbus_gopro: canbus_init: MODE NORMAL Enabled.
+[00:00:00.503,753] <inf> canbus_gopro: CAN Start
+[00:00:00.511,047] <inf> fs_nvs: 2 Sectors of 4096 bytes
+[00:00:00.511,047] <inf> fs_nvs: alloc wra: 0, fb8
+[00:00:00.511,077] <inf> fs_nvs: data wra: 0, 8c
+[00:00:00.511,260] <inf> bt_sdc_hci_driver: SoftDevice Controller build revision: 
+                                            fc de 41 eb a2 d1 42 24  00 b5 f8 57 9f ac 9d 9e |..A...B$ ...W....
+                                            aa c9 b4 34                                      |...4             
+[00:00:00.515,655] <inf> bt_hci_core: HW Platform: Nordic Semiconductor (0x0002)
+[00:00:00.515,686] <inf> bt_hci_core: HW Variant: nRF52x (0x0002)
+[00:00:00.515,747] <inf> bt_hci_core: Firmware: Standard Bluetooth controller (0x00) Version 252.16862 Build 1121034987
+[00:00:00.516,174] <inf> bt_hci_core: No ID address. App must call settings_load()
+[00:00:00.516,174] <inf> gopro_discovery: Bluetooth initialized
+[00:00:00.517,089] <inf> bt_hci_core: HCI transport: SDC
+[00:00:00.517,181] <inf> bt_hci_core: Identity: F6:4F:7D:39:A8:A5 (random)
+[00:00:00.517,211] <inf> bt_hci_core: HCI: version 6.1 (0x0f) revision 0x1069, manufacturer 0x0059
+[00:00:00.517,272] <inf> bt_hci_core: LMP: version 6.1 (0x0f) subver 0x1069
+[00:00:00.519,073] <dbg> gopro_discovery: gopro_bt_start: Settings load done
+[00:00:00.519,104] <inf> gopro_discovery: GoPro Client module initialized
+[00:00:00.519,104] <inf> gopro_discovery: Scan module initialized
+[00:00:00.519,226] <dbg> gopro_discovery: try_add_address_filter: Saved bond found: E4:40:32:AC:17:1F (random)
+[00:00:00.519,348] <inf> gopro_discovery: Address filter added: E4:40:32:AC:17:1F (random)
+[00:00:00.520,477] <inf> gopro_discovery: Scan started
+[00:00:20.284,759] <dbg> gopro_discovery: scan_filter_match: Filters matched. Address: E4:40:32:AC:17:1F (random) connectable: 0
+[00:00:20.284,851] <dbg> gopro_leds: leds_callback: Get led message
+[00:00:20.284,912] <dbg> gopro_c: gopro_client_set_sate: Set GoPro state: 2
+[00:00:20.285,034] <dbg> gopro_discovery: eir_found: Camera ON, connecting
+[00:00:20.446,319] <inf> gopro_discovery: Connected: E4:40:32:AC:17:1F (random)
+[00:00:20.446,380] <dbg> gopro_leds: leds_callback: Get led message
+[00:00:20.446,502] <inf> gopro_discovery: Change security
+[00:00:20.447,113] <err> gopro_discovery: Stop LE scan failed (err 0)
+[00:00:20.797,698] <inf> gopro_discovery: Security changed: E4:40:32:AC:17:1F (random) level 2
+[00:00:20.797,882] <dbg> gopro_discovery: discovery_start_work_handler: Start discovery UUID [0] b5f90001-aa8d-11e3-9046-0002a5d5c51b
+[00:00:20.947,814] <inf> gopro_discovery: MTU exchange done
+[00:00:22.447,723] <inf> gopro_discovery: Service discovery complete
+ATT[1]:  UUID: 0x2803 Handle: 0x0029 Value:
+ Characteristic: 0xb5f90002-aa8d-11e3-9046-0002a5d5c51b Properties: 0x000A
+ATT[2]:  UUID: 0xb5f90002-aa8d-11e3-9046-0002a5d5c51b Handle: 0x002A Value:
+ATT[3]:  UUID: 0x2803 Handle: 0x002B Value:
+ Characteristic: 0xb5f90003-aa8d-11e3-9046-0002a5d5c51b Properties: 0x000A
+ATT[4]:  UUID: 0xb5f90003-aa8d-11e3-9046-0002a5d5c51b Handle: 0x002C Value:
+ATT[5]:  UUID: 0x2803 Handle: 0x002D Value:
+ Characteristic: 0xb5f90004-aa8d-11e3-9046-0002a5d5c51b Properties: 0x0008
+ATT[6]:  UUID: 0xb5f90004-aa8d-11e3-9046-0002a5d5c51b Handle: 0x002E Value:
+ATT[7]:  UUID: 0x2803 Handle: 0x002F Value:
+ Characteristic: 0xb5f90005-aa8d-11e3-9046-0002a5d5c51b Properties: 0x0022
+ATT[8]:  UUID: 0xb5f90005-aa8d-11e3-9046-0002a5d5c51b Handle: 0x0030 Value:
+ATT[9]:  UUID: 0x2902 Handle: 0x0031 Value:
+ CCCD
+ATT[10]:  UUID: 0x2803 Handle: 0x0032 Value:
+ Characteristic: 0xb5f90006-aa8d-11e3-9046-0002a5d5c51b Properties: 0x0002
+ATT[11]:  UUID: 0xb5f90006-aa8d-11e3-9046-0002a5d5c51b Handle: 0x0033 Value:
+
+[00:00:22.449,462] <dbg> gopro_discovery: handles_assign: Gopro wifi service
+[00:00:22.449,493] <dbg> gopro_c: bt_gopro_wifi_handles_assign: DM: 0x20007B0C UUID: 0x2000D118
+[00:00:22.449,523] <dbg> gopro_c: bt_gopro_wifi_handles_assign: Found handle for SSID characteristic
+[00:00:22.449,554] <dbg> gopro_c: bt_gopro_wifi_handles_assign: DM: 0x20007B0C UUID: 0x2000D12C
+[00:00:22.449,584] <dbg> gopro_c: bt_gopro_wifi_handles_assign: Found handle for PASS characteristic
+[00:00:22.449,615] <dbg> gopro_c: bt_gopro_wifi_handles_assign: DM: 0x20007B0C UUID: 0x2000D140
+[00:00:22.449,645] <dbg> gopro_c: bt_gopro_wifi_handles_assign: Found handle for POWER characteristic
+[00:00:22.449,707] <dbg> gopro_c: bt_gopro_wifi_handles_assign: DM: 0x20007B0C UUID: 0x2000D154
+[00:00:22.449,737] <dbg> gopro_c: bt_gopro_wifi_handles_assign: Found handle for STATE characteristic
+[00:00:22.449,890] <dbg> gopro_discovery: discovery_start_work_handler: Start discovery UUID [1] fea6
+
+[00:00:24.747,711] <inf> gopro_discovery: Service discovery complete
+ATT[1]:  UUID: 0x2803 Handle: 0x0037 Value:
+ Characteristic: 0xb5f90072-aa8d-11e3-9046-0002a5d5c51b Properties: 0x0008
+ATT[2]:  UUID: 0xb5f90072-aa8d-11e3-9046-0002a5d5c51b Handle: 0x0038 Value:
+ATT[3]:  UUID: 0x2803 Handle: 0x0039 Value:
+ Characteristic: 0xb5f90073-aa8d-11e3-9046-0002a5d5c51b Properties: 0x0010
+ATT[4]:  UUID: 0xb5f90073-aa8d-11e3-9046-0002a5d5c51b Handle: 0x003A Value:
+ATT[5]:  UUID: 0x2902 Handle: 0x003B Value:
+ CCCD
+ATT[6]:  UUID: 0x2803 Handle: 0x003C Value:
+ Characteristic: 0xb5f90074-aa8d-11e3-9046-0002a5d5c51b Properties: 0x0008
+ATT[7]:  UUID: 0xb5f90074-aa8d-11e3-9046-0002a5d5c51b Handle: 0x003D Value:
+ATT[8]:  UUID: 0x2803 Handle: 0x003E Value:
+ Characteristic: 0xb5f90075-aa8d-11e3-9046-0002a5d5c51b Properties: 0x0010
+ATT[9]:  UUID: 0xb5f90075-aa8d-11e3-9046-0002a5d5c51b Handle: 0x003F Value:
+ATT[10]:  UUID: 0x2902 Handle: 0x0040 Value:
+ CCCD
+ATT[11]:  UUID: 0x2803 Handle: 0x0041 Value:
+ Characteristic: 0xb5f90076-aa8d-11e3-9046-0002a5d5c51b Properties: 0x0008
+ATT[12]:  UUID: 0xb5f90076-aa8d-11e3-9046-0002a5d5c51b Handle: 0x0042 Value:
+ATT[13]:  UUID: 0x2803 Handle: 0x0043 Value:
+ Characteristic: 0xb5f90077-aa8d-11e3-9046-0002a5d5c51b Properties: 0x0010
+ATT[14]:  UUID: 0xb5f90077-aa8d-11e3-9046-0002a5d5c51b Handle: 0x0044 Value:
+ATT[15]:  UUID: 0x2902 Handle: 0x0045 Value:
+ CCCD
+ATT[16]:  UUID: 0x2803 Handle: 0x0046 Value:
+ Characteristic: 0xb5f90078-aa8d-11e3-9046-0002a5d5c51b Properties: 0x0008
+ATT[17]:  UUID: 0xb5f90078-aa8d-11e3-9046-0002a5d5c51b Handle: 0x0047 Value:
+ATT[18]:  UUID: 0x2803 Handle: 0x0048 Value:
+ Characteristic: 0xb5f90079-aa8d-11e3-9046-0002a5d5c51b Properties: 0x0010
+ATT[19]:  UUID: 0xb5f90079-aa8d-11e3-9046-0002a5d5c51b Handle: 0x0049 Value:
+ATT[20]:  UUID: 0x2902 Handle: 0x004A Value:
+ CCCD
+[00:00:24.750,671] <dbg> gopro_discovery: handles_assign: Gopro main service
+[00:00:24.750,701] <dbg> gopro_c: bt_gopro_handles_assign: DM: 0x20007B0C UUID: 0x2000D12C
+[00:00:24.750,732] <dbg> gopro_c: bt_gopro_handles_assign: Found handle for Notify characteristic for CMD.
+[00:00:24.750,762] <dbg> gopro_c: bt_gopro_handles_assign: Found handle for CCC of GoPro Notify characteristic. 0x3B
+[00:00:24.750,793] <dbg> gopro_c: bt_gopro_handles_assign: Found handle for Write characteristic.
+[00:00:24.750,823] <inf> gopro_c: CMD Handles assigned succesfull.
+[00:00:24.750,885] <dbg> gopro_c: bt_gopro_handles_assign: DM: 0x20007B0C UUID: 0x2000D140
+[00:00:24.750,885] <dbg> gopro_c: bt_gopro_handles_assign: Found handle for Notify characteristic for SETTINGS.
+[00:00:24.750,915] <dbg> gopro_c: bt_gopro_handles_assign: Found handle for CCC of GoPro Notify characteristic. 0x40
+[00:00:24.750,976] <dbg> gopro_c: bt_gopro_handles_assign: Found handle for Write characteristic.
+[00:00:24.750,976] <inf> gopro_c: SETTINGS Handles assigned succesfull.
+[00:00:24.751,068] <dbg> gopro_c: bt_gopro_handles_assign: DM: 0x20007B0C UUID: 0x2000D154
+[00:00:24.751,098] <dbg> gopro_c: bt_gopro_handles_assign: Found handle for Notify characteristic for QUERY.
+[00:00:24.751,129] <dbg> gopro_c: bt_gopro_handles_assign: Found handle for CCC of GoPro Notify characteristic. 0x45
+[00:00:24.751,190] <dbg> gopro_c: bt_gopro_handles_assign: Found handle for Write characteristic.
+[00:00:24.751,190] <inf> gopro_c: QUERY Handles assigned succesfull.
+
+[00:00:24.751,403] <dbg> gopro_discovery: discovery_start_work_handler: Start discovery UUID [2] b5f90090-aa8d-11e3-9046-0002a5d5c51b
+[00:00:25.647,735] <inf> gopro_discovery: Service discovery complete
+ATT[1]:  UUID: 0x2803 Handle: 0x0051 Value:
+ Characteristic: 0xb5f90091-aa8d-11e3-9046-0002a5d5c51b Properties: 0x0008
+ATT[2]:  UUID: 0xb5f90091-aa8d-11e3-9046-0002a5d5c51b Handle: 0x0052 Value:
+ATT[3]:  UUID: 0x2803 Handle: 0x0053 Value:
+ Characteristic: 0xb5f90092-aa8d-11e3-9046-0002a5d5c51b Properties: 0x0010
+ATT[4]:  UUID: 0xb5f90092-aa8d-11e3-9046-0002a5d5c51b Handle: 0x0054 Value:
+ATT[5]:  UUID: 0x2902 Handle: 0x0055 Value:
+ CCCD
+
+[00:00:25.648,590] <wrn> gopro_discovery: No worker for UUID b5f90090-aa8d-11e3-9046-0002a5d5c51b
+[00:00:25.648,712] <dbg> gopro_discovery: discovery_start_work_handler: List end, stop discovery
+[00:00:25.648,742] <dbg> gopro_discovery: discovery_finish_work_handler: Start subscribe
+
+[00:00:25.648,864] <dbg> gopro_c: gopro_set_subscribe: [SUBSCRIBED] for 0 handle
+[00:00:25.648,925] <dbg> gopro_c: gopro_set_subscribe: [SUBSCRIBED] for 1 handle
+[00:00:25.648,986] <dbg> gopro_c: gopro_set_subscribe: [SUBSCRIBED] for 2 handle
+
+[00:00:25.649,017] <dbg> gopro_discovery: discovery_finish_work_handler: Set connected mode
+[00:00:25.649,047] <dbg> gopro_leds: leds_callback: Get led message
+[00:00:25.649,108] <dbg> gopro_c: gopro_client_set_sate: Set GoPro state: 3
+[00:00:25.649,230] <dbg> gopro_discovery: discovery_finish_work_handler: Dummy wait
+
+[00:00:26.649,383] <dbg> gopro_discovery: discovery_finish_work_handler: Push to TX chan:
+                                          04 53 0a 27 46                                   |.S.'F            
+[00:00:26.649,536] <dbg> gopro_discovery: discovery_finish_work_handler: Push to TX chan:
+                                          02 13 27                                         |..'              
+[00:00:26.649,688] <dbg> gopro_discovery: discovery_finish_work_handler: Push to TX chan:
+                                          02 13 46                                         |..F              
+[00:00:26.649,810] <dbg> gopro_discovery: discovery_finish_work_handler: Push to TX chan:
+                                          02 13 0a                                         |...              
+[00:00:26.650,299] <dbg> gopro_discovery: gopro_cmd_subscriber_task: CMD Data to send:
+                                          04 53 0a 27 46                                   |.S.'F            
+[00:00:26.650,329] <dbg> gopro_c: bt_gopro_client_send: Send handle: 0x0 5 bytes
+[00:00:27.097,656] <dbg> gopro_discovery: ble_data_sent: Data send len: 5
+[00:00:27.097,808] <dbg> gopro_discovery: gopro_cmd_subscriber_task: CMD Data to send:
+                                          02 13 27                                         |..'              
+[00:00:27.097,839] <dbg> gopro_c: bt_gopro_client_send: Send handle: 0x42 3 bytes
+[00:00:27.098,480] <dbg> gopro_c: on_received_query: [NOTIFICATION] length 15 handle 68
+[00:00:27.098,541] <dbg> gopro_c: gopro_parse_query_status_notify: Encoding: 0
+[00:00:27.098,571] <dbg> gopro_leds: leds_callback: Get led message
+[00:00:27.098,632] <dbg> gopro_c: gopro_parse_query_status_notify: Video Count: 9
+[00:00:27.098,663] <dbg> gopro_c: gopro_parse_query_status_notify: Battery: 69
+[00:00:27.098,754] <inf> gopro_discovery: Get reply on 2, len 15
+[00:00:27.098,785] <dbg> gopro_discovery: ble_data_received: Recieve data:
+                                          0e 53 00 0a 01 00 27 04  00 00 00 09 46 01 45    |.S....'. ....F.E 
+[00:00:27.098,815] <dbg> gopro_discovery: ble_data_received: General 5-bit Packet. Data Len: 14
+[00:00:27.098,846] <dbg> gopro_c: gopro_parse_query_reply: Parse Query reply
+[00:00:27.098,846] <dbg> gopro_c: gopro_parse_query_status_notify: Encoding: 0
+[00:00:27.098,907] <dbg> gopro_leds: leds_callback: Get led message
+[00:00:27.098,968] <dbg> gopro_c: gopro_parse_query_status_notify: Video Count: 9
+[00:00:27.098,968] <dbg> gopro_c: gopro_parse_query_status_notify: Battery: 69
+[00:00:27.197,662] <dbg> gopro_discovery: ble_data_sent: Data send len: 3
+[00:00:27.197,814] <dbg> gopro_discovery: gopro_cmd_subscriber_task: CMD Data to send:
+                                          02 13 46                                         |..F              
+[00:00:27.197,845] <dbg> gopro_c: bt_gopro_client_send: Send handle: 0x42 3 bytes
+[00:00:27.198,486] <dbg> gopro_c: on_received_query: [NOTIFICATION] length 9 handle 68
+[00:00:27.198,486] <wrn> gopro_c: Not REG packet. CMD: 0x13
+[00:00:27.198,486] <inf> gopro_discovery: Get reply on 2, len 9
+[00:00:27.198,547] <dbg> gopro_discovery: ble_data_received: Recieve data:
+                                          08 13 00 27 04 00 00 00  09                      |...'.... .       
+[00:00:27.198,547] <dbg> gopro_discovery: ble_data_received: General 5-bit Packet. Data Len: 8
+[00:00:27.198,577] <dbg> gopro_c: gopro_parse_query_reply: Parse Query reply
+[00:00:27.198,577] <dbg> gopro_c: gopro_parse_query_status_reply: Video count: 9
+[00:00:27.297,668] <dbg> gopro_discovery: ble_data_sent: Data send len: 3
+[00:00:27.297,821] <dbg> gopro_discovery: gopro_cmd_subscriber_task: CMD Data to send:
+                                          02 13 0a                                         |...              
+[00:00:27.297,851] <dbg> gopro_c: bt_gopro_client_send: Send handle: 0x42 3 bytes
+[00:00:27.298,309] <dbg> gopro_c: on_received_query: [NOTIFICATION] length 6 handle 68
+[00:00:27.298,309] <wrn> gopro_c: Not REG packet. CMD: 0x13
+[00:00:27.298,309] <inf> gopro_discovery: Get reply on 2, len 6
+[00:00:27.298,370] <dbg> gopro_discovery: ble_data_received: Recieve data:
+                                          05 13 00 46 01 45                                |...F.E           
+[00:00:27.298,370] <dbg> gopro_discovery: ble_data_received: General 5-bit Packet. Data Len: 5
+[00:00:27.298,400] <dbg> gopro_c: gopro_parse_query_reply: Parse Query reply
+[00:00:27.298,400] <dbg> gopro_c: gopro_parse_query_status_reply: Battery: 69
+[00:00:27.397,674] <dbg> gopro_discovery: ble_data_sent: Data send len: 3
+[00:00:27.398,284] <dbg> gopro_c: on_received_query: [NOTIFICATION] length 6 handle 68
+[00:00:27.398,315] <wrn> gopro_c: Not REG packet. CMD: 0x13
+[00:00:27.398,315] <inf> gopro_discovery: Get reply on 2, len 6
+[00:00:27.398,345] <dbg> gopro_discovery: ble_data_received: Recieve data:
+                                          05 13 00 0a 01 00                                |......           
+[00:00:27.398,376] <dbg> gopro_discovery: ble_data_received: General 5-bit Packet. Data Len: 5
+[00:00:27.398,376] <dbg> gopro_c: gopro_parse_query_reply: Parse Query reply
+[00:00:27.398,406] <dbg> gopro_c: gopro_parse_query_status_reply: Encoding: 0
+[00:00:27.398,468] <dbg> gopro_leds: leds_callback: Get led message

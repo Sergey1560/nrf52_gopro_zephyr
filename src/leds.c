@@ -139,7 +139,7 @@ int gopro_leds_init(void){
 			LOG_ERR("Error %d: failed to configure LED device %s pin %d\n",err, led_rec.port->name, led_rec.pin);
 			led_rec.port = NULL;
 		} else {
-			LOG_INF("Set up LED at %s pin %d\n", led_rec.port->name, led_rec.pin);
+			LOG_INF("Set up LED at %s pin %d", led_rec.port->name, led_rec.pin);
 		}
 	}
 
@@ -153,7 +153,7 @@ int gopro_leds_init(void){
 			LOG_ERR("Error %d: failed to configure LED device %s pin %d\n",err, led_bt.port->name, led_bt.pin);
 			led_bt.port = NULL;
 		} else {
-			LOG_INF("Set up LED at %s pin %d\n", led_bt.port->name, led_bt.pin);
+			LOG_INF("Set up LED at %s pin %d", led_bt.port->name, led_bt.pin);
 		}
 	}
 
