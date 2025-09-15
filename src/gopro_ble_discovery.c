@@ -253,7 +253,7 @@ static void discovery_service_not_found(struct bt_conn *conn, void *context){
 
 static void discovery_error(struct bt_conn *conn, int err,void *context){
 	LOG_WRN("Error while discovering GATT database: (%d)", err);
-	k_work_submit(&discovery_start_work);
+	//k_work_submit(&discovery_start_work);
 }
 
 static int handles_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client *nus_c){
@@ -600,23 +600,13 @@ static void exchange_func(struct bt_conn *conn, uint8_t err, struct bt_gatt_exch
 }
 
 static void gatt_discover(struct bt_conn *conn){
-	//int err;
-
-	//LOG_INF("Start discovery");
-
 	if (conn != default_conn) {
 		LOG_WRN("Not valid conn");
 		return;
 	}
 
+	LOG_DBG("Start dicovery func");
 	k_work_submit(&discovery_start_work);
-//	gopro_start_discovery(default_conn, &gopro_client);
-
- 	// err = bt_gatt_dm_start(default_conn, BT_UUID_GOPRO_WIFI_SERVICE, &discovery_cb, &gopro_client);
-
- 	// if (err) {
- 	// 	LOG_ERR("could not start the discovery procedure, error code: %d", err);
- 	// }
 }
 
 static void ble_data_sent(struct bt_gopro_client *nus, uint8_t err, const uint8_t *const data, uint16_t len){
@@ -708,6 +698,13 @@ static void gopro_cmd_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
 		if (&gopro_cmd_chan == chan) {
 				LOG_HEXDUMP_DBG(gopro_cmd.data, gopro_cmd.len,"CMD Data to send:");
 
+				if(gopro_cmd.cmd_type == 0xFF){
+					LOG_WRN("Remove bonding, start new pair");
+					bt_unpair(BT_ID_DEFAULT,BT_ADDR_LE_ANY);
+					continue;
+				}
+				
+				
 				err = bt_gopro_client_send(&gopro_client, &gopro_cmd);
 
 				if (err) {
@@ -727,6 +724,10 @@ static void gopro_cmd_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
 
 bool gopro_cmd_validator(const void* msg, size_t msg_size) {
 	struct gopro_cmd_t *gopro_cmd =  (struct gopro_cmd_t *)msg;
+
+	if(gopro_cmd->cmd_type == 0xFF){
+		return 1;
+	}
 
 	if(gopro_client_get_state() != GPSTATE_CONNECTED){
 		return 0;

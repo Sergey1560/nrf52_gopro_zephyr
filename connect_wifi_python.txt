@@ -1,0 +1,194 @@
+./tut_venv/bin/python3 ./tutorial_modules/tutorial_6_connect_wifi/connect_as_sta.py www ppp222ppp
+INFO     13:53:06.400 Scanning for bluetooth devices...                                       ble_connect.py:55
+INFO     13:53:11.444    Discovered: 05-C4-E7-FF-FD-AE                                        ble_connect.py:73
+INFO     13:53:11.451    Discovered: D4-41-D9-FE-A5-BD                                        ble_connect.py:73
+INFO     13:53:11.457    Discovered: TY                                                       ble_connect.py:73
+INFO     13:53:11.461    Discovered: 43" Crystal UHD                                          ble_connect.py:73
+INFO     13:53:11.464    Discovered: 69-93-11-68-69-92                                        ble_connect.py:73
+INFO     13:53:11.466    Discovered: 04-3A-86-40-75-D8                                        ble_connect.py:73
+INFO     13:53:11.468    Discovered: 76-CC-23-79-73-A8                                        ble_connect.py:73
+INFO     13:53:11.470    Discovered: 44-52-09-9A-DB-39                                        ble_connect.py:73
+INFO     13:53:11.472    Discovered: MAJOR V [LE]                                             ble_connect.py:73
+INFO     13:53:11.473    Discovered: BK                                                       ble_connect.py:73
+INFO     13:53:11.475    Discovered: GoPro 0699                                               ble_connect.py:73
+INFO     13:53:11.476    Discovered: C8-E3-B0-AE-E8-CA                                        ble_connect.py:73
+INFO     13:53:11.478    Discovered: 4C-42-84-09-20-B1                                        ble_connect.py:73
+INFO     13:53:11.480    Discovered: 3E-D9-D3-1C-26-2E                                        ble_connect.py:73
+INFO     13:53:11.482    Discovered: midea                                                    ble_connect.py:73
+INFO     13:53:11.484    Discovered: 59-0B-71-51-20-03                                        ble_connect.py:73
+INFO     13:53:11.485    Discovered: F3-A8-88-6C-A9-73                                        ble_connect.py:73
+INFO     13:53:11.487    Discovered: MiTV-MOOQ1                                               ble_connect.py:73
+INFO     13:53:11.488    Discovered: 19-91-11-A7-BF-54                                        ble_connect.py:73
+INFO     13:53:11.489 Found 1 matching devices.                                               ble_connect.py:77
+INFO     13:53:11.490 Establishing BLE connection to F0:8B:39:74:F5:CC: GoPro 0699...         ble_connect.py:82
+INFO     13:53:14.110 BLE Connected!                                                          ble_connect.py:85
+INFO     13:53:14.116 Attempting to pair...                                                   ble_connect.py:88
+INFO     13:53:14.123 Pairing complete!                                                       ble_connect.py:94
+INFO     13:53:14.127 Enabling notifications...                                               ble_connect.py:97
+INFO     13:53:14.130 Enabling notification on char b5f90092-aa8d-11e3-9046-0002a5d5c51b     ble_connect.py:101
+INFO     13:53:14.204 Enabling notification on char b5f90081-aa8d-11e3-9046-0002a5d5c51b     ble_connect.py:101
+INFO     13:53:14.293 Enabling notification on char b5f90084-aa8d-11e3-9046-0002a5d5c51b     ble_connect.py:101
+INFO     13:53:14.384 Enabling notification on char b5f90083-aa8d-11e3-9046-0002a5d5c51b     ble_connect.py:101
+INFO     13:53:14.473 Enabling notification on char b5f90075-aa8d-11e3-9046-0002a5d5c51b     ble_connect.py:101
+INFO     13:53:14.563 Enabling notification on char b5f90079-aa8d-11e3-9046-0002a5d5c51b     ble_connect.py:101
+INFO     13:53:14.653 Enabling notification on char b5f90077-aa8d-11e3-9046-0002a5d5c51b     ble_connect.py:101
+INFO     13:53:14.743 Enabling notification on char b5f90073-aa8d-11e3-9046-0002a5d5c51b     ble_connect.py:101
+INFO     13:53:14.833 Enabling notification on char 00002a19-0000-1000-8000-00805f9b34fb     ble_connect.py:101
+INFO     13:53:14.923 Done enabling notifications                                            ble_connect.py:103
+INFO     13:53:14.927 BLE Connection is ready for communication.                             ble_connect.py:104
+INFO     13:53:14.931 Scanning for available Wifi Networks                                 connect_as_sta.py:79
+INFO     13:53:14.935 Writing: 02:02:02                                                    connect_as_sta.py:91
+DEBUG    13:53:15.014 Received response at GoProUuid.NETWORK_MANAGEMENT_RSP_UUID:      decipher_response.py:161
+         06:02:82:08:01:10:02                                                                                  
+DEBUG    13:53:15.019 self.bytes_remaining=0                               ble_command_get_hardware_info.py:100
+DEBUG    13:53:19.739 Received response at GoProUuid.NETWORK_MANAGEMENT_RSP_UUID:      decipher_response.py:161
+         0a:02:0b:08:05:10:02:18:16:20:00                                                                      
+DEBUG    13:53:19.744 self.bytes_remaining=0                               ble_command_get_hardware_info.py:100
+INFO     13:53:19.748 Received scan notification: scanning_state: SCANNING_SUCCESS        connect_as_sta.py:100
+         scan_id: 2                                                                                            
+         total_entries: 22                                                                                     
+         total_configured_ssid: 0                                                                              
+                                                                                                               
+INFO     13:53:19.754 Getting the scanned networks.                                       connect_as_sta.py:121
+INFO     13:53:19.758 Writing: 08:02:03:08:00:10:64:18:02                                 connect_as_sta.py:133
+DEBUG    13:53:19.829 Received response at GoProUuid.NETWORK_MANAGEMENT_RSP_UUID:      decipher_response.py:161
+         21:6a:02:83:08:01:10:02:1a:13:0a:0a:44:6c:69:6e:6b:36:30:32                                           
+DEBUG    13:53:19.837 self.bytes_remaining=344                             ble_command_get_hardware_info.py:100
+DEBUG    13:53:19.843 Received response at GoProUuid.NETWORK_MANAGEMENT_RSP_UUID:      decipher_response.py:161
+         80:5f:31:10:03:20:85:13:28:01:1a:14:0a:0b:74:70:6c:69:6e:6b                                           
+DEBUG    13:53:19.851 self.bytes_remaining=325                             ble_command_get_hardware_info.py:100
+DEBUG    13:53:19.856 Received response at GoProUuid.NETWORK_MANAGEMENT_RSP_UUID:      decipher_response.py:161
+         81:5f:6e:33:30:30:10:03:20:ec:12:28:01:1a:16:0a:0d:4b:65:65                                           
+DEBUG    13:53:19.860 self.bytes_remaining=306                             ble_command_get_hardware_info.py:100
+DEBUG    13:53:19.862 Received response at GoProUuid.NETWORK_MANAGEMENT_RSP_UUID:      decipher_response.py:161
+         82:6e:65:74:69:63:2d:39:31:32:32:10:03:20:f6:12:28:01:1a:13                                           
+DEBUG    13:53:19.866 self.bytes_remaining=287                             ble_command_get_hardware_info.py:100
+DEBUG    13:53:19.867 Received response at GoProUuid.NETWORK_MANAGEMENT_RSP_UUID:      decipher_response.py:161
+         83:0a:0a:42:6f:72:6f:76:61:79:61:32:30:10:02:20:99:13:28:01                                           
+DEBUG    13:53:19.869 self.bytes_remaining=268                             ble_command_get_hardware_info.py:100
+DEBUG    13:53:19.871 Received response at GoProUuid.NETWORK_MANAGEMENT_RSP_UUID:      decipher_response.py:161
+         84:1a:16:0a:0d:48:41:50:5f:46:52:33:39:36:30:39:33:33:10:02                                           
+DEBUG    13:53:19.873 self.bytes_remaining=249                             ble_command_get_hardware_info.py:100
+DEBUG    13:53:19.874 Received response at GoProUuid.NETWORK_MANAGEMENT_RSP_UUID:      decipher_response.py:161
+         85:20:9e:13:28:01:1a:16:0a:0d:42:61:67:67:69:6e:73:43:6f:66                                           
+DEBUG    13:53:19.877 self.bytes_remaining=230                             ble_command_get_hardware_info.py:100
+DEBUG    13:53:19.878 Received response at GoProUuid.NETWORK_MANAGEMENT_RSP_UUID:      decipher_response.py:161
+         86:66:65:65:10:02:20:fb:12:28:01:1a:11:0a:08:42:6f:67:65:6d                                           
+DEBUG    13:53:19.880 self.bytes_remaining=211                             ble_command_get_hardware_info.py:100
+DEBUG    13:53:19.882 Received response at GoProUuid.NETWORK_MANAGEMENT_RSP_UUID:      decipher_response.py:161
+         87:61:2d:39:10:02:20:85:13:28:01:1a:16:0a:0d:42:61:67:67:69                                           
+DEBUG    13:53:19.884 self.bytes_remaining=192                             ble_command_get_hardware_info.py:100
+DEBUG    13:53:19.885 Received response at GoProUuid.NETWORK_MANAGEMENT_RSP_UUID:      decipher_response.py:161
+         88:6e:73:20:47:75:65:73:74:10:02:20:fb:12:28:01:1a:17:0a:0e                                           
+DEBUG    13:53:19.886 self.bytes_remaining=173                             ble_command_get_hardware_info.py:100
+DEBUG    13:53:19.888 Received response at GoProUuid.NETWORK_MANAGEMENT_RSP_UUID:      decipher_response.py:161
+         89:53:6d:61:72:74:48:6f:6d:65:32:37:31:30:34:10:02:20:9e:13                                           
+DEBUG    13:53:19.889 self.bytes_remaining=154                             ble_command_get_hardware_info.py:100
+DEBUG    13:53:19.890 Received response at GoProUuid.NETWORK_MANAGEMENT_RSP_UUID:      decipher_response.py:161
+         8a:28:01:1a:17:0a:0e:47:41:54:45:33:31:5f:35:67:7a:5f:45:58                                           
+DEBUG    13:53:19.891 self.bytes_remaining=135                             ble_command_get_hardware_info.py:100
+DEBUG    13:53:19.892 Received response at GoProUuid.NETWORK_MANAGEMENT_RSP_UUID:      decipher_response.py:161
+         8b:54:10:02:20:94:13:28:01:1a:0c:0a:03:76:76:62:10:02:20:ec                                           
+DEBUG    13:53:19.894 self.bytes_remaining=116                             ble_command_get_hardware_info.py:100
+DEBUG    13:53:19.895 Received response at GoProUuid.NETWORK_MANAGEMENT_RSP_UUID:      decipher_response.py:161
+         8c:12:28:01:1a:0c:0a:03:56:56:20:10:02:20:94:13:28:01:1a:17                                           
+DEBUG    13:53:19.897 self.bytes_remaining=97                              ble_command_get_hardware_info.py:100
+DEBUG    13:53:19.898 Received response at GoProUuid.NETWORK_MANAGEMENT_RSP_UUID:      decipher_response.py:161
+         8d:0a:0e:53:6d:61:72:74:48:6f:6d:65:32:38:32:33:34:10:02:20                                           
+DEBUG    13:53:19.900 self.bytes_remaining=78                              ble_command_get_hardware_info.py:100
+DEBUG    13:53:19.901 Received response at GoProUuid.NETWORK_MANAGEMENT_RSP_UUID:      decipher_response.py:161
+         8e:80:13:28:01:1a:1d:0a:14:54:50:2d:4c:69:6e:6b:5f:4f:46:49                                           
+DEBUG    13:53:19.903 self.bytes_remaining=59                              ble_command_get_hardware_info.py:100
+DEBUG    13:53:19.904 Received response at GoProUuid.NETWORK_MANAGEMENT_RSP_UUID:      decipher_response.py:161
+         8f:46:45:5f:32:30:30:5f:32:47:10:02:20:80:13:28:01:1a:12:0a                                           
+DEBUG    13:53:19.905 self.bytes_remaining=40                              ble_command_get_hardware_info.py:100
+DEBUG    13:53:19.906 Received response at GoProUuid.NETWORK_MANAGEMENT_RSP_UUID:      decipher_response.py:161
+         90:09:53:6b:61:74:65:54:6f:77:6e:10:02:20:9e:13:28:01:1a:15                                           
+DEBUG    13:53:19.907 self.bytes_remaining=21                              ble_command_get_hardware_info.py:100
+DEBUG    13:53:19.908 Received response at GoProUuid.NETWORK_MANAGEMENT_RSP_UUID:      decipher_response.py:161
+         91:0a:0c:54:50:2d:4c:69:6e:6b:5f:30:36:43:34:10:02:20:9e:13                                           
+DEBUG    13:53:19.910 self.bytes_remaining=2                               ble_command_get_hardware_info.py:100
+DEBUG    13:53:19.916 Received response at GoProUuid.NETWORK_MANAGEMENT_RSP_UUID:      decipher_response.py:161
+         92:28:01                                                                                              
+DEBUG    13:53:19.918 self.bytes_remaining=0                               ble_command_get_hardware_info.py:100
+INFO     13:53:19.919 Found the following networks:                                       connect_as_sta.py:140
+INFO     13:53:19.920 ssid: "Dlink602_1"                                                  connect_as_sta.py:142
+         signal_strength_bars: 3                                                                               
+         signal_frequency_mhz: 2437                                                                            
+         scan_entry_flags: 1                                                                                   
+                                                                                                               
+INFO     13:53:19.922 ssid: "tplink_n300"                                                 connect_as_sta.py:142
+         signal_strength_bars: 3                                                                               
+         signal_frequency_mhz: 2412                                                                            
+         scan_entry_flags: 1                                                                                   
+                                                                                                               
+INFO     13:53:19.923 ssid: "Keenetic-9122"                                               connect_as_sta.py:142
+         signal_strength_bars: 3                                                                               
+         signal_frequency_mhz: 2422                                                                            
+         scan_entry_flags: 1                                                                                   
+                                                                                                               
+INFO     13:53:19.925 ssid: "Borovaya20"                                                  connect_as_sta.py:142
+         signal_strength_bars: 2                                                                               
+         signal_frequency_mhz: 2457                                                                            
+         scan_entry_flags: 1                                                                                   
+                                                                                                               
+INFO     13:53:19.926 ssid: "HAP_FR3960933"                                               connect_as_sta.py:142
+         signal_strength_bars: 2                                                                               
+         signal_frequency_mhz: 2462                                                                            
+         scan_entry_flags: 1                                                                                   
+                                                                                                               
+INFO     13:53:19.927 ssid: "BagginsCoffee"                                               connect_as_sta.py:142
+         signal_strength_bars: 2                                                                               
+         signal_frequency_mhz: 2427                                                                            
+         scan_entry_flags: 1                                                                                   
+                                                                                                               
+INFO     13:53:19.929 ssid: "Bogema-9"                                                    connect_as_sta.py:142
+         signal_strength_bars: 2                                                                               
+         signal_frequency_mhz: 2437                                                                            
+         scan_entry_flags: 1                                                                                   
+                                                                                                               
+INFO     13:53:19.930 ssid: "Baggins Guest"                                               connect_as_sta.py:142
+         signal_strength_bars: 2                                                                               
+         signal_frequency_mhz: 2427                                                                            
+         scan_entry_flags: 1                                                                                   
+                                                                                                               
+INFO     13:53:19.932 ssid: "SmartHome27104"                                              connect_as_sta.py:142
+         signal_strength_bars: 2                                                                               
+         signal_frequency_mhz: 2462                                                                            
+         scan_entry_flags: 1                                                                                   
+                                                                                                               
+INFO     13:53:19.934 ssid: "GATE31_5gz_EXT"                                              connect_as_sta.py:142
+         signal_strength_bars: 2                                                                               
+         signal_frequency_mhz: 2452                                                                            
+         scan_entry_flags: 1                                                                                   
+                                                                                                               
+INFO     13:53:19.935 ssid: "vvb"                                                         connect_as_sta.py:142
+         signal_strength_bars: 2                                                                               
+         signal_frequency_mhz: 2412                                                                            
+         scan_entry_flags: 1                                                                                   
+                                                                                                               
+INFO     13:53:19.937 ssid: "VV "                                                         connect_as_sta.py:142
+         signal_strength_bars: 2                                                                               
+         signal_frequency_mhz: 2452                                                                            
+         scan_entry_flags: 1                                                                                   
+                                                                                                               
+INFO     13:53:19.938 ssid: "SmartHome28234"                                              connect_as_sta.py:142
+         signal_strength_bars: 2                                                                               
+         signal_frequency_mhz: 2432                                                                            
+         scan_entry_flags: 1                                                                                   
+                                                                                                               
+INFO     13:53:19.939 ssid: "TP-Link_OFIFE_200_2G"                                        connect_as_sta.py:142
+         signal_strength_bars: 2                                                                               
+         signal_frequency_mhz: 2432                                                                            
+         scan_entry_flags: 1                                                                                   
+                                                                                                               
+INFO     13:53:19.940 ssid: "SkateTown"                                                   connect_as_sta.py:142
+         signal_strength_bars: 2                                                                               
+         signal_frequency_mhz: 2462                                                                            
+         scan_entry_flags: 1                                                                                   
+                                                                                                               
+INFO     13:53:19.942 ssid: "TP-Link_06C4"                                                connect_as_sta.py:142
+         signal_strength_bars: 2                                                                               
+         signal_frequency_mhz: 2462                                                                            
+         scan_entry_flags: 1                                                                                   
+                                                                      

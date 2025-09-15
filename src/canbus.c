@@ -102,7 +102,7 @@ const struct can_frame err_state_frame = {
 const struct can_filter goprocan_filter = {
         .flags = 0,
         .id = GPCAN_INPUT_CMD_ID,
-        .mask = 0x7F8
+        .mask = 0x7F0
 };
 #else
 const struct can_filter goprocan_filter = {
@@ -133,6 +133,10 @@ static void rx_callback_function(const struct device *dev, struct can_frame *fra
 
 	case GPCAN_INPUT_QUERY_ID: //GoPro cmd
 		gopro_cmd.cmd_type = GP_CNTRL_HANDLE_QUERY;
+		break;
+
+	case GPCAN_INPUT_UNPAIR_ID: //GoPro cmd
+		gopro_cmd.cmd_type = 0xFF;
 		break;
 
 	default:
