@@ -55,11 +55,15 @@ const char *pb_enum_state[7]={
     "ERROR_INDEX"
 };
 
-#define WORK_BUFF_SIZE 8192
+
 uint8_t work_buff[WORK_BUFF_SIZE];
 
 struct ap_entries_desc_t ap_entries_desc;
 
+volatile int ap_list_index = 0;
+volatile struct ap_list_t ap_list[MAX_AP_LIST_COUNT];
+
+uint8_t resp_ap_entries_buf[128];
 
 size_t gopro_wifi_request_scan(uint8_t *data, uint32_t max_len){
     int err;
@@ -245,6 +249,62 @@ static int gopro_pb_req_ap(uint8_t scan_id, uint8_t start_index, uint8_t count){
     return 0;
 }
 
+bool read_ssid_callback(pb_istream_t *stream, const pb_field_t *field, void **arg) {
+    struct ap_list_t *ap_list_ptr = (struct ap_list_t *)*arg;
+    int bytes = stream->bytes_left;
+
+    if(bytes > MAX_SSID_LEN){
+        LOG_ERR("Str len > buffer size %d of %d",bytes,MAX_SSID_LEN);
+        return false;
+    }
+
+    if (pb_read(stream, (pb_byte_t *)ap_list_ptr->ssid, stream->bytes_left)) {
+        ap_list_ptr->ssid[bytes] = '\0'; // Null-terminate the string
+        return true;
+    }
+
+    return false; // Failed to read the string
+}
+
+static bool read_ap_entries_callback(pb_istream_t *stream, const pb_field_t *field, void **arg) {
+    int err;
+    int bytes = stream->bytes_left;
+    struct ap_list_t *ap_list_ptr = (struct ap_list_t *)*arg;
+
+    if(bytes > sizeof(resp_ap_entries_buf)){
+        LOG_ERR("Read bytes > entries size %d of %d",stream->bytes_left,sizeof(resp_ap_entries_buf));
+        return false;
+    }
+
+    if (pb_read(stream, (pb_byte_t *)resp_ap_entries_buf, bytes)) {
+
+        open_gopro_ResponseGetApEntries_ScanEntry resp = open_gopro_ResponseGetApEntries_ScanEntry_init_zero;
+        resp.ssid.funcs.decode = read_ssid_callback;
+        resp.ssid.arg = (struct ap_list_t*)&ap_list_ptr[ap_list_index];
+
+        pb_istream_t istream = pb_istream_from_buffer((const pb_byte_t *)resp_ap_entries_buf, bytes);
+
+        err = pb_decode(&istream, open_gopro_ResponseGetApEntries_ScanEntry_fields, &resp);
+        if(!err){
+            LOG_ERR("PB decode failed %s", PB_GET_ERROR(&istream));
+        }else{
+            ap_list_ptr[ap_list_index].signal_frequency_mhz = resp.signal_frequency_mhz;
+            ap_list_ptr[ap_list_index].signal_strength_bars = resp.signal_strength_bars;
+            ap_list_ptr[ap_list_index].flags = resp.scan_entry_flags;
+            if(ap_list_index < (MAX_AP_LIST_COUNT-1)){
+                ap_list_index++;
+            }else{
+                LOG_ERR("AP count overload %d",MAX_AP_LIST_COUNT);
+            }
+        }
+    
+    }else{
+        LOG_ERR("Read failed");
+    }
+
+    return true;
+}
+
 
 static int gopro_parse_ap_entries(struct ap_entries_desc_t *ap_entries_desc, uint8_t *data, uint32_t len){
     int err;
@@ -260,14 +320,22 @@ static int gopro_parse_ap_entries(struct ap_entries_desc_t *ap_entries_desc, uin
         open_gopro_ResponseGetApEntries resp = open_gopro_ResponseGetApEntries_init_zero;
         pb_istream_t stream = pb_istream_from_buffer(work_buff, ap_entries_desc->packet_data_len);
 
+        resp.entries.funcs.decode = read_ap_entries_callback;
+        resp.entries.arg = (struct ap_list_t*)ap_list;
+
         err = pb_decode(&stream, open_gopro_ResponseGetApEntries_fields, &resp);
 
         if(!err){
             LOG_ERR("PB decode failed %s", PB_GET_ERROR(&stream));
         }else{
             LOG_DBG("AP Decode OK.");
+            for(uint32_t i=0; i<ap_list_index; i++){
+                LOG_DBG("SSID: %s Mhz: %d Bars: %d Flags: %d",(char *)ap_list[i].ssid,(int32_t)ap_list[i].signal_frequency_mhz,(int32_t)ap_list[i].signal_strength_bars,(int32_t)ap_list[i].flags);
+            }
+
         }
     }
 
+    LOG_DBG("AP parse finish");
     return 0;
 };

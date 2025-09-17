@@ -491,7 +491,7 @@ static uint8_t on_read_pass(struct bt_conn *conn, uint8_t err, struct bt_gatt_re
 		memcpy(gopro_state.wifi_pass,data,str_size);
 		gopro_state.wifi_pass[str_size]=0;
 		
-		LOG_DBG("Get AP PASS %s",gopro_state.wifi_ssid);
+		LOG_DBG("Get AP PASS %s",gopro_state.wifi_pass);
 	}else{
 		LOG_HEXDUMP_DBG(data,length,"Read CHAR data:");
 	}
