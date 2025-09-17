@@ -75,6 +75,7 @@ enum gopro_control_handle_list_t{
     GP_CNTRL_HANDLE_CMD,
     GP_CNTRL_HANDLE_SETTINGS,
     GP_CNTRL_HANDLE_QUERY,
+    GP_CNTRL_HANDLE_NET,
 	GP_CNTRL_HANDLE_END,
 };
 
@@ -84,11 +85,6 @@ enum gopro_wifi_handle_list_t{
     GP_WIFI_HANDLE_POWER,
     GP_WIFI_HANDLE_STATE,
     GP_WIFI_HANDLE_END,
-};
-
-enum gopro_net_handle_list_t{
-    GP_NET_HANDLE_CMD,
-    GP_NET_HANDLE_END,
 };
 
 enum gopro_flag_t{
@@ -183,12 +179,10 @@ struct bt_gopro_client {
          * to interact with the device.
          */
 	struct bt_gopro_client_handles handles[GP_CNTRL_HANDLE_END];
-	struct bt_gopro_client_handles net_handle;
 	uint16_t wifihandles[GP_WIFI_HANDLE_END];
 
 	/** GATT subscribe parameters for NUS TX Characteristic. */
 	struct bt_gatt_subscribe_params notif_params[GP_CNTRL_HANDLE_END];
-	struct bt_gatt_subscribe_params net_notif_params;
 
         /** GATT write parameters for NUS RX Characteristic. */
 	struct bt_gatt_write_params write_params[GP_CNTRL_HANDLE_END];

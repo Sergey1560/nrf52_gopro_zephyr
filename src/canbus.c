@@ -135,6 +135,10 @@ static void rx_callback_function(const struct device *dev, struct can_frame *fra
 		gopro_cmd.cmd_type = GP_CNTRL_HANDLE_QUERY;
 		break;
 
+	case GPCAN_INPUT_NET_ID: //GoPro cmd
+		gopro_cmd.cmd_type = GP_CNTRL_HANDLE_NET;
+		break;
+
 	case GPCAN_INPUT_UNPAIR_ID: //GoPro cmd
 		gopro_cmd.cmd_type = 0xFF;
 		break;

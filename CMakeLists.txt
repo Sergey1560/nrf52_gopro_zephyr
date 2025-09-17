@@ -27,6 +27,7 @@ target_sources(app PRIVATE
   src/gopro_client.c
   src/gopro_ble_discovery.c
   src/gopro_protobuf.c
+  src/gopro_packet.c
   src/canbus.c
   src/buttons.c
   src/leds.c
