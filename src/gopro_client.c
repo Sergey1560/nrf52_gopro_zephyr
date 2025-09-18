@@ -10,6 +10,8 @@
 #include <zephyr/zbus/zbus.h>
 
 #include <gopro_client.h>
+#include <gopro_packet.h>
+#include <gopro_protobuf.h>
 #include <leds.h>
 
 #include <zephyr/logging/log.h>
@@ -24,7 +26,7 @@ ZBUS_CHAN_DEFINE(gopro_state_chan,                     	/* Name */
 );
 
 static int gopro_parse_query_status_notify(const void *data, uint16_t length);
-static int gopro_check_reply(struct gopro_cmd_t *gopro_cmd);
+//static int gopro_check_reply(struct gopro_cmd_t *gopro_cmd);
 
 static uint8_t on_received_cmd(struct bt_conn *conn, struct bt_gatt_subscribe_params *params, const void *data, uint16_t length);
 static uint8_t on_received_settings(struct bt_conn *conn, struct bt_gatt_subscribe_params *params, const void *data, uint16_t length);
@@ -1016,6 +1018,7 @@ static int gopro_parse_query_status_notify(const void *data, uint16_t length){
 
 	if(pdata[0] != (length-1)){
 		LOG_ERR("Not REPLY FMT");
+		LOG_HEXDUMP_ERR(data,length,"Data");
 		return -1;
 	}
 
@@ -1097,6 +1100,7 @@ static int gopro_parse_query_status_reply(const void *data, uint16_t length){
 
 	if(pdata[0] != (length-1)){
 		LOG_ERR("Not REPLY FMT");
+		LOG_HEXDUMP_ERR(data,length,"Data");
 		return -1;
 	}
 
@@ -1144,52 +1148,97 @@ static int gopro_parse_query_status_reply(const void *data, uint16_t length){
 	return 0;
 }
 
-static int gopro_check_reply(struct gopro_cmd_t *gopro_cmd){
+// static int gopro_check_reply(struct gopro_cmd_t *gopro_cmd){
 
-	if(gopro_cmd->len == (gopro_cmd->data[0]+1) ){
-		return 0;
-	}
+// 	if(gopro_cmd->len == (gopro_cmd->data[0]+1) ){
+// 		return 0;
+// 	}
 
 
-	return -1;
-}
+// 	return -1;
+// }
 
 
 int	gopro_parse_query_reply(struct gopro_cmd_t *gopro_cmd){
+    static uint8_t last_action = 0;
+    static uint8_t last_feature = 0;
+    uint8_t feature;
+    uint8_t action;
+    uint8_t packet_num;
+    uint32_t len;
+    uint8_t index;
 
-	LOG_DBG("Parse Query reply");
+	gopro_packet_type_t packet_type = gopro_packet_get_type(gopro_cmd);
 
-	if(gopro_check_reply(gopro_cmd) != 0){
-		LOG_ERR("Not valid reply");
-		return -1;
+	if(packet_type == gopro_packet_cont){
+        packet_num = gopro_cmd->data[0] & 0x0F;
+		LOG_DBG("QUERY Continuation Packet number %d for feature 0x%0X action 0x%0X",packet_num,last_feature,last_action);
+		gopro_packet_get_data_ptr(gopro_cmd,&index,&len);
+
+        if(last_feature == 0xF5){
+            switch (last_action){
+            case 0xEF:
+                gopro_build_packet_cohn_status(&gopro_cmd->data[index],len,-1);
+                break;
+
+			case 0xEE:
+				gopro_build_packet_cohn_cert(&gopro_cmd->data[index],len,-1);
+				break;
+				
+            default:
+                break;
+            }
+        }
+
+    }else{
+        gopro_packet_get_feature(gopro_cmd,&feature,&action);
+        gopro_packet_get_data_ptr(gopro_cmd,&index,&len);
+
+		LOG_DBG("Parse Query reply Feature: 0x%0X Action: 0x%0X",feature,action);
+
+		last_feature = feature;
+        last_action = action;
+
+		switch (feature)
+		{
+		case GOPRO_QUERY_STATUS_REG_STATUS:
+		case GOPRO_QUERY_STATUS_REG_STATUS_NOTIFY:
+			if(action == 0){
+				gopro_parse_query_status_notify(gopro_cmd->data,gopro_cmd->len);
+			}else{
+				LOG_ERR("REG Result not OK: %d",action);
+			}	
+			return 0;
+			break;
+
+		case GOPRO_QUERY_STATUS_GET_STATUS:
+			if(action == 0){
+				gopro_parse_query_status_reply(gopro_cmd->data,gopro_cmd->len);
+			}else{
+				LOG_ERR("REG Result not OK: %d",action);
+			}	
+
+			break;
+
+		case 0xF5:
+			if(action == 0xEF){
+                gopro_build_packet_cohn_status(&gopro_cmd->data[index],len,gopro_packet_get_len(gopro_cmd)-2);
+
+			}
+
+			if(action == 0xEE){
+                gopro_build_packet_cohn_cert(&gopro_cmd->data[index],len,gopro_packet_get_len(gopro_cmd)-2);
+			}
+
+			break;
+
+		default:
+			LOG_DBG("No parser for packet %d",feature);
+			LOG_HEXDUMP_DBG(gopro_cmd->data,gopro_cmd->len,"Data:");
+			break;
+		}
+
 	}
-
-	switch (gopro_cmd->data[1])
-	{
-	case GOPRO_QUERY_STATUS_REG_STATUS:
-	case GOPRO_QUERY_STATUS_REG_STATUS_NOTIFY:
-		if(gopro_cmd->data[2] == 0){
-			gopro_parse_query_status_notify(gopro_cmd->data,gopro_cmd->len);
-		}else{
-			LOG_ERR("REG Result not OK: %d",gopro_cmd->data[2]);
-		}	
-		return 0;
-		break;
-
-	case GOPRO_QUERY_STATUS_GET_STATUS:
-		if(gopro_cmd->data[2] == 0){
-			gopro_parse_query_status_reply(gopro_cmd->data,gopro_cmd->len);
-		}else{
-			LOG_ERR("REG Result not OK: %d",gopro_cmd->data[2]);
-		}	
-
-		break;
-
-	default:
-		break;
-	}
-
-
 	return 0;
 };
 
@@ -1200,7 +1249,48 @@ int gopro_parse_settings_reply(struct gopro_cmd_t *gopro_cmd){
 };
 
 int gopro_parse_cmd_reply(struct gopro_cmd_t *gopro_cmd){
+    static uint8_t last_action = 0;
+    static uint8_t last_feature = 0;
+    uint8_t feature;
+    uint8_t action;
+    //uint8_t packet_num;
+    uint32_t len;
+    uint8_t index;
+
 
 	LOG_DBG("CMD reply");
+	
+	gopro_packet_type_t packet_type = gopro_packet_get_type(gopro_cmd);
+	
+	if(packet_type == gopro_packet_cont){
+		LOG_DBG("CMD Cont packet");
+	}else{
+
+        gopro_packet_get_feature(gopro_cmd,&feature,&action);
+        gopro_packet_get_data_ptr(gopro_cmd,&index,&len);
+
+		LOG_DBG("Feature 0x%0X Action 0x%0X",feature,action);
+
+        last_feature = feature;
+        last_action = action;
+
+		if(feature == 0xF1){
+			switch (action)
+			{
+				case 0xE7:
+				case 0xE6:
+					LOG_DBG("Generic response");
+					gopro_parse_response_generic(&gopro_cmd->data[index],len);
+					break;
+				default:
+					break;
+			
+			}
+		}
+
+	}
+
+
+
 	return 0;
 };

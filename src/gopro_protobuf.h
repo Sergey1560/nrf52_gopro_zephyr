@@ -26,4 +26,8 @@ struct ap_list_t{
 
 size_t gopro_wifi_request_scan(uint8_t *data, uint32_t max_len);
 int gopro_parse_net_reply(struct gopro_cmd_t *gopro_cmd);
+int gopro_build_packet_cohn_status(uint8_t *data, uint32_t len, int32_t packet_len);
+void gopro_parse_response_generic(uint8_t *data, uint32_t len);
+int gopro_build_packet_cohn_cert(uint8_t *data, uint32_t len, int32_t packet_len);
+
 #endif

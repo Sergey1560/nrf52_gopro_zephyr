@@ -235,15 +235,15 @@ static void discovery_finish_work_handler(struct k_work *work){
 	LOG_DBG("Dummy wait");
 	k_sleep(K_MSEC(1000));
 
-	// for(uint32_t i=0; i < sizeof(startup_query_list)/sizeof(startup_query_list[0]); i++){
+	for(uint32_t i=0; i < sizeof(startup_query_list)/sizeof(startup_query_list[0]); i++){
 		
-	// 	LOG_HEXDUMP_DBG(startup_query_list[i]->data,startup_query_list[i]->len,"Push to TX chan:");
-	// 	err = zbus_chan_pub(&gopro_cmd_chan, startup_query_list[i], K_MSEC(100));
+		LOG_HEXDUMP_DBG(startup_query_list[i]->data,startup_query_list[i]->len,"Push to TX chan:");
+		err = zbus_chan_pub(&gopro_cmd_chan, startup_query_list[i], K_MSEC(100));
 
-	// 	if(err != 0){
-	// 		LOG_ERR("Chan pub failed: %d",err);
-	// 	}
-	// }
+		if(err != 0){
+			LOG_ERR("Chan pub failed: %d",err);
+		}
+	}
 }
 
 static void discovery_service_not_found(struct bt_conn *conn, void *context){
@@ -575,6 +575,8 @@ static void security_changed(struct bt_conn *conn, bt_security_t level,enum bt_s
 
 	if (!err) {
 		LOG_INF("Security changed: %s level %u", addr, level);
+		gatt_discover(conn);
+
 	} else {
 		LOG_WRN("Security failed: %s level %u err %d %s", addr, level, err,
 			bt_security_err_to_str(err));
@@ -582,13 +584,8 @@ static void security_changed(struct bt_conn *conn, bt_security_t level,enum bt_s
 			if(err == BT_SECURITY_ERR_PIN_OR_KEY_MISSING){
 				gopro_client_set_sate(GPSTATE_NEED_PAIRING);
 				gopro_led_mode_set(LED_NUM_REC,LED_MODE_BLINK_300MS);
-				// LOG_WRN("Remove bonding, start new pair");
-				// bt_unpair(BT_ID_DEFAULT,BT_ADDR_LE_ANY);
 			}
-		
 		}
-
-	gatt_discover(conn);
 }
 
 static void exchange_func(struct bt_conn *conn, uint8_t err, struct bt_gatt_exchange_params *params){
@@ -600,6 +597,7 @@ static void exchange_func(struct bt_conn *conn, uint8_t err, struct bt_gatt_exch
 }
 
 static void gatt_discover(struct bt_conn *conn){
+
 	if (conn != default_conn) {
 		LOG_WRN("Not valid conn");
 		return;
@@ -732,10 +730,12 @@ bool gopro_cmd_validator(const void* msg, size_t msg_size) {
 	}
 
 	if(gopro_client_get_state() != GPSTATE_CONNECTED){
+		LOG_ERR("Not connected state");
 		return 0;
 	}
 
-	if(gopro_cmd->len >= GOPRO_CMD_DATA_LEN){
+	if(gopro_cmd->len > GOPRO_CMD_DATA_LEN){
+		LOG_ERR("Data len > 20");
 		return 0;
 	}
 
