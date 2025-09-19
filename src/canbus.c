@@ -10,6 +10,7 @@
 #include <zephyr/sys/printk.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/zbus/zbus.h>
+#include <zephyr/canbus/isotp.h>
 
 #include <gopro_client.h>
 
@@ -30,6 +31,8 @@ static void can_tx_timer_handler(struct k_timer *dummy);
 static void can_tx_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
 static void can_data_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
 static void can_tx_work_handler(struct k_work *work);
+
+static void isotp_rx_thread(void *arg1, void *arg2, void *arg3);
 
 ZBUS_CHAN_DEFINE(can_tx_chan,                           	/* Name */
          struct can_frame,                       		      	/* Message type */
@@ -61,6 +64,21 @@ K_TIMER_DEFINE(can_tx_timer, can_tx_timer_handler, NULL);
 
 K_WORK_DEFINE(can_tx_work, can_tx_work_handler);
 
+#define ISOTPRX_THREAD_PRIORITY 	9
+#define ISOTP_RX_THREAD_STACK_SIZE	2048
+K_THREAD_STACK_DEFINE(isotp_rx_thread_stack, ISOTP_RX_THREAD_STACK_SIZE);
+struct k_thread isotp_rx_thread_data;
+
+struct isotp_recv_ctx isotp_recv_ctx;
+
+const struct isotp_msg_id isotp_rx_addr = {
+	.std_id = 0x753,
+};
+const struct isotp_msg_id isotp_tx_addr = {
+	.std_id = 0x763,
+};
+
+const struct isotp_fc_opts isotp_fc_opts = {.bs = 8, .stmin = 0};
 
 const struct can_timing mcp2515_8mhz_500 = {
 	.sjw = 2,
@@ -187,6 +205,7 @@ void mcp2515_get_timing(struct can_timing *timing, uint8_t cnf1, uint8_t cnf2, u
 
 int canbus_init(void){
     int err;
+	k_tid_t tid;
 
 	if (!gpio_is_ready_dt(&mcp_rst_switch)) {
 		LOG_ERR("The MCP2515 RST pin GPIO port is not ready.");
@@ -262,6 +281,16 @@ int canbus_init(void){
 
 	CAN_TX_TIMER_START;
 	
+	tid = k_thread_create(&isotp_rx_thread_data, isotp_rx_thread_stack, K_THREAD_STACK_SIZEOF(isotp_rx_thread_stack), isotp_rx_thread, NULL, NULL, NULL, ISOTPRX_THREAD_PRIORITY, 0, K_NO_WAIT);
+	if (!tid) {
+		LOG_ERR("ERROR spawning ISO-TP rx thread\n");
+	}else{
+		k_thread_name_set(tid, "isotprx");
+	}
+	
+	
+
+	LOG_INF("CAN BUS init done");
     return 0;
 }
 
@@ -377,6 +406,41 @@ static void can_data_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
 	}
 }
 
+
+static void isotp_rx_thread(void *arg1, void *arg2, void *arg3){
+	ARG_UNUSED(arg1);
+	ARG_UNUSED(arg2);
+	ARG_UNUSED(arg3);
+	int ret, rem_len, received_len;
+	struct net_buf *buf;
+
+
+	LOG_DBG("Bind ISO-TP");
+	ret = isotp_bind(&isotp_recv_ctx, can_dev, &isotp_rx_addr, &isotp_tx_addr, &isotp_fc_opts, K_FOREVER);
+
+	if(ret != ISOTP_N_OK){
+		LOG_ERR("Failed to bind ISO-TP to rx ID %d [%d]\n", isotp_rx_addr.std_id, ret);
+		return;
+	}
+
+	while (1) {
+		received_len = 0;
+		do {
+			rem_len = isotp_recv_net(&isotp_recv_ctx, &buf, K_FOREVER);
+			if (rem_len < 0) {
+				LOG_ERR("Receiving error [%d]\n", rem_len);
+				break;
+			}
+
+			while (buf != NULL) {
+				received_len += buf->len;
+				LOG_DBG("Proceed %d bytes, %d total",buf->len,received_len);
+				buf = net_buf_frag_del(NULL, buf);
+			}
+		} while (rem_len);
+		LOG_DBG("Got %d bytes in total\n", received_len);
+	}
+}
 
 
 #else
