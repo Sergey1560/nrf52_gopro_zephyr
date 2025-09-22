@@ -34,6 +34,8 @@ static void can_tx_work_handler(struct k_work *work);
 
 static void isotp_rx_thread(void *arg1, void *arg2, void *arg3);
 
+K_SEM_DEFINE(can_isotp_rx_sem, 1, 1);
+
 ZBUS_CHAN_DEFINE(can_tx_chan,                           	/* Name */
          struct can_frame,                       		      	/* Message type */
          NULL,                                       	/* Validator */
@@ -41,6 +43,7 @@ ZBUS_CHAN_DEFINE(can_tx_chan,                           	/* Name */
          ZBUS_OBSERVERS(can_tx_subscriber),  	        		/* observers */
          ZBUS_MSG_INIT(0)       						/* Initial value */
 );
+
 
 ZBUS_MSG_SUBSCRIBER_DEFINE(can_tx_subscriber);
 K_THREAD_DEFINE(can_tx_subscriber_task_id, 2048, can_tx_subscriber_task, NULL, NULL, NULL, 3, 0, 0);
@@ -63,6 +66,8 @@ K_TIMER_DEFINE(can_tx_timer, can_tx_timer_handler, NULL);
 #define CAN_TX_TIMER_START	do{k_timer_start(&can_tx_timer, K_MSEC(100), K_MSEC(100));}while(0)
 
 K_WORK_DEFINE(can_tx_work, can_tx_work_handler);
+
+ZBUS_CHAN_DECLARE(can_rx_ble_chan);
 
 #define ISOTPRX_THREAD_PRIORITY 	9
 #define ISOTP_RX_THREAD_STACK_SIZE	2048
@@ -411,9 +416,10 @@ static void isotp_rx_thread(void *arg1, void *arg2, void *arg3){
 	ARG_UNUSED(arg1);
 	ARG_UNUSED(arg2);
 	ARG_UNUSED(arg3);
-	int ret, rem_len, received_len;
+	int ret, rem_len;
+	int err;
 	struct net_buf *buf;
-
+	struct mem_pkt_t mem_pkt;
 
 	LOG_DBG("Bind ISO-TP");
 	ret = isotp_bind(&isotp_recv_ctx, can_dev, &isotp_rx_addr, &isotp_tx_addr, &isotp_fc_opts, K_FOREVER);
@@ -422,23 +428,69 @@ static void isotp_rx_thread(void *arg1, void *arg2, void *arg3){
 		LOG_ERR("Failed to bind ISO-TP to rx ID %d [%d]\n", isotp_rx_addr.std_id, ret);
 		return;
 	}
+	memset(&mem_pkt,0,sizeof(struct mem_pkt_t));
 
 	while (1) {
-		received_len = 0;
-		do {
-			rem_len = isotp_recv_net(&isotp_recv_ctx, &buf, K_FOREVER);
-			if (rem_len < 0) {
-				LOG_ERR("Receiving error [%d]\n", rem_len);
+		if( k_sem_take(&can_isotp_rx_sem, K_MSEC(2000)) == 0) {
+			LOG_DBG("Semaphore lock %d",ret);
+			if(mem_pkt.data != NULL){
+				LOG_DBG("Free isotp mem");
+				k_free(mem_pkt.data);
+			}
+			memset(&mem_pkt,0,sizeof(struct mem_pkt_t));
+
+			do {
+				rem_len = isotp_recv_net(&isotp_recv_ctx, &buf, K_FOREVER);
+				
+				
+
+				if(mem_pkt.data == NULL){ //Начало пакета, выделение памяти
+					uint32_t alloc_size = rem_len + buf->len;
+					LOG_DBG("Start recieving pkt, allocate %d bytes",alloc_size);
+
+					mem_pkt.data = k_malloc(alloc_size);
+
+					if (mem_pkt.data != NULL) {
+						memset(mem_pkt.data, 0, alloc_size);
+						mem_pkt.len = alloc_size;
+					} else {
+						LOG_ERR("Memory not allocated");
+					}
+				}
+				
+				if (rem_len < 0) {
+					LOG_ERR("Receiving error [%d]\n", rem_len);
+					mem_pkt.len = -1;
+					break;
+				}
+
+				if(mem_pkt.data != NULL){
+					while (buf != NULL) {
+						memcpy(&mem_pkt.data[mem_pkt.index],buf->data,buf->len);
+						mem_pkt.index += buf->len;
+						LOG_DBG("ISO-TP Proceed %d bytes, %d total",buf->len,mem_pkt.index);
+						buf = net_buf_frag_del(NULL, buf);
+					}
+				}
+			} while (rem_len);
+
+			if(mem_pkt.len < 0){
+				k_sem_give(&can_isotp_rx_sem);
 				break;
 			}
 
-			while (buf != NULL) {
-				received_len += buf->len;
-				LOG_DBG("Proceed %d bytes, %d total",buf->len,received_len);
-				buf = net_buf_frag_del(NULL, buf);
+			LOG_DBG("Got %d bytes of %d in total", mem_pkt.index, mem_pkt.len);
+
+			err = zbus_chan_pub(&can_rx_ble_chan, &mem_pkt, K_NO_WAIT);
+			if(err != 0){
+				LOG_ERR("Chan pub failed: %d",err);
+				k_sem_give(&can_isotp_rx_sem);
+				break;
 			}
-		} while (rem_len);
-		LOG_DBG("Got %d bytes in total\n", received_len);
+	}else{
+		LOG_WRN("Semaphore busy");
+	}
+	
 	}
 }
 

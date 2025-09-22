@@ -117,6 +117,11 @@ struct gopro_cmd_t {
 	uint8_t  data[GOPRO_CMD_DATA_LEN];
 };
 
+struct mem_pkt_t{
+    uint32_t index;
+    int len;
+    uint8_t *data;
+};
 
 
 /** @brief Handles on the connected peer device that are needed to interact with
