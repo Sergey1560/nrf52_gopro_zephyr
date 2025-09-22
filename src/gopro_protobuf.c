@@ -13,6 +13,7 @@
 #include "src/protobuf/response_generic.pb.h"
 #include "src/protobuf/set_camera_control_status.pb.h"
 #include "src/protobuf/turbo_transfer.pb.h"
+#include "src/protobuf/gopro_client.pb.h"
 
 #include <pb_encode.h>
 #include <pb_decode.h>
@@ -924,11 +925,22 @@ static void can_rx_ble_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
 		if (&can_rx_ble_chan == chan) {
 
             LOG_DBG("Unpack msg %d len",mem_pkt.len);
-            
-            LOG_HEXDUMP_DBG(mem_pkt.data,mem_pkt.len,"PB Data");
+        
+            GoproClient_bledata bledata = GoproClient_bledata_init_zero;
+            pb_istream_t stream = pb_istream_from_buffer(mem_pkt.data, mem_pkt.len);
+            int err = pb_decode(&stream, GoproClient_bledata_fields, &bledata);
 
-             k_sem_give(&can_isotp_rx_sem);
-			}
+            if(!err){
+                LOG_ERR("PB decode failed %s", PB_GET_ERROR(&stream));
+                LOG_HEXDUMP_DBG(mem_pkt.data,mem_pkt.len,"PB Data");
+            }else{
+                LOG_DBG("Data for addr: %d",bledata.ble_addr);
+
+                LOG_HEXDUMP_DBG(bledata.data.bytes,32,"Decode:");
+            };
+
+            k_sem_give(&can_isotp_rx_sem);
+        }
 	}
 };
 
