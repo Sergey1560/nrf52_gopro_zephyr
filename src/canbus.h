@@ -30,6 +30,12 @@
 // #define MCP2515_8MHz_500kBPS_CFG2            0x91
 // #define MCP2515_8MHz_500kBPS_CFG3            0x01
 
+#define ISOTP_RX_THREAD_PRIORITY 	9
+#define ISOTP_RX_THREAD_STACK_SIZE	2048
+
+#define ISOTP_TX_THREAD_PRIORITY 	9
+#define ISOTP_TX_THREAD_STACK_SIZE	2048
+
 extern struct k_sem can_isotp_rx_sem;
 
 int canbus_init(void);

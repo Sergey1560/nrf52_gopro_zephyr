@@ -33,6 +33,7 @@ static void can_data_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
 static void can_tx_work_handler(struct k_work *work);
 
 static void isotp_rx_thread(void *arg1, void *arg2, void *arg3);
+static void isotp_tx_thread(void *arg1, void *arg2, void *arg3);
 
 K_SEM_DEFINE(can_isotp_rx_sem, 1, 1);
 
@@ -69,10 +70,22 @@ K_WORK_DEFINE(can_tx_work, can_tx_work_handler);
 
 ZBUS_CHAN_DECLARE(can_rx_ble_chan);
 
-#define ISOTPRX_THREAD_PRIORITY 	9
-#define ISOTP_RX_THREAD_STACK_SIZE	2048
+ZBUS_CHAN_DEFINE(can_tx_ble_chan,                           	/* Name */
+         struct mem_pkt_t,                       		      	/* Message type */
+         NULL,                                       	/* Validator */
+         NULL,                                       	/* User Data */
+         ZBUS_OBSERVERS(can_tx_ble_subscriber),  	        		/* observers */
+         ZBUS_MSG_INIT(0)       						/* Initial value */
+);
+
+ZBUS_MSG_SUBSCRIBER_DEFINE(can_tx_ble_subscriber);
+
 K_THREAD_STACK_DEFINE(isotp_rx_thread_stack, ISOTP_RX_THREAD_STACK_SIZE);
+K_THREAD_STACK_DEFINE(isotp_tx_thread_stack, ISOTP_TX_THREAD_STACK_SIZE);
+
+
 struct k_thread isotp_rx_thread_data;
+struct k_thread isotp_tx_thread_data;
 
 struct isotp_recv_ctx isotp_recv_ctx;
 
@@ -82,6 +95,15 @@ const struct isotp_msg_id isotp_rx_addr = {
 const struct isotp_msg_id isotp_tx_addr = {
 	.std_id = 0x763,
 };
+
+const struct isotp_msg_id tx_reply = {
+	.std_id = 0x783,
+};
+
+const struct isotp_msg_id rx_reply = {
+	.std_id = 0x784,
+};
+
 
 const struct isotp_fc_opts isotp_fc_opts = {.bs = 8, .stmin = 0};
 
@@ -286,13 +308,19 @@ int canbus_init(void){
 
 	CAN_TX_TIMER_START;
 	
-	tid = k_thread_create(&isotp_rx_thread_data, isotp_rx_thread_stack, K_THREAD_STACK_SIZEOF(isotp_rx_thread_stack), isotp_rx_thread, NULL, NULL, NULL, ISOTPRX_THREAD_PRIORITY, 0, K_NO_WAIT);
+	tid = k_thread_create(&isotp_rx_thread_data, isotp_rx_thread_stack, K_THREAD_STACK_SIZEOF(isotp_rx_thread_stack), isotp_rx_thread, NULL, NULL, NULL, ISOTP_RX_THREAD_PRIORITY, 0, K_NO_WAIT);
 	if (!tid) {
 		LOG_ERR("ERROR spawning ISO-TP rx thread\n");
 	}else{
 		k_thread_name_set(tid, "isotprx");
 	}
 	
+	tid = k_thread_create(&isotp_tx_thread_data, isotp_tx_thread_stack, K_THREAD_STACK_SIZEOF(isotp_tx_thread_stack), isotp_tx_thread, NULL, NULL, NULL, ISOTP_TX_THREAD_PRIORITY, 0, K_NO_WAIT);
+	if (!tid) {
+		LOG_ERR("ERROR spawning ISO-TP rx thread\n");
+	}else{
+		k_thread_name_set(tid, "isotptx");
+	}
 	
 
 	LOG_INF("CAN BUS init done");
@@ -494,6 +522,34 @@ static void isotp_rx_thread(void *arg1, void *arg2, void *arg3){
 	}
 }
 
+
+static void isotp_tx_thread(void *arg1, void *arg2, void *arg3){
+	ARG_UNUSED(arg1);
+	ARG_UNUSED(arg2);
+	ARG_UNUSED(arg3);
+	int ret;
+	static struct isotp_send_ctx send_ctx;
+	struct mem_pkt_t mem_pkt;
+	const struct zbus_channel *chan;
+
+	memset(&send_ctx,0,sizeof(struct isotp_send_ctx));
+
+	while(1){
+
+		while (!zbus_sub_wait_msg(&can_tx_ble_subscriber, &chan, &mem_pkt, K_FOREVER)) {
+			if (&can_tx_ble_chan == chan) {
+				
+				LOG_DBG("Get %d bytes for ISOTP send",mem_pkt.len);
+
+				ret = isotp_send(&send_ctx, can_dev, mem_pkt.data, mem_pkt.len, &tx_reply, &rx_reply, NULL, NULL);
+				if (ret != ISOTP_N_OK) {
+					LOG_ERR("Error while sending data to ID %d [%d]\n",	tx_reply.std_id, ret);
+				}
+
+			}
+		}
+	}
+};
 
 #else
 

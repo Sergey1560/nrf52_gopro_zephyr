@@ -53,6 +53,7 @@ static void gopro_send_big_data(uint8_t *data, uint32_t len, uint8_t type, uint8
 static void can_rx_ble_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
 
 ZBUS_CHAN_DECLARE(gopro_cmd_chan);
+ZBUS_CHAN_DECLARE(can_tx_ble_chan);
 
 ZBUS_CHAN_DEFINE(can_rx_ble_chan,                           	/* Name */
          struct mem_pkt_t,                       		      	/* Message type */
@@ -61,6 +62,7 @@ ZBUS_CHAN_DEFINE(can_rx_ble_chan,                           	/* Name */
          ZBUS_OBSERVERS(can_rx_ble_subscriber),  	        		/* observers */
          ZBUS_MSG_INIT(0)       						/* Initial value */
 );
+
 
 ZBUS_MSG_SUBSCRIBER_DEFINE(can_rx_ble_subscriber);
 
@@ -655,6 +657,15 @@ static int gopro_parse_ap_entries(struct ap_entries_desc_t *ap_entries_desc, uin
     if(ap_entries_desc->saved_bytes == ap_entries_desc->packet_data_len){
         LOG_DBG("Full packet saved");
 
+        //LOG_HEXDUMP_DBG(work_buff,16,"16 bytes");
+
+        struct mem_pkt_t mem_pkt = {
+            .data = work_buff,
+            .len = ap_entries_desc->packet_data_len
+        };
+
+        zbus_chan_pub(&can_tx_ble_chan, &mem_pkt, K_NO_WAIT);
+
         open_gopro_ResponseGetApEntries resp = open_gopro_ResponseGetApEntries_init_zero;
         pb_istream_t stream = pb_istream_from_buffer(work_buff, ap_entries_desc->packet_data_len);
 
@@ -667,7 +678,7 @@ static int gopro_parse_ap_entries(struct ap_entries_desc_t *ap_entries_desc, uin
             LOG_ERR("PB decode failed %s", PB_GET_ERROR(&stream));
         }else{
             LOG_DBG("AP Decode OK.");
-            gopro_connect_ap((struct ap_list_t *)ap_list, ap_list_index);
+            //gopro_connect_ap((struct ap_list_t *)ap_list, ap_list_index);
         }
     }
 
