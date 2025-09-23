@@ -48,7 +48,7 @@ bool gopro_cmd_validator(const void* msg, size_t msg_size);
 static void gopro_cmd_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
 
 static struct bt_conn *default_conn;
-static struct bt_gopro_client gopro_client;
+struct bt_gopro_client gopro_client;
 
 static struct k_work scan_work;
 
@@ -66,7 +66,6 @@ static struct bt_conn_auth_info_cb conn_auth_info_callbacks = {
 	.pairing_complete = pairing_complete,
 	.pairing_failed = pairing_failed
 };
-
 
 const static struct gopro_cmd_t gopro_query_encoding = {
 	.len = 3,
@@ -119,7 +118,6 @@ struct bt_conn_le_create_param *conn_params = BT_CONN_LE_CREATE_PARAM(BT_CONN_LE
 K_THREAD_STACK_DEFINE(my_stack_area, MY_STACK_SIZE);
 
 struct k_work_q my_work_q;
-
 
 ZBUS_CHAN_DEFINE(gopro_cmd_chan,                        /* Name */
          struct gopro_cmd_t,                       		/* Message type */
@@ -226,7 +224,10 @@ static void discovery_finish_work_handler(struct k_work *work){
 	k_sem_take(&ble_read_sem,K_FOREVER);
 
 	LOG_DBG("Start subscribe");
-	bt_gopro_subscribe_receive(&gopro_client);
+	gopro_set_subscribe(&gopro_client, GP_CNTRL_HANDLE_CMD);
+	gopro_set_subscribe(&gopro_client, GP_CNTRL_HANDLE_SETTINGS);
+	gopro_set_subscribe(&gopro_client, GP_CNTRL_HANDLE_QUERY);
+	gopro_set_subscribe(&gopro_client, GP_CNTRL_HANDLE_NET);
 
 	LOG_DBG("Set connected mode");
 	gopro_led_mode_set(LED_NUM_BT,LED_MODE_ON);
@@ -235,11 +236,10 @@ static void discovery_finish_work_handler(struct k_work *work){
 	LOG_DBG("Dummy wait");
 	k_sleep(K_MSEC(1000));
 
+	LOG_DBG("Push subscribe to TX chan");
 	for(uint32_t i=0; i < sizeof(startup_query_list)/sizeof(startup_query_list[0]); i++){
-		
-		LOG_HEXDUMP_DBG(startup_query_list[i]->data,startup_query_list[i]->len,"Push to TX chan:");
+		//LOG_HEXDUMP_DBG(startup_query_list[i]->data,startup_query_list[i]->len,"Push to TX chan:");
 		err = zbus_chan_pub(&gopro_cmd_chan, startup_query_list[i], K_MSEC(100));
-
 		if(err != 0){
 			LOG_ERR("Chan pub failed: %d",err);
 		}
@@ -623,43 +623,12 @@ static void ble_data_sent(struct bt_gopro_client *nus, uint8_t err, const uint8_
 static uint8_t ble_data_received(struct bt_gopro_client *nus, const struct gopro_cmd_t *gopro_cmd){
 	ARG_UNUSED(nus);
 
-	// LOG_INF("Get reply on %d, len %d",gopro_cmd->cmd_type,gopro_cmd->len);
 	LOG_HEXDUMP_DBG(gopro_cmd->data,gopro_cmd->len,"Recieve data:");
 
-	// if(gopro_cmd->data[0] & 0x80){
-
-	// 	uint8_t packet_num = gopro_cmd->data[0] & 0x0F;
-	// 	LOG_DBG("Continuation Packet number %d",packet_num);
-
-	// }else{
-	// 	uint8_t packet_type = ((gopro_cmd->data[0] & 0x60) >> 5);
-	// 	uint16_t packet_data_len = 0;
-
-	// 	switch (packet_type)
-	// 	{
-	// 	case 0:
-	// 		packet_data_len = (gopro_cmd->data[0] & 0x1F);
-	// 		LOG_DBG("General 5-bit Packet. Data Len: %d",packet_data_len);
-	// 		break;
-
-	// 	case 1:
-	// 		packet_data_len = ((gopro_cmd->data[0] & 0x1F) << 8)|gopro_cmd->data[1];
-	// 		LOG_DBG("Extended 13-bit Packet. Data Len: %d",packet_data_len);
-	// 		break;
-
-	// 	case 2:
-	// 		packet_data_len = (gopro_cmd->data[1] << 8)|gopro_cmd->data[2];
-	// 		LOG_DBG("Extended 16-bit Packet. Data Len: %d",packet_data_len);
-	// 		break;
-		
-	// 	default:
-	// 		break;
-	// 	}
-
-	// }
 	#ifdef CANBUS_PRESENT
 	zbus_chan_pub(&can_txdata_chan, &gopro_cmd, K_NO_WAIT);
 	#endif
+
 	switch (gopro_cmd->cmd_type)
 	{
 	case GP_CNTRL_HANDLE_CMD:
@@ -697,7 +666,7 @@ static void gopro_cmd_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
 
 	while (!zbus_sub_wait_msg(&gopro_cmd_subscriber, &chan, &gopro_cmd, K_FOREVER)) {
 		if (&gopro_cmd_chan == chan) {
-				LOG_HEXDUMP_DBG(gopro_cmd.data, gopro_cmd.len,"CMD Data to send:");
+				//LOG_HEXDUMP_DBG(gopro_cmd.data, gopro_cmd.len,"CMD Data to send:");
 
 				if(gopro_cmd.cmd_type == 0xFF){
 					LOG_WRN("Remove bonding, start new pair");

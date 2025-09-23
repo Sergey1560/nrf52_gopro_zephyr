@@ -212,7 +212,7 @@ int gopro_parse_settings_reply(struct gopro_cmd_t *gopro_cmd);
 int gopro_parse_cmd_reply(struct gopro_cmd_t *gopro_cmd);
 
 int bt_gopro_net_handle_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client *nus_c);
-
+int gopro_set_subscribe(struct bt_gopro_client *nus_c, enum gopro_control_handle_list_t gopro_handle);
 extern struct k_sem ble_read_sem;
 
 /** @brief Initialize the GoPro Client module.
@@ -263,19 +263,6 @@ int bt_gopro_client_get(struct bt_gopro_client *nus_c, uint16_t handle);
  * @retval Otherwise, a negative error code is returned.
  */
 int bt_gopro_handles_assign(struct bt_gatt_dm *dm, struct bt_gopro_client *nus);
-
-/** @brief Request the peer to start sending notifications for the Notify
- *	   Characteristic.
- *
- * This function enables notifications for the Characteristic at the peer
- * by writing to the CCC descriptor of the TX Characteristic.
- *
- * @param[in,out] nus Client instance.
- *
- * @retval 0 If the operation was successful.
- *           Otherwise, a negative error code is returned.
- */
-int bt_gopro_subscribe_receive(struct bt_gopro_client *nus);
 
 int bt_gopro_wifi_handles_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client *nus_c);
 

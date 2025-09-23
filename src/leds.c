@@ -68,7 +68,6 @@ static void leds_callback(const struct zbus_channel *chan)
  	const struct led_message_t *led_message;
 	if (&leds_chan == chan) {
 			led_message = zbus_chan_const_msg(chan); // Direct message access
-			LOG_DBG("Get led message");
 
 			switch (led_message->led_number)
 			{
