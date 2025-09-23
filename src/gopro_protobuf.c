@@ -13,11 +13,13 @@
 #include "src/protobuf/response_generic.pb.h"
 #include "src/protobuf/set_camera_control_status.pb.h"
 #include "src/protobuf/turbo_transfer.pb.h"
+#include "src/protobuf/gopro_client.pb.h"
 
 #include <pb_encode.h>
 #include <pb_decode.h>
 
 #include "gopro_packet.h"
+#include "canbus.h"
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(gopro_protobuf, LOG_LEVEL_DBG);
@@ -48,7 +50,21 @@ static uint32_t gopro_prepare_connect_saved(uint8_t *data, uint32_t max_len);
 
 static void gopro_send_big_data(uint8_t *data, uint32_t len, uint8_t type, uint8_t feature, uint8_t action);
 
+static void can_rx_ble_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
+
 ZBUS_CHAN_DECLARE(gopro_cmd_chan);
+
+ZBUS_CHAN_DEFINE(can_rx_ble_chan,                           	/* Name */
+         struct mem_pkt_t,                       		      	/* Message type */
+         NULL,                                       	/* Validator */
+         NULL,                                       	/* User Data */
+         ZBUS_OBSERVERS(can_rx_ble_subscriber),  	        		/* observers */
+         ZBUS_MSG_INIT(0)       						/* Initial value */
+);
+
+ZBUS_MSG_SUBSCRIBER_DEFINE(can_rx_ble_subscriber);
+
+K_THREAD_DEFINE(can_rx_ble_subscriber_task_id, 2048, can_rx_ble_subscriber_task, NULL, NULL, NULL, 3, 0, 0);
 
 const char *pb_enum_result[8]={
     "(0)RESULT_UNKNOWN",
@@ -897,3 +913,34 @@ int gopro_build_packet_cohn_cert(uint8_t *data, uint32_t len, int32_t packet_len
 
     return 0;
 };
+
+static void can_rx_ble_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
+    struct mem_pkt_t mem_pkt;
+    ARG_UNUSED(ptr1);
+	ARG_UNUSED(ptr2);
+	ARG_UNUSED(ptr3);
+	const struct zbus_channel *chan;
+
+	while (!zbus_sub_wait_msg(&can_rx_ble_subscriber, &chan, &mem_pkt, K_FOREVER)) {
+		if (&can_rx_ble_chan == chan) {
+
+            LOG_DBG("Unpack msg %d len",mem_pkt.len);
+        
+            GoproClient_bledata bledata = GoproClient_bledata_init_zero;
+            pb_istream_t stream = pb_istream_from_buffer(mem_pkt.data, mem_pkt.len);
+            int err = pb_decode(&stream, GoproClient_bledata_fields, &bledata);
+
+            if(!err){
+                LOG_ERR("PB decode failed %s", PB_GET_ERROR(&stream));
+                LOG_HEXDUMP_DBG(mem_pkt.data,mem_pkt.len,"PB Data");
+            }else{
+                LOG_DBG("Data for addr: %d",bledata.ble_addr);
+
+                LOG_HEXDUMP_DBG(bledata.data.bytes,32,"Decode:");
+            };
+
+            k_sem_give(&can_isotp_rx_sem);
+        }
+	}
+};
+

@@ -20,6 +20,7 @@ zephyr_nanopb_sources(app src/protobuf/request_get_preset_status.proto)
 zephyr_nanopb_sources(app src/protobuf/response_generic.proto)
 zephyr_nanopb_sources(app src/protobuf/set_camera_control_status.proto)
 zephyr_nanopb_sources(app src/protobuf/turbo_transfer.proto)
+zephyr_nanopb_sources(app src/protobuf/gopro_client.proto)
 
 # NORDIC SDK APP START
 target_sources(app PRIVATE
