@@ -195,16 +195,17 @@ struct bt_gopro_client {
 	struct bt_gatt_read_params read_wifi_params[GP_WIFI_HANDLE_END];
 
         /** Application callbacks. */
-	struct bt_gopro_client_cb cb;
+	//struct bt_gopro_client_cb cb;
 };
 
 /** @brief NUS Client initialization structure. */
-struct bt_gopro_client_init_param {
+// struct bt_gopro_client_init_param {
 
-        /** Callbacks provided by the user. */
-	struct bt_gopro_client_cb cb;
-};
+//         /** Callbacks provided by the user. */
+// 	struct bt_gopro_client_cb cb;
+// };
 
+void gopro_client_update_state(void);
 
 int gopro_client_set_device_addr(bt_addr_le_t* addr);
 bt_addr_le_t* gopro_client_get_device_addr(void);
@@ -231,7 +232,7 @@ extern struct k_sem ble_read_sem;
  * @retval 0 If the operation was successful.
  *           Otherwise, a negative error code is returned.
  */
-int bt_gopro_client_init(struct bt_gopro_client *nus, const struct bt_gopro_client_init_param *init_param);
+int bt_gopro_client_init(struct bt_gopro_client *gopro_client);
 
 /** @brief Send data to the server.
  *

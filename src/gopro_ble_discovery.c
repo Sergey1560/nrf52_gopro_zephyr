@@ -8,6 +8,8 @@
 
 LOG_MODULE_REGISTER(gopro_discovery, LOG_LEVEL_DBG);
 
+extern struct k_sem ble_write_sem;
+
 const struct bt_uuid *uuid_list[] = {BT_UUID_GOPRO_WIFI_SERVICE,BT_UUID_GOPRO_SERVICE,BT_UUID_GOPRO_NET_SERVICE};
 #define UUID_COUNT  (sizeof(uuid_list)/sizeof(uuid_list[0]))
 
@@ -40,9 +42,6 @@ static void disconnected(struct bt_conn *conn, uint8_t reason);
 static void security_changed(struct bt_conn *conn, bt_security_t level,enum bt_security_err err);
 static void exchange_func(struct bt_conn *conn, uint8_t err, struct bt_gatt_exchange_params *params);
 static void gatt_discover(struct bt_conn *conn);
-
-static uint8_t ble_data_received(struct bt_gopro_client *nus, const struct gopro_cmd_t *gopro_cmd);
-static void ble_data_sent(struct bt_gopro_client *nus, uint8_t err, const uint8_t *const data, uint16_t len);
 
 bool gopro_cmd_validator(const void* msg, size_t msg_size);
 static void gopro_cmd_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
@@ -106,7 +105,7 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 	.disconnected = disconnected,
 	.security_changed = security_changed
 };
-K_SEM_DEFINE(ble_write_sem, 0, 1);
+//K_SEM_DEFINE(ble_write_sem, 0, 1);
 //#define BT_AUTO_CONNECT
 #ifndef BT_AUTO_CONNECT
 struct bt_conn_le_create_param *conn_params = BT_CONN_LE_CREATE_PARAM(BT_CONN_LE_OPT_CODED | BT_CONN_LE_OPT_NO_1M,BT_GAP_SCAN_FAST_INTERVAL,BT_GAP_SCAN_FAST_INTERVAL);
@@ -281,15 +280,8 @@ static int handles_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client *nus_c)
 
 static int gopro_client_init(void){
 	int err;
-	struct bt_gopro_client_init_param init = {
-		.cb = {
-			.received = ble_data_received,
-			.sent = ble_data_sent,
-			.unsubscribed = NULL
-		}
-	};
 
-	err = bt_gopro_client_init(&gopro_client, &init);
+	err = bt_gopro_client_init(&gopro_client);
 	if (err) {
 		LOG_ERR("GoPro Client initialization failed (err %d)", err);
 		return err;
@@ -607,55 +599,6 @@ static void gatt_discover(struct bt_conn *conn){
 	k_work_submit(&discovery_start_work);
 }
 
-static void ble_data_sent(struct bt_gopro_client *nus, uint8_t err, const uint8_t *const data, uint16_t len){
-	ARG_UNUSED(nus);
-	ARG_UNUSED(data);
-	ARG_UNUSED(len);
-
-	LOG_DBG("Data send len: %d",len);
-	k_sem_give(&ble_write_sem);
-
-	if (err) {
-		LOG_WRN("ATT error code: 0x%02X", err);
-	}
-}
-
-static uint8_t ble_data_received(struct bt_gopro_client *nus, const struct gopro_cmd_t *gopro_cmd){
-	ARG_UNUSED(nus);
-
-	LOG_HEXDUMP_DBG(gopro_cmd->data,gopro_cmd->len,"Recieve data:");
-
-	#ifdef CANBUS_PRESENT
-	zbus_chan_pub(&can_txdata_chan, &gopro_cmd, K_NO_WAIT);
-	#endif
-
-	switch (gopro_cmd->cmd_type)
-	{
-	case GP_CNTRL_HANDLE_CMD:
-		gopro_parse_cmd_reply((struct gopro_cmd_t *)gopro_cmd);
-		break;
-
-	case GP_CNTRL_HANDLE_SETTINGS:
-		gopro_parse_settings_reply((struct gopro_cmd_t *)gopro_cmd);
-		break;
-		
-	case GP_CNTRL_HANDLE_QUERY:
-		gopro_parse_query_reply((struct gopro_cmd_t *)gopro_cmd);
-		break;
-
-	case GP_CNTRL_HANDLE_NET:
-		gopro_parse_net_reply((struct gopro_cmd_t *)gopro_cmd);
-		break;
-
-	default:
-		LOG_WRN("No action for cmd_type %d",gopro_cmd->cmd_type);
-		break;
-	}
-
-
-	return BT_GATT_ITER_CONTINUE;
-}
-
 static void gopro_cmd_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
 	int err;
 	struct gopro_cmd_t gopro_cmd;
@@ -684,9 +627,6 @@ static void gopro_cmd_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
 				if (err) {
 					LOG_WRN("Data send timeout");
 				}
-
-
-
 			}
 	}
 };

@@ -24,16 +24,8 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(gopro_protobuf, LOG_LEVEL_DBG);
 
-static void gopro_parse_start_scaning(uint8_t *data, uint32_t len);
-static void gopro_parse_request_scan_req(uint8_t *data, uint32_t len);
-
 static char *gopro_pb_provstate(open_gopro_EnumProvisioning state);
-static void gopro_parse_notif_prov_state(uint8_t *data, uint32_t len);
 
-static void gopro_parse_resp_connect_new(uint8_t *data, uint32_t len);
-static void gopro_parse_resp_connect(uint8_t *data, uint32_t len);
-
-static void gopro_parse_response_cohn_status(uint8_t *data, uint32_t len);
 
 static int gopro_pb_req_ap(uint8_t scan_id, uint8_t start_index, uint8_t count);
 
@@ -43,7 +35,6 @@ static char *gopro_pb_state(open_gopro_EnumScanning state);
 static char *gopro_pb_cohn_status(open_gopro_EnumCOHNStatus state);
 static char *gopro_pb_cohn_state(open_gopro_EnumCOHNNetworkState state);
 
-static int gopro_parse_ap_entries(struct ap_entries_desc_t *ap_entries_desc, uint8_t *data, uint32_t len);
 static void gopro_connect_ap(struct ap_list_t *ap_list, int count);
 static uint32_t gopro_prepare_connect_new(uint8_t *data, uint32_t max_len);
 static uint32_t gopro_prepare_connect_saved(uint8_t *data, uint32_t max_len);
@@ -131,116 +122,10 @@ const char my_wifi_ssid[]="service_5";
 const char my_wifi_pass[]=".W@71<5KD1J\"uz";
 
 uint8_t work_buff[WORK_BUFF_SIZE];
-
-struct ap_entries_desc_t ap_entries_desc;
+uint8_t resp_ap_entries_buf[128];
 
 volatile int ap_list_index = 0;
 volatile struct ap_list_t ap_list[MAX_AP_LIST_COUNT];
-
-uint8_t resp_ap_entries_buf[128];
-
-int gopro_parse_net_reply(struct gopro_cmd_t *gopro_cmd){
-    static uint8_t last_action = 0;
-    static uint8_t last_feature = 0;
-    uint8_t feature;
-    uint8_t action;
-    uint8_t packet_num;
-    uint32_t len;
-    uint8_t index;
-    LOG_DBG("Parse NET reply");
-
-    gopro_packet_type_t packet_type = gopro_packet_get_type(gopro_cmd);
-    
-	if(packet_type == gopro_packet_cont){
-        packet_num = gopro_cmd->data[0] & 0x0F;
-		LOG_DBG("NET Continuation Packet number %d for feature 0x%0X action 0x%0X",packet_num,last_feature,last_action);
-
-        if(last_feature == 0x02){
-            switch (last_action){
-            case 0x83:
-                gopro_packet_get_data_ptr(gopro_cmd,&index,&len);
-                gopro_parse_ap_entries(&ap_entries_desc,&gopro_cmd->data[index],len);
-                break;
-            
-            default:
-                break;
-            }
-        }
-
-    }else{
-        gopro_packet_get_feature(gopro_cmd,&feature,&action);
-        gopro_packet_get_data_ptr(gopro_cmd,&index,&len);
-
-        last_feature = feature;
-        last_action = action;
-
-        if(feature == 0x02){ //Feature ID
-            switch (action){ //Action ID
-                case 0x0B:
-                    LOG_DBG("NotifStartScanning");
-                    gopro_parse_start_scaning(&gopro_cmd->data[index],len);
-                    break;
-
-                case 0x82:
-                    LOG_DBG("ResponseStartScanning");
-                    gopro_parse_request_scan_req(&gopro_cmd->data[index],len);
-                    break;
-
-                case 0x83:
-                    LOG_DBG("ResponseGetApEntries");
-                    memset(work_buff,0,WORK_BUFF_SIZE);
-                    memset((uint8_t *)&ap_list,0,sizeof(ap_list));
-                    ap_entries_desc.packet_data_len = gopro_packet_get_len(gopro_cmd)-2;
-                    ap_entries_desc.packet_num = 0;
-                    ap_entries_desc.saved_bytes = 0;
-                    ap_list_index=0;
-                    LOG_DBG("Start AP entires for %d bytes",ap_entries_desc.packet_data_len);
-                    gopro_parse_ap_entries(&ap_entries_desc,&gopro_cmd->data[index],len);
-                    break;
-
-                case 0x84:
-                    LOG_DBG("ResponseConnect");
-                    gopro_parse_resp_connect(&gopro_cmd->data[index],len);
-                    break;
-
-                case 0x85:
-                    LOG_DBG("ResponseConnectNew");
-                    gopro_parse_resp_connect_new(&gopro_cmd->data[index],len);
-                    break;
-
-                case 0x0C:
-                    LOG_DBG("NotifProvisioningState");
-                    gopro_parse_notif_prov_state(&gopro_cmd->data[index],len);
-                    break;
-
-                default:
-                    LOG_WRN("No PARSE for feature 0x02 Action ID 0x%0X",action);
-                    break;
-            }
-        }
-        if(feature == 0xF1){ //Feature ID
-            switch (action){ //Action ID
-
-                case 0xE6:
-                    LOG_DBG("Clear COHN Certificate response");
-                    gopro_parse_response_generic(&gopro_cmd->data[index],len);
-                    break;
-
-                case 0xE7:
-                    LOG_DBG("Create COHN Certificate response");
-                    gopro_parse_response_generic(&gopro_cmd->data[index],len);
-                    break;
-
-                default:
-                    LOG_WRN("No PARSE for feature 0xF1 Action ID 0x%0X",action);
-                    break;
-                
-            }
-        }
-
-    }
-    return 0;
-}
 
 bool read_str_callback(pb_istream_t *stream, const pb_field_t *field, void **arg) {
     char buffer[64];
@@ -262,7 +147,7 @@ bool read_str_callback(pb_istream_t *stream, const pb_field_t *field, void **arg
 }
 
 
-static void gopro_parse_response_cohn_status(uint8_t *data, uint32_t len){
+void gopro_parse_response_cohn_status(uint8_t *data, uint32_t len){
     int err;
     uint8_t *input_data = data;
     uint32_t input_len = len;
@@ -319,7 +204,7 @@ static bool cert_decode_callback(pb_istream_t *stream, const pb_field_t *field, 
 }
 
 
-static void gopro_parse_response_cohn_cert(uint8_t *data, uint32_t len){
+void gopro_parse_response_cohn_cert(uint8_t *data, uint32_t len){
     int err;
     uint8_t *input_data = data;
     uint32_t input_len = len;
@@ -343,7 +228,7 @@ static void gopro_parse_response_cohn_cert(uint8_t *data, uint32_t len){
 
 };
 
-static void gopro_parse_resp_connect_new(uint8_t *data, uint32_t len){
+void gopro_parse_resp_connect_new(uint8_t *data, uint32_t len){
     int err;
     uint8_t *input_data = data;
     uint32_t input_len = len;
@@ -361,7 +246,7 @@ static void gopro_parse_resp_connect_new(uint8_t *data, uint32_t len){
     }
 }
 
-static void gopro_parse_resp_connect(uint8_t *data, uint32_t len){
+void gopro_parse_resp_connect(uint8_t *data, uint32_t len){
     int err;
     uint8_t *input_data = data;
     uint32_t input_len = len;
@@ -380,7 +265,7 @@ static void gopro_parse_resp_connect(uint8_t *data, uint32_t len){
 };
 
 
-static void gopro_parse_notif_prov_state(uint8_t *data, uint32_t len){
+void gopro_parse_notif_prov_state(uint8_t *data, uint32_t len){
     int err;
     uint8_t *input_data = data;
     uint32_t input_len = len;
@@ -399,7 +284,7 @@ static void gopro_parse_notif_prov_state(uint8_t *data, uint32_t len){
 }
 
 
-static void gopro_parse_request_scan_req(uint8_t *data, uint32_t len){
+void gopro_parse_request_scan_req(uint8_t *data, uint32_t len){
     int err;
     uint8_t *input_data = data;
     uint32_t input_len = len;
@@ -435,7 +320,7 @@ void gopro_parse_response_generic(uint8_t *data, uint32_t len){
     }
 }
 
-static void gopro_parse_start_scaning(uint8_t *data, uint32_t len){
+void gopro_parse_start_scaning(uint8_t *data, uint32_t len){
     int err;
     uint8_t *input_data = data;
     uint32_t input_len = len;
@@ -636,50 +521,32 @@ static bool read_ap_entries_callback(pb_istream_t *stream, const pb_field_t *fie
     return true;
 }
 
-static int gopro_parse_ap_entries(struct ap_entries_desc_t *ap_entries_desc, uint8_t *data, uint32_t len){
+
+int gopro_parse_ap_entries(struct gopro_packet_t *gopro_packet){
     int err;
 
-    if((ap_entries_desc->saved_bytes + len) > WORK_BUFF_SIZE){
-        LOG_ERR("Not enougth buffer for AP Entries: %d of %d",(ap_entries_desc->saved_bytes + len),WORK_BUFF_SIZE);
-        return -1;
-    }
+    // struct mem_pkt_t mem_pkt = {
+    //     .data = gopro_packet->data,
+    //     .len = gopro_packet->packet_len
+    // };
 
-    if((ap_entries_desc->saved_bytes + len) > ap_entries_desc->packet_data_len){
-        LOG_ERR("Saved bytes > packet bytes %d of %d",(ap_entries_desc->saved_bytes + len),ap_entries_desc->packet_data_len);
-        return -1;
-    }
+    // zbus_chan_pub(&can_tx_ble_chan, &mem_pkt, K_NO_WAIT);
 
-    memcpy(&work_buff[ap_entries_desc->saved_bytes],data,len);
-    ap_entries_desc->saved_bytes+=len;
+    open_gopro_ResponseGetApEntries resp = open_gopro_ResponseGetApEntries_init_zero;
+    pb_istream_t stream = pb_istream_from_buffer(&gopro_packet->data[2], gopro_packet->packet_len);
 
-    LOG_DBG("AP Saved %d of %d",ap_entries_desc->saved_bytes,ap_entries_desc->packet_data_len);
+    resp.entries.funcs.decode = read_ap_entries_callback;
+    ap_list_index=0;
+    resp.entries.arg = (struct ap_list_t*)ap_list;
+    memset((struct ap_list_t *)ap_list,0,sizeof(struct ap_list_t));
 
-    if(ap_entries_desc->saved_bytes == ap_entries_desc->packet_data_len){
-        LOG_DBG("Full packet saved");
+    err = pb_decode(&stream, open_gopro_ResponseGetApEntries_fields, &resp);
 
-        //LOG_HEXDUMP_DBG(work_buff,16,"16 bytes");
-
-        struct mem_pkt_t mem_pkt = {
-            .data = work_buff,
-            .len = ap_entries_desc->packet_data_len
-        };
-
-        zbus_chan_pub(&can_tx_ble_chan, &mem_pkt, K_NO_WAIT);
-
-        open_gopro_ResponseGetApEntries resp = open_gopro_ResponseGetApEntries_init_zero;
-        pb_istream_t stream = pb_istream_from_buffer(work_buff, ap_entries_desc->packet_data_len);
-
-        resp.entries.funcs.decode = read_ap_entries_callback;
-        resp.entries.arg = (struct ap_list_t*)ap_list;
-
-        err = pb_decode(&stream, open_gopro_ResponseGetApEntries_fields, &resp);
-
-        if(!err){
-            LOG_ERR("PB decode failed %s", PB_GET_ERROR(&stream));
-        }else{
-            LOG_DBG("AP Decode OK.");
-            //gopro_connect_ap((struct ap_list_t *)ap_list, ap_list_index);
-        }
+    if(!err){
+        LOG_ERR("PB decode failed %s", PB_GET_ERROR(&stream));
+    }else{
+        LOG_DBG("AP Decode OK.");
+        //gopro_connect_ap((struct ap_list_t *)ap_list, ap_list_index);
     }
 
     LOG_DBG("AP parse finish");
@@ -844,86 +711,6 @@ static void gopro_send_big_data(uint8_t *data, uint32_t len, uint8_t type, uint8
         LOG_ERR("Packet to big: %d",len);
     }
 }
-
-/*
-Первый пакет с значением в packet_len устанавливает значение и сбрасывает saved_bytes
-Остальные пакеты с -1
-*/
-int gopro_build_packet_cohn_status(uint8_t *data, uint32_t len, int32_t packet_len){
-    static int32_t packet_data_len = 0;
-    static uint32_t saved_bytes = 0;
-
-    LOG_DBG("BUILD COHN Status");
-    if(packet_len != -1){
-        packet_data_len = packet_len;
-        saved_bytes = 0;
-    }
-
-    if((saved_bytes + len) > WORK_BUFF_SIZE){
-        LOG_ERR("Not enougth buffer: %d of %d",(saved_bytes + len),WORK_BUFF_SIZE);
-        return -1;
-    }
-
-    if((saved_bytes + len) > packet_data_len){
-        LOG_ERR("Saved bytes > packet bytes %d of %d",(saved_bytes + len),packet_data_len);
-        return -1;
-    }
-
-    memcpy(&work_buff[saved_bytes],data,len);
-    saved_bytes+=len;
-
-    LOG_DBG("Saved %d of %d",saved_bytes,packet_data_len);
-
-    if(saved_bytes == packet_data_len){
-        LOG_DBG("Full packet saved");
-
-        gopro_parse_response_cohn_status(work_buff,saved_bytes);
-
-        LOG_DBG("Packet parse finish");
-    return 0;
-    };
-    return 0;
-};
-
-/*
-Первый пакет с значением в packet_len устанавливает значение и сбрасывает saved_bytes
-Остальные пакеты с -1
-*/
-int gopro_build_packet_cohn_cert(uint8_t *data, uint32_t len, int32_t packet_len){
-    static int32_t packet_data_len = 0;
-    static uint32_t saved_bytes = 0;
-
-    LOG_DBG("BUILD COHN Cert");
-    if(packet_len != -1){
-        packet_data_len = packet_len;
-        saved_bytes = 0;
-    }
-
-    if((saved_bytes + len) > WORK_BUFF_SIZE){
-        LOG_ERR("Not enougth buffer: %d of %d",(saved_bytes + len),WORK_BUFF_SIZE);
-        return -1;
-    }
-
-    if((saved_bytes + len) > packet_data_len){
-        LOG_ERR("Saved bytes > packet bytes %d of %d",(saved_bytes + len),packet_data_len);
-        return -1;
-    }
-
-    memcpy(&work_buff[saved_bytes],data,len);
-    saved_bytes+=len;
-
-    LOG_DBG("Saved %d of %d",saved_bytes,packet_data_len);
-
-    if(saved_bytes == packet_data_len){
-        LOG_DBG("Full packet saved");
-
-        gopro_parse_response_cohn_cert(work_buff,saved_bytes);
-
-        LOG_DBG("Packet parse finish");
-    };
-
-    return 0;
-};
 
 static void can_rx_ble_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
     struct mem_pkt_t mem_pkt;
