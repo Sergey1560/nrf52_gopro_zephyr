@@ -427,9 +427,13 @@ static void gopro_packet_parse_cmd(struct gopro_packet_t *gopro_packet){
     if(gopro_packet->feature == 0xF1){
         switch (gopro_packet->action)
         {
-            case 0xE7:
-            case 0xE6:
+            case 0xE4:
             case 0xE5:
+            case 0xE6:
+            case 0xE7:
+            case 0xE9:
+            case 0xEB:
+            case 0xF9:
                 LOG_DBG("Generic response");
                 gopro_parse_response_generic(&gopro_packet->data[2],gopro_packet->packet_len);
                 break;
