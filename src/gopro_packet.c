@@ -340,7 +340,7 @@ void gopro_packet_build(struct gopro_cmd_t *gopro_cmd){
 
         if(gopro_packet.saved_len == gopro_packet.total_len){
             LOG_DBG("Full multi-packet saved");
-            LOG_HEXDUMP_DBG(gopro_packet.data,gopro_packet.total_len,"Total packet");
+            //LOG_HEXDUMP_DBG(gopro_packet.data,gopro_packet.total_len,"Total packet");
             gopro_packet_parse(&gopro_packet);
             k_free(gopro_packet.data);
             gopro_packet.data = 0;
@@ -384,7 +384,7 @@ void gopro_packet_build(struct gopro_cmd_t *gopro_cmd){
 
         if(gopro_packet.saved_len == gopro_packet.total_len){
             LOG_DBG("Full single-packet saved");
-            LOG_HEXDUMP_DBG(gopro_packet.data,gopro_packet.total_len,"Total packet");
+            //LOG_HEXDUMP_DBG(gopro_packet.data,gopro_packet.total_len,"Total packet");
             gopro_packet_parse(&gopro_packet);
             k_free(gopro_packet.data);
             gopro_packet.data = 0;
@@ -429,9 +429,11 @@ static void gopro_packet_parse_cmd(struct gopro_packet_t *gopro_packet){
         {
             case 0xE7:
             case 0xE6:
+            case 0xE5:
                 LOG_DBG("Generic response");
                 gopro_parse_response_generic(&gopro_packet->data[2],gopro_packet->packet_len);
                 break;
+
             default:
                 LOG_WRN("Unknown CMD action 0xF1:0x%0X",gopro_packet->action);
                 break;
