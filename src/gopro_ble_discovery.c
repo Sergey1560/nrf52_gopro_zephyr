@@ -406,14 +406,19 @@ static void scan_filter_no_match(struct bt_scan_device_info *device_info, bool c
 static void scan_filter_match(struct bt_scan_device_info *device_info,struct bt_scan_filter_match *filter_match, bool connectable){
 	char addr[BT_ADDR_LE_STR_LEN];
 
-	bt_addr_le_to_str(device_info->recv_info->addr, addr, sizeof(addr));
-	LOG_DBG("Filters matched. Address: %s connectable: %d", addr, connectable);
+	static bt_addr_le_t last_addr;
+
+	if(bt_addr_le_cmp(&last_addr,device_info->recv_info->addr)){
+		bt_addr_le_to_str(device_info->recv_info->addr, addr, sizeof(addr));
+		LOG_DBG("Filters matched. Address: %s connectable: %d", addr, connectable);
+		bt_addr_le_copy(&last_addr,device_info->recv_info->addr);
+	}
 
 	gopro_client_set_device_addr((bt_addr_le_t *)device_info->recv_info->addr);
-
 	led_idle_timer_start(1);
-
 	bt_data_parse(device_info->adv_data,eir_found,(void *)device_info->recv_info->addr);
+
+
 }
 
 static void scan_connecting_error(struct bt_scan_device_info *device_info){

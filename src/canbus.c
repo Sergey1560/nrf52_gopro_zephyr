@@ -36,6 +36,7 @@ static void isotp_rx_thread(void *arg1, void *arg2, void *arg3);
 static void isotp_tx_thread(void *arg1, void *arg2, void *arg3);
 
 K_SEM_DEFINE(can_isotp_rx_sem, 1, 1);
+K_SEM_DEFINE(can_tx_sem, 0, 1);
 
 ZBUS_CHAN_DEFINE(can_tx_chan,                           	/* Name */
          struct can_frame,                       		      	/* Message type */
@@ -327,6 +328,10 @@ int canbus_init(void){
     return 0;
 }
 
+void can_tx_callback(const struct device *dev, int error, void *user_data){
+	k_sem_give(&can_tx_sem);
+};
+
 static void can_tx_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
 	int err;
 	struct can_frame tx_frame;
@@ -334,15 +339,34 @@ static void can_tx_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
 	ARG_UNUSED(ptr2);
 	ARG_UNUSED(ptr3);
 	const struct zbus_channel *chan;
+	uint8_t can_error_flag = 0;
+	uint8_t can_tx_timeout_flag = 0;
 
 	while (!zbus_sub_wait_msg(&can_tx_subscriber, &chan, &tx_frame, K_FOREVER)) {
 		if (&can_tx_chan == chan) {
 				//LOG_DBG("Msg to send: 0x%0X len: %d", tx_frame.id,tx_frame.dlc);
 
-				err = can_send(can_dev, &tx_frame, K_NO_WAIT, NULL, NULL);
+				err = can_send(can_dev, &tx_frame, K_NO_WAIT, can_tx_callback, NULL);
 
 				if (err != 0) {
-					LOG_ERR("CAN Sending failed [%d]", err);
+					if(can_error_flag == 0){
+						LOG_ERR("CAN Sending failed [%d]", err);
+						can_error_flag = 1;
+					}
+				}else{
+					can_error_flag = 0;
+				}
+
+				if (k_sem_take(&can_tx_sem, K_MSEC(50)) != 0) {
+					if(can_tx_timeout_flag == 0){
+						can_tx_timeout_flag = 1;
+						LOG_ERR("Can send timeout");
+					}
+    			} else {
+					if(can_tx_timeout_flag == 1){
+						LOG_DBG("Can send restore");
+					}
+					can_tx_timeout_flag = 0;
 				}
 
 			}
