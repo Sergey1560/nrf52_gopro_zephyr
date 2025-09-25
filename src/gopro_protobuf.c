@@ -377,7 +377,7 @@ static char *gopro_pb_cohn_status(open_gopro_EnumCOHNStatus state){
     if((state>=0) && (state < 2)){
         return (char *)pb_enum_cohn_status[state];
       }else{
-        return (char *)pb_enum_cohn_status[7];
+        return (char *)pb_enum_cohn_status[2];
       }
 
 }
