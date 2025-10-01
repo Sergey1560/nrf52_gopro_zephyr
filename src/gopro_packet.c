@@ -177,12 +177,6 @@ static int gopro_parse_query_status_reply(const void *data, uint16_t length){
 	int result;
 	int id;
 
-	// if(pdata[0] != (length-1)){
-	// 	LOG_ERR("Not REPLY FMT %d != %d",pdata[0],(length-1));
-	// 	LOG_HEXDUMP_ERR(data,length,"Data");
-	// 	return -1;
-	// }
-
 	total_data_len = length;
 	id = pdata[0];
 	result = pdata[1];
@@ -233,13 +227,6 @@ static int gopro_parse_query_status_notify(const void *data, uint16_t length){
 	int result;
 	int id;
 	int id_len;
-
-	// if(pdata[0] != (length-1)){
-	// 	LOG_ERR("Not REPLY FMT");
-    //     LOG_ERR("Not REPLY FMT %d != %d",pdata[0],(length-1));
-	// 	LOG_HEXDUMP_ERR(data,length,"Data");
-	// 	return -1;
-	// }
 
 	total_data_len = length;
 

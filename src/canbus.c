@@ -27,6 +27,8 @@ LOG_MODULE_REGISTER(canbus_gopro, LOG_LEVEL_DBG);
 #error "Overlay for MCP2515 RST pin not properly defined."
 #endif
 
+static void mcp2515_get_timing(struct can_timing *timing, uint8_t cnf1, uint8_t cnf2, uint8_t cnf3);
+
 static void can_tx_timer_handler(struct k_timer *dummy);
 static void can_tx_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
 static void can_data_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
@@ -220,7 +222,7 @@ static void rx_callback_function(const struct device *dev, struct can_frame *fra
 }
 
 
-void mcp2515_get_timing(struct can_timing *timing, uint8_t cnf1, uint8_t cnf2, uint8_t cnf3){
+static void __attribute__((unused)) mcp2515_get_timing(struct can_timing *timing, uint8_t cnf1, uint8_t cnf2, uint8_t cnf3){
 	timing->sjw= (cnf1 >> 6) + 1;
 	timing->prescaler= (cnf1 & 0x3F) + 1;
 
@@ -323,7 +325,6 @@ int canbus_init(void){
 		k_thread_name_set(tid, "isotptx");
 	}
 	
-
 	LOG_INF("CAN BUS init done");
     return 0;
 }
@@ -344,8 +345,6 @@ static void can_tx_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
 
 	while (!zbus_sub_wait_msg(&can_tx_subscriber, &chan, &tx_frame, K_FOREVER)) {
 		if (&can_tx_chan == chan) {
-				//LOG_DBG("Msg to send: 0x%0X len: %d", tx_frame.id,tx_frame.dlc);
-
 				err = can_send(can_dev, &tx_frame, K_NO_WAIT, can_tx_callback, NULL);
 
 				if (err != 0) {
@@ -373,8 +372,7 @@ static void can_tx_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
 	}
 };
 
-static void can_tx_work_handler(struct k_work *work)
-{
+static void can_tx_work_handler(struct k_work *work){
 	int err;
 	struct can_frame tx_frame;
 	struct gopro_state_t gopro_state;
@@ -397,13 +395,11 @@ static void can_tx_work_handler(struct k_work *work)
 	tx_frame.data[3] = gopro_state.video_count; 
 
 	zbus_chan_pub(&can_tx_chan, &tx_frame, K_NO_WAIT);
-
 }
 
 static void can_tx_timer_handler(struct k_timer *dummy){
 	k_work_submit(&can_tx_work);
 };
-
 
 static void can_data_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
 	struct gopro_cmd_t gopro_cmd;
@@ -493,8 +489,6 @@ static void isotp_rx_thread(void *arg1, void *arg2, void *arg3){
 
 			do {
 				rem_len = isotp_recv_net(&isotp_recv_ctx, &buf, K_FOREVER);
-				
-				
 
 				if(mem_pkt.data == NULL){ //Начало пакета, выделение памяти
 					uint32_t alloc_size = rem_len + buf->len;

@@ -54,8 +54,8 @@ bt_addr_le_t* gopro_client_get_device_addr(void){
 
 int gopro_client_set_sate(enum gopro_state_list_t  state){
 
-	if(state >= GPSTATE_END){
-		LOG_ERR("Invalid state num %d of %d",state,GPSTATE_END-1);
+	if(state >= GP_STATE_END){
+		LOG_ERR("Invalid state num %d of %d", state, GP_STATE_END-1);
 		return -1;
 	}
 
@@ -68,12 +68,9 @@ int gopro_client_set_sate(enum gopro_state_list_t  state){
 	return 0;
 }
 
-
 enum gopro_state_list_t gopro_client_get_state(void){
-
 	return gopro_state.state;
 }
-
 
 int gopro_client_setname(char *name, uint8_t len){
 
@@ -101,7 +98,6 @@ int gopro_client_setname(char *name, uint8_t len){
 	return 0;
 }
 
-
 void gopro_client_update_state(void){
 	zbus_chan_pub(&gopro_state_chan, &gopro_state, K_NO_WAIT);
 };
@@ -117,19 +113,19 @@ static uint8_t on_notify_received(struct bt_conn *conn, struct bt_gatt_subscribe
 		if(params->value_handle == gopro_client.notif_params[GP_CNTRL_HANDLE_SETTINGS].value_handle){
 			LOG_DBG("Setting notify");
 			params->value_handle = 0;
-			atomic_clear_bit(&gopro_client.state, GOPRO_C_SETTINGS_NOTIF_ENABLED);
+			atomic_clear_bit(&gopro_client.state, GP_FLAG_SETTINGS_NOTIF_ENABLED);
 		}else if (params->value_handle == gopro_client.notif_params[GP_CNTRL_HANDLE_CMD].value_handle){
 			LOG_DBG("CMD notify");
 			params->value_handle = 0;
-			atomic_clear_bit(&gopro_client.state, GOPRO_C_CMD_NOTIF_ENABLED);
+			atomic_clear_bit(&gopro_client.state, GP_FLAG_CMD_NOTIF_ENABLED);
 		}else if (params->value_handle == gopro_client.notif_params[GP_CNTRL_HANDLE_QUERY].value_handle){
 			LOG_DBG("Query notify");
 			params->value_handle = 0;
-			atomic_clear_bit(&gopro_client.state, GOPRO_C_QUERY_NOTIF_ENABLED);
+			atomic_clear_bit(&gopro_client.state, GP_FLAG_QUERY_NOTIF_ENABLED);
 		}else if (params->value_handle == gopro_client.notif_params[GP_CNTRL_HANDLE_NET].value_handle){
 			LOG_DBG("Net notify");
 			params->value_handle = 0;
-			atomic_clear_bit(&gopro_client.state, GOPRO_C_NET_NOTIF_ENABLED);
+			atomic_clear_bit(&gopro_client.state, GP_FLAG_NET_NOTIF_ENABLED);
 		}else{
 			LOG_ERR("Recieve unknown handle 0x%0X",params->value_handle);
 			return BT_GATT_ITER_CONTINUE;
@@ -165,64 +161,37 @@ static uint8_t on_notify_received(struct bt_conn *conn, struct bt_gatt_subscribe
 		gopro_cmd.data[i]=(uint8_t)(pdata[i]);
 	}
 
-	//zbus_chan_pub(&can_txdata_chan, &gopro_cmd, K_NO_WAIT);
-
-	/*
-	Build packet	
-	*/
 	gopro_packet_build(&gopro_cmd);
 
 	return BT_GATT_ITER_CONTINUE;
 }
 
 static void on_sent_data(struct bt_conn *conn, uint8_t err, struct bt_gatt_write_params *params){
-	// const void *data;
-	// uint16_t length;
-
-	/* Make a copy of volatile data that is required by the callback. */
-	// data = params->data;
-	// length = params->length;
-
-	//LOG_DBG("Data sent len: %d",params->length);
 	
 	if(params->handle == gopro_client.write_params[GP_CNTRL_HANDLE_SETTINGS].handle){
 		LOG_DBG("Setiings sent");
-		atomic_clear_bit(&gopro_client.state, GOPRO_C_SETTINGS_WRITE_PENDING);
+		atomic_clear_bit(&gopro_client.state, GP_FLAG_SETTINGS_WRITE_PENDING);
 	}else if (params->handle == gopro_client.write_params[GP_CNTRL_HANDLE_CMD].handle){
 		LOG_DBG("CMD sent");
-		atomic_clear_bit(&gopro_client.state, GOPRO_C_CMD_WRITE_PENDING);
+		atomic_clear_bit(&gopro_client.state, GP_FLAG_CMD_WRITE_PENDING);
 	}else if (params->handle == gopro_client.write_params[GP_CNTRL_HANDLE_QUERY].handle){
 		LOG_DBG("Query sent");
-		atomic_clear_bit(&gopro_client.state, GOPRO_C_QUERY_WRITE_PENDING);
+		atomic_clear_bit(&gopro_client.state, GP_FLAG_QUERY_WRITE_PENDING);
 	}else if (params->handle == gopro_client.write_params[GP_CNTRL_HANDLE_NET].handle){
 		LOG_DBG("Net sent");
-		atomic_clear_bit(&gopro_client.state, GOPRO_C_NET_WRITE_PENDING);
+		atomic_clear_bit(&gopro_client.state, GP_FLAG_NET_WRITE_PENDING);
 	}else{
 		LOG_ERR("Recieve unknown handle 0x%0X",params->handle);
 		return;
 	}
 
-	atomic_clear_bit(&gopro_client.state, GOPRO_C_CMD_WRITE_PENDING);
+	atomic_clear_bit(&gopro_client.state, GP_FLAG_CMD_WRITE_PENDING);
 	k_sem_give(&ble_write_sem);
 
 	if (err) {
 		LOG_WRN("ATT error code: 0x%02X", err);
 	}
 
-}
-
-
-int bt_gopro_client_init(struct bt_gopro_client *gopro_client)
-{
-	if (!gopro_client) {
-		return -EINVAL;
-	}
-
-	if (atomic_test_and_set_bit(&gopro_client->state, GOPRO_C_INITIALIZED)) {
-		return -EALREADY;
-	}
-
-	return 0;
 }
 
 int bt_gopro_client_send(struct bt_gopro_client *nus_c, struct gopro_cmd_t *gopro_cmd){
@@ -243,16 +212,16 @@ int bt_gopro_client_send(struct bt_gopro_client *nus_c, struct gopro_cmd_t *gopr
 	switch (handle_index)
 	{
 	case GP_CNTRL_HANDLE_CMD:
-		flag_bit = GOPRO_C_CMD_WRITE_PENDING;
+		flag_bit = GP_FLAG_CMD_WRITE_PENDING;
 		break;
 	case GP_CNTRL_HANDLE_SETTINGS:
-		flag_bit = GOPRO_C_SETTINGS_WRITE_PENDING;
+		flag_bit = GP_FLAG_SETTINGS_WRITE_PENDING;
 		break;
 	case GP_CNTRL_HANDLE_QUERY:
-		flag_bit = GOPRO_C_QUERY_WRITE_PENDING;
+		flag_bit = GP_FLAG_QUERY_WRITE_PENDING;
 		break;
 	case GP_CNTRL_HANDLE_NET:
-		flag_bit = GOPRO_C_NET_WRITE_PENDING;
+		flag_bit = GP_FLAG_NET_WRITE_PENDING;
 		break;
 	
 	default:
@@ -384,13 +353,11 @@ int bt_gopro_wifi_handles_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client 
 	struct bt_gatt_dm_attr *gatt_chrc;
 	struct bt_gatt_dm_attr *gatt_desc;
 
-
 	if (bt_uuid_cmp(gatt_service->uuid, BT_UUID_GOPRO_WIFI_SERVICE)) {
 		LOG_ERR("Not valid GoPro WIFI Service UUID");
 		return -ENOTSUP;
 	}
 	memset(&nus_c->wifihandles, 0xFF, sizeof(nus_c->wifihandles));
-
 
 	/* SSID */
 	gatt_chrc = (struct bt_gatt_dm_attr *)bt_gatt_dm_char_by_uuid(dm, BT_UUID_GOPRO_WIFI_SSID);
@@ -409,7 +376,6 @@ int bt_gopro_wifi_handles_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client 
 	LOG_DBG("Found handle for SSID characteristic");
 	nus_c->wifihandles[GP_WIFI_HANDLE_SSID] = gatt_desc->handle;
 
-
 	/* PASS */
 	gatt_chrc = (struct bt_gatt_dm_attr *)bt_gatt_dm_char_by_uuid(dm, BT_UUID_GOPRO_WIFI_PASS);
 	LOG_DBG("DM: 0x%0X UUID: 0x%0X",(uint32_t)dm,(uint32_t)BT_UUID_GOPRO_WIFI_PASS);
@@ -426,7 +392,6 @@ int bt_gopro_wifi_handles_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client 
 	
 	LOG_DBG("Found handle for PASS characteristic");
 	nus_c->wifihandles[GP_WIFI_HANDLE_PASS] = gatt_desc->handle;
-
 
 	/* POWER */
 	gatt_chrc = (struct bt_gatt_dm_attr *)bt_gatt_dm_char_by_uuid(dm, BT_UUID_GOPRO_WIFI_POWER);
@@ -461,8 +426,6 @@ int bt_gopro_wifi_handles_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client 
 	
 	LOG_DBG("Found handle for STATE characteristic");
 	nus_c->wifihandles[GP_WIFI_HANDLE_STATE] = gatt_desc->handle;
-
-
 
 	nus_c->conn = bt_gatt_dm_conn_get(dm);
 	return 0;
@@ -521,8 +484,6 @@ int bt_gopro_handles_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client *nus_
 
 	LOG_INF("CMD Handles assigned succesfull.");
 	/* CMD */
-	//gopro_set_handle(dm, nus_c, GP_HANDLE_CMD);
-	
 	
 	/* SETTINGS */
 	gatt_chrc = (struct bt_gatt_dm_attr *)bt_gatt_dm_char_by_uuid(dm, BT_UUID_GOPRO_SETTINGS_NOTIFY);
@@ -565,9 +526,6 @@ int bt_gopro_handles_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client *nus_
 
 	LOG_INF("SETTINGS Handles assigned succesfull.");
 	/* SETTINGS */
-	//gopro_set_handle(dm, nus_c, GP_HANDLE_SETTINGS);
-
-
 
 	/* QUERY */
 	gatt_chrc = (struct bt_gatt_dm_attr *)bt_gatt_dm_char_by_uuid(dm, BT_UUID_GOPRO_QUERY_NOTIFY);
@@ -610,7 +568,6 @@ int bt_gopro_handles_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client *nus_
 
 	LOG_INF("QUERY Handles assigned succesfull.");
 	/* CMD */
-	//gopro_set_handle(dm, nus_c, GP_HANDLE_QUERY);
 
 	/* Assign connection instance. */
 	nus_c->conn = bt_gatt_dm_conn_get(dm);
@@ -675,32 +632,26 @@ int bt_gopro_net_handle_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client *n
 	return 0;
 }
 
-
 int gopro_set_subscribe(struct bt_gopro_client *nus_c, enum gopro_control_handle_list_t gopro_handle){
 	int flag_bit;
-	int handle_index;
 	int err;
 
 	switch (gopro_handle)
 	{
 	case GP_CNTRL_HANDLE_CMD:
-		flag_bit = GOPRO_C_CMD_NOTIF_ENABLED;
-		handle_index = GP_CNTRL_HANDLE_CMD;
+		flag_bit = GP_FLAG_CMD_NOTIF_ENABLED;
 		break;
 	
 	case GP_CNTRL_HANDLE_SETTINGS:
-		flag_bit = GOPRO_C_SETTINGS_NOTIF_ENABLED;
-		handle_index = GP_CNTRL_HANDLE_SETTINGS;
+		flag_bit = GP_FLAG_SETTINGS_NOTIF_ENABLED;
 		break;
 	
 	case GP_CNTRL_HANDLE_QUERY:
-		flag_bit = GOPRO_C_QUERY_NOTIF_ENABLED;
-		handle_index = GP_CNTRL_HANDLE_QUERY;
+		flag_bit = GP_FLAG_QUERY_NOTIF_ENABLED;
 		break;
 
 	case GP_CNTRL_HANDLE_NET:
-		flag_bit = GOPRO_C_NET_NOTIF_ENABLED;
-		handle_index = GP_CNTRL_HANDLE_NET;
+		flag_bit = GP_FLAG_NET_NOTIF_ENABLED;
 		break;
 		
 	default:
@@ -713,20 +664,20 @@ int gopro_set_subscribe(struct bt_gopro_client *nus_c, enum gopro_control_handle
 		return -EALREADY;
 	}
 
-	nus_c->notif_params[handle_index].notify = on_notify_received;
-	nus_c->notif_params[handle_index].value = BT_GATT_CCC_NOTIFY;
-	nus_c->notif_params[handle_index].value_handle = nus_c->handles[handle_index].notify;
-	nus_c->notif_params[handle_index].ccc_handle = nus_c->handles[handle_index].notify_ccc;
+	nus_c->notif_params[gopro_handle].notify = on_notify_received;
+	nus_c->notif_params[gopro_handle].value = BT_GATT_CCC_NOTIFY;
+	nus_c->notif_params[gopro_handle].value_handle = nus_c->handles[gopro_handle].notify;
+	nus_c->notif_params[gopro_handle].ccc_handle = nus_c->handles[gopro_handle].notify_ccc;
 	
-	atomic_set_bit(nus_c->notif_params[handle_index].flags,BT_GATT_SUBSCRIBE_FLAG_VOLATILE);
+	atomic_set_bit(nus_c->notif_params[gopro_handle].flags,BT_GATT_SUBSCRIBE_FLAG_VOLATILE);
 
-	err = bt_gatt_subscribe(nus_c->conn, &nus_c->notif_params[handle_index]);
+	err = bt_gatt_subscribe(nus_c->conn, &nus_c->notif_params[gopro_handle]);
 
 	if (err) {
 		LOG_ERR("Subscribe failed (err %d)", err);
 		atomic_clear_bit(&nus_c->state, flag_bit);
 	} else {
-		LOG_DBG("[SUBSCRIBED] for %d handle",handle_index);
+		LOG_DBG("[SUBSCRIBED] for %d handle",gopro_handle);
 	}
 
 	return 0;

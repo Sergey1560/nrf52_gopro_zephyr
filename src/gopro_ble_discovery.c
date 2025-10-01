@@ -9,9 +9,9 @@
 LOG_MODULE_REGISTER(gopro_discovery, LOG_LEVEL_DBG);
 
 extern struct k_sem ble_write_sem;
+extern struct k_sem ble_read_sem;
 
 const struct bt_uuid *uuid_list[] = {BT_UUID_GOPRO_WIFI_SERVICE,BT_UUID_GOPRO_SERVICE,BT_UUID_GOPRO_NET_SERVICE};
-#define UUID_COUNT  (sizeof(uuid_list)/sizeof(uuid_list[0]))
 
 static void discovery_complete(struct bt_gatt_dm *dm, void *context);
 static void discovery_service_not_found(struct bt_conn *conn, void *context);
@@ -22,7 +22,6 @@ static int handles_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client *nus_c)
 static void discovery_start_work_handler(struct k_work *work);
 static void discovery_finish_work_handler(struct k_work *work);
 
-static int gopro_client_init(void);
 static void auth_cancel(struct bt_conn *conn);
 static void pairing_complete(struct bt_conn *conn, bool bonded);
 static void pairing_failed(struct bt_conn *conn, enum bt_security_err reason);
@@ -105,7 +104,7 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 	.disconnected = disconnected,
 	.security_changed = security_changed
 };
-//K_SEM_DEFINE(ble_write_sem, 0, 1);
+
 //#define BT_AUTO_CONNECT
 #ifndef BT_AUTO_CONNECT
 struct bt_conn_le_create_param *conn_params = BT_CONN_LE_CREATE_PARAM(BT_CONN_LE_OPT_CODED | BT_CONN_LE_OPT_NO_1M,BT_GAP_SCAN_FAST_INTERVAL,BT_GAP_SCAN_FAST_INTERVAL);
@@ -162,12 +161,6 @@ int gopro_bt_start(void){
 		LOG_DBG("Settings load done");
 	}
 
-	err = gopro_client_init();
-	if (err != 0) {
-		LOG_ERR("gopro_client_init failed (err %d)", err);
-		return 0;
-	}
-
 	scan_init();
 	err = scan_start();
 	if (err) {
@@ -182,10 +175,8 @@ static void discovery_start_work_handler(struct k_work *work){
     char uuid_str[50];
 	static uint8_t uuid_index = 0;
 
-
 	if(uuid_index >= (sizeof(uuid_list)/sizeof(uuid_list[0]))){
 		LOG_DBG("List end, stop discovery");
-//		k_work_submit(&discovery_finish_work);
 		k_work_submit_to_queue	(&my_work_q,&discovery_finish_work);
 		return;
 	}
@@ -230,7 +221,7 @@ static void discovery_finish_work_handler(struct k_work *work){
 
 	LOG_DBG("Set connected mode");
 	gopro_led_mode_set(LED_NUM_BT,LED_MODE_ON);
-	gopro_client_set_sate(GPSTATE_CONNECTED);
+	gopro_client_set_sate(GP_STATE_CONNECTED);
 
 	LOG_DBG("Dummy wait");
 	k_sleep(K_MSEC(1000));
@@ -276,19 +267,6 @@ static int handles_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client *nus_c)
 	}
 
 	return ret_val;
-}
-
-static int gopro_client_init(void){
-	int err;
-
-	err = bt_gopro_client_init(&gopro_client);
-	if (err) {
-		LOG_ERR("GoPro Client initialization failed (err %d)", err);
-		return err;
-	}
-
-	LOG_INF("GoPro Client module initialized");
-	return err;
 }
 
 static void auth_cancel(struct bt_conn *conn){
@@ -441,12 +419,12 @@ static bool eir_found(struct bt_data *data, void *user_data){
 		{
 		case 0:
 			gopro_led_mode_set(LED_NUM_BT,LED_MODE_BLINK_1S);
-			gopro_client_set_sate(GPSTATE_OFFLINE);
+			gopro_client_set_sate(GP_STATE_OFFLINE);
 			break;
 		
 		case 1:
 			gopro_led_mode_set(LED_NUM_BT,LED_MODE_BLINK_300MS);
-			gopro_client_set_sate(GPSTATE_ONLINE);
+			gopro_client_set_sate(GP_STATE_ONLINE);
 			LOG_DBG("Camera ON, connecting");
 			
 			#ifndef BT_AUTO_CONNECT
@@ -467,7 +445,7 @@ static bool eir_found(struct bt_data *data, void *user_data){
 
 		case 5:
 			gopro_led_mode_set(LED_NUM_BT,LED_MODE_BLINK_100MS);
-			gopro_client_set_sate(GPSTATE_PAIRING);
+			gopro_client_set_sate(GP_STATE_PAIRING);
 			LOG_DBG("Camera Pairing");
 
 			#ifndef BT_AUTO_CONNECT
@@ -579,7 +557,7 @@ static void security_changed(struct bt_conn *conn, bt_security_t level,enum bt_s
 			bt_security_err_to_str(err));
 	
 			if(err == BT_SECURITY_ERR_PIN_OR_KEY_MISSING){
-				gopro_client_set_sate(GPSTATE_NEED_PAIRING);
+				gopro_client_set_sate(GP_STATE_NEED_PAIRING);
 				gopro_led_mode_set(LED_NUM_REC,LED_MODE_BLINK_300MS);
 			}
 		}
@@ -643,7 +621,7 @@ bool gopro_cmd_validator(const void* msg, size_t msg_size) {
 		return 1;
 	}
 
-	if(gopro_client_get_state() != GPSTATE_CONNECTED){
+	if(gopro_client_get_state() != GP_STATE_CONNECTED){
 		LOG_ERR("Not connected state");
 		return 0;
 	}

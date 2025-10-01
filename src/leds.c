@@ -198,10 +198,10 @@ static void gopro_led_set_rec(uint8_t val){
 }
 
 static void led_idle_handler(struct k_work *work){
-	if(gopro_client_get_state() != GPSTATE_UNKNOWN){
+	if(gopro_client_get_state() != GP_STATE_UNKNOWN){
 		LOG_DBG("Set LED to idle state");
 		gopro_led_mode_set(LED_NUM_BT,LED_MODE_BLINK_5S);
-		gopro_client_set_sate(GPSTATE_UNKNOWN);
+		gopro_client_set_sate(GP_STATE_UNKNOWN);
 		gopro_client_setname(NULL,0);
 	}
 }

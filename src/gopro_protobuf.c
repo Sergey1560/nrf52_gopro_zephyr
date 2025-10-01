@@ -114,12 +114,8 @@ const char *pb_enum_cohn_netstate[9]={
     "ERROR_INDEX"
 };
 
-//const uint8_t gopro_RequestGetCOHNStatus[]={0x04,0xF5,0x6F,0x8,0x1}; 
-
-// const char my_wifi_ssid[]="Dlink602_1";
-// const char my_wifi_pass[]="Hnt45vh4JySqi";
-const char my_wifi_ssid[]="service_5";
-const char my_wifi_pass[]=".W@71<5KD1J\"uz";
+const char my_wifi_ssid[]="wifi_ssid";
+const char my_wifi_pass[]="wifi_pass";
 
 uint8_t work_buff[WORK_BUFF_SIZE];
 uint8_t resp_ap_entries_buf[128];
@@ -553,7 +549,7 @@ int gopro_parse_ap_entries(struct gopro_packet_t *gopro_packet){
     return 0;
 };
 
-static void gopro_connect_ap(struct ap_list_t *ap_list, int count){
+static void __attribute__((unused)) gopro_connect_ap(struct ap_list_t *ap_list, int count){
 
     for(uint32_t i=0; i<count; i++){
 

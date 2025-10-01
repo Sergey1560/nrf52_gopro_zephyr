@@ -1,8 +1,6 @@
 #ifndef GOPRO_IDS_H
 #define GOPRO_IDS_H
 
-
-
 /*
 https://gopro.github.io/OpenGoPro/ble/features/query.html#
 */
@@ -21,7 +19,6 @@ https://gopro.github.io/OpenGoPro/ble/features/query.html#
 #define GOPRO_QUERY_STATUS_UNREG_SETTING        0x72
 #define GOPRO_QUERY_STATUS_UNREG_STATUS         0x73
 #define GOPRO_QUERY_STATUS_UNREG_SETTING_CAP    0x82
-
 
 /*
 https://gopro.github.io/OpenGoPro/ble/features/statuses.html#status-ids
