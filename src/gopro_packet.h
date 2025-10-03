@@ -8,7 +8,7 @@
 
 struct gopro_packet_t {
     uint32_t  total_len;            //Полная длина данных из всех пакетов, включая поля feature и action
-    uint32_t  packet_len;           //Полная полезная длина из вех пакетов (без feature и action)
+    uint32_t  packet_len;           //Полная полезная длина из всех пакетов (без feature и action)
     uint32_t  pkt_len;              //Длина всех данных в текущем пакете
     uint32_t  data_len;             //Длина данных в текущем пакете
     uint32_t  saved_len;            //Количество сохраненных данных

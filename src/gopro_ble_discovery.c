@@ -12,6 +12,7 @@ LOG_MODULE_REGISTER(gopro_discovery, LOG_LEVEL_DBG);
 
 extern struct k_sem ble_write_sem;
 extern struct k_sem ble_read_sem;
+extern struct k_sem get_hw_sem;
 
 const struct bt_uuid *uuid_list[] = {BT_UUID_GOPRO_WIFI_SERVICE,BT_UUID_GOPRO_SERVICE,BT_UUID_GOPRO_NET_SERVICE};
 
@@ -105,6 +106,13 @@ const static struct gopro_cmd_t gopro_query_register = {
 	.cmd_type = GP_CNTRL_HANDLE_QUERY,
 	.data={4,GOPRO_QUERY_STATUS_REG_STATUS,GOPRO_STATUS_ID_ENCODING,GOPRO_STATUS_ID_VIDEO_NUM,GOPRO_STATUS_ID_BAT_PERCENT}
 };
+
+const static struct gopro_cmd_t gopro_get_hw_info = {
+	.len = 2,
+	.cmd_type = GP_CNTRL_HANDLE_CMD,
+	.data={1,0x3C}
+};
+
 
 const static struct gopro_cmd_t *startup_query_list[] = {
 	&gopro_query_register, 
@@ -289,9 +297,25 @@ static void discovery_finish_work_handler(struct k_work *work){
 	gopro_led_mode_set(LED_NUM_BT,LED_MODE_ON);
 	gopro_client_set_sate(GP_STATE_CONNECTED);
 
-	LOG_DBG("Dummy wait");
-	k_sleep(K_MSEC(1000));
+	// LOG_DBG("Dummy wait");
+	// k_sleep(K_MSEC(1000));
 
+	for(uint32_t i=0; i<GET_HW_POLL_COUNT; i++){
+		LOG_DBG("Poll HW Info");
+		
+		err = zbus_chan_pub(&gopro_cmd_chan, &gopro_get_hw_info,K_NO_WAIT);
+		if(err != 0){
+			LOG_ERR("Chan pub failed: %d",err);
+		}
+
+		err = k_sem_take(&get_hw_sem,K_MSEC(1000));
+		if(err == 0){
+			LOG_DBG("Get Status OK, start sending data");
+			break;
+		}
+
+	}
+	
 	LOG_DBG("Push subscribe to TX chan");
 	for(uint32_t i=0; i < sizeof(startup_query_list)/sizeof(startup_query_list[0]); i++){
 		//LOG_HEXDUMP_DBG(startup_query_list[i]->data,startup_query_list[i]->len,"Push to TX chan:");

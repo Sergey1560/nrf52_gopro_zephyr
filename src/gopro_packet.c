@@ -5,7 +5,7 @@
 #include "gopro_client.h"
 #include "leds.h"
 
-
+K_SEM_DEFINE(get_hw_sem, 0, 1);
 LOG_MODULE_REGISTER(gopro_packet, LOG_LEVEL_DBG);
 
 struct gopro_packet_t gopro_packet;
@@ -409,6 +409,106 @@ void gopro_packet_parse(struct gopro_packet_t *gopro_packet){
         }
 }
 
+static void gopro_parse_response_hw_info(struct gopro_packet_t *gopro_packet){
+    uint8_t *pdata = &gopro_packet->data[2];
+    uint32_t len = gopro_packet->packet_len;
+    uint32_t index = 0;
+    // char model_name[20];
+    // char firmware_version[20];
+    // char serial_number[20];
+    // char ap_ssid[20];
+    // char ap_mac[20];
+    
+    //LOG_HEXDUMP_DBG(gopro_packet->data,gopro_packet->total_len,"Parse CMD INPUT");
+
+    uint8_t model_number_length = pdata[0];
+
+    if(model_number_length > 4){
+        LOG_ERR("Invalid model number len");
+        return;
+    }
+    index++;
+
+    uint32_t model_number = 0;
+    for(uint32_t i=model_number_length; i>0; i--){
+        model_number |= (uint32_t)(pdata[index] << (i-1)*8);
+        index++;
+    }
+    LOG_DBG("Model number: 0x%0X",model_number);
+
+    uint8_t model_name_length = pdata[index];
+    index++;
+    
+    if(model_name_length >= sizeof(gopro_state.model_name)){
+        LOG_ERR("Invalid model name len");
+        return;
+    }
+    memcpy(gopro_state.model_name,&pdata[index],model_name_length);
+    gopro_state.model_name[model_name_length]=0;
+    index += model_name_length;
+    LOG_DBG("Model name: %s",gopro_state.model_name);
+
+    uint8_t deprecated_length = pdata[index];
+    index++;
+    index += deprecated_length;
+
+    //FW Version
+    uint8_t firmware_version_length = pdata[index];
+    index++;
+    if(firmware_version_length >= sizeof(gopro_state.firmware_version)){
+        LOG_ERR("Invalid firmware_version len");
+        return;
+    }
+    memcpy(gopro_state.firmware_version,&pdata[index],firmware_version_length);
+    gopro_state.firmware_version[firmware_version_length]=0;
+    index += firmware_version_length;
+    LOG_DBG("Firmware: %s",gopro_state.firmware_version);
+
+    //Serial Number
+    uint8_t serial_number_length = pdata[index];
+    index++;
+    if(serial_number_length >= sizeof(gopro_state.serial_number)){
+        LOG_ERR("Invalid serial_number len");
+        return;
+    }
+    memcpy(gopro_state.serial_number,&pdata[index],serial_number_length);
+    gopro_state.serial_number[serial_number_length]=0;
+    index += serial_number_length;
+    LOG_DBG("Serial: %s",gopro_state.serial_number);
+
+    //AP SSID
+    uint8_t ap_ssid_length = pdata[index];
+    index++;
+    if(ap_ssid_length >= sizeof(gopro_state.wifi_ssid)){
+        LOG_ERR("Invalid ap_ssid len");
+        return;
+    }
+    memcpy(gopro_state.wifi_ssid,&pdata[index],ap_ssid_length);
+    gopro_state.wifi_ssid[ap_ssid_length]=0;
+    index += ap_ssid_length;
+    LOG_DBG("AP SSID: %s",gopro_state.wifi_ssid);
+
+    //AP MAC
+    uint8_t ap_mac_address_length = pdata[index];
+    index++;
+    if(ap_mac_address_length >= sizeof(gopro_state.ap_mac)){
+        LOG_ERR("Invalid ap_mac_address_length len");
+        return;
+    }
+    memcpy(gopro_state.ap_mac,&pdata[index],ap_mac_address_length);
+    gopro_state.ap_mac[ap_mac_address_length]=0;
+    index += ap_mac_address_length;
+    LOG_DBG("AP MAC: %s",gopro_state.ap_mac);
+
+    index += 11; //reserved data not part of the payload
+    if(index == len){
+        LOG_DBG("Packet parse correct");
+    }else{
+        LOG_WRN("Packet len error: %d %d",index,len);
+    }
+};
+
+
 static void gopro_packet_parse_cmd(struct gopro_packet_t *gopro_packet){
 
     if(gopro_packet->feature == 0xF1){
@@ -429,6 +529,29 @@ static void gopro_packet_parse_cmd(struct gopro_packet_t *gopro_packet){
                 LOG_WRN("Unknown CMD action 0xF1:0x%0X",gopro_packet->action);
                 break;
         }
+    }
+
+    if(gopro_packet->feature == 0x3C){
+        LOG_DBG("Get HW status response");
+        switch (gopro_packet->action)
+        {
+        case 0:
+            LOG_DBG("Status OK");
+            gopro_parse_response_hw_info(gopro_packet);
+            k_sem_give(&get_hw_sem);
+            break;
+        case 1:
+            LOG_ERR("Status Error");
+            break;
+        case 2:
+            LOG_ERR("Invalid Parameter");
+            break;
+        
+        default:
+            LOG_ERR("Unknown status: %d",gopro_packet->action);
+            break;
+        }
+    
     }
 }
 

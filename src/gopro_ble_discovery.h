@@ -18,6 +18,7 @@
 //#define DISCOVERY_TIMEOUT   K_MSEC(5000)
 #define DISCOVERY_TIMEOUT   K_FOREVER
 #define BLE_WRITE_TIMEOUT	K_MSEC(1200)
+#define GET_HW_POLL_COUNT   20
 
 int gopro_bt_start(void);
 void gopro_start_discovery(struct bt_conn *conn, struct bt_gopro_client *gopro_client);

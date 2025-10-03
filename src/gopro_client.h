@@ -101,6 +101,10 @@ struct gopro_state_t {
 	char 						name[GOPRO_NAME_LEN];
 	char 						wifi_ssid[20];
 	char 						wifi_pass[20];
+    char 						model_name[20];
+    char 						firmware_version[20];
+    char 						serial_number[20];
+    char 						ap_mac[20];
 };
 
 struct gopro_cmd_t {
