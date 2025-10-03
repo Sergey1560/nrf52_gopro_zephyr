@@ -5,6 +5,8 @@
 #include <zephyr/zbus/zbus.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/settings/settings.h>
+#include <zephyr/drivers/hwinfo.h>
+//#include <hw_id.h>
 
 LOG_MODULE_REGISTER(gopro_discovery, LOG_LEVEL_DBG);
 
@@ -26,9 +28,9 @@ static void auth_cancel(struct bt_conn *conn);
 static void pairing_complete(struct bt_conn *conn, bool bonded);
 static void pairing_failed(struct bt_conn *conn, enum bt_security_err reason);
 
-static void scan_init(void);
+//static void scan_init(void);
 static void scan_work_handler(struct k_work *item);
-static int scan_start(void);
+//static int scan_start(void);
 static void try_add_address_filter(const struct bt_bond_info *info, void *user_data);
 static void scan_filter_no_match(struct bt_scan_device_info *device_info, bool connectable);
 static void scan_connecting_error(struct bt_scan_device_info *device_info);
@@ -48,7 +50,8 @@ static void gopro_cmd_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
 static struct bt_conn *default_conn;
 struct bt_gopro_client gopro_client;
 
-static struct k_work scan_work;
+//static struct k_work scan_work;
+K_WORK_DELAYABLE_DEFINE(scan_work, scan_work_handler);
 
 struct bt_gatt_dm_cb discovery_cb = {
 	.completed         = discovery_complete,
@@ -59,6 +62,20 @@ struct bt_gatt_dm_cb discovery_cb = {
 static struct bt_conn_auth_cb conn_auth_callbacks = {
 	.cancel = auth_cancel,
 };
+
+static const struct bt_scan_init_param scan_init = {
+	#ifdef BT_AUTO_CONNECT
+	.connect_if_match = true,
+	#else
+	.connect_if_match = false,
+	#endif
+};
+
+static bt_addr_le_t static_le_addr = {
+	.type = BT_ADDR_LE_RANDOM,
+	.a.val = {0xAA, 0xDF, 0xAF, 0xEE, 0xBE, 0xDA},
+};
+
 
 static struct bt_conn_auth_info_cb conn_auth_info_callbacks = {
 	.pairing_complete = pairing_complete,
@@ -131,6 +148,29 @@ K_THREAD_DEFINE(gopro_cmd_subscriber_task_id, 1024, gopro_cmd_subscriber_task, N
 
 int gopro_bt_start(void){
 	int err;
+	bt_addr_le_t addrs[CONFIG_BT_ID_MAX];
+	size_t count = CONFIG_BT_ID_MAX;
+	char addr_str[BT_ADDR_LE_STR_LEN];
+	uint8_t hw_id[10];
+	
+	uint8_t hw_len = hwinfo_get_device_id(hw_id,10);	
+
+	if(hw_len > 0){
+		LOG_DBG("HW ID: 0x%0X:0x%0X:0x%0X:0x%0X:0x%0X:0x%0X:0x%0X:0x%0X ",hw_id[0],hw_id[1],hw_id[2],hw_id[3],hw_id[4],hw_id[5],hw_id[6],hw_id[7]);
+
+		uint8_t start_index = 0;
+		
+		if(hw_len > sizeof(static_le_addr.a.val)){
+			start_index = hw_len - sizeof(static_le_addr.a.val);
+		}
+		
+		for(uint32_t i = 0; i<sizeof(static_le_addr.a.val); i++){
+			static_le_addr.a.val[i] = hw_id[start_index+i];
+		};
+
+	}else{
+		LOG_ERR("Failed to get HW ID");
+	}
 
 	k_work_queue_init(&my_work_q);
 	k_work_queue_start(&my_work_q, my_stack_area, K_THREAD_STACK_SIZEOF(my_stack_area), MY_PRIORITY, NULL);
@@ -147,6 +187,15 @@ int gopro_bt_start(void){
 		return 0;
 	}
 
+	BT_ADDR_SET_STATIC(&static_le_addr.a);
+	int profile = bt_id_create(&static_le_addr, NULL);
+
+	if (profile < 0) {
+		LOG_ERR("failed to create profile (err %d)", profile);
+		return profile;
+	}
+	LOG_INF("default profile %d created", profile);
+	
 	err = bt_enable(NULL);
 	if (err) {
 		LOG_ERR("Bluetooth init failed (err %d)", err);
@@ -161,12 +210,29 @@ int gopro_bt_start(void){
 		LOG_DBG("Settings load done");
 	}
 
-	scan_init();
-	err = scan_start();
-	if (err) {
-		return 0;
+	bt_id_get(addrs, &count);
+	if(count > 0){
+		LOG_DBG("Found %u saved ID",count);
+		bt_addr_le_t *p_addrs = addrs;
+		
+		while(count--){
+			bt_addr_le_to_str(p_addrs, addr_str, sizeof(addr_str));
+			LOG_DBG("ID: %s",addr_str);
+			p_addrs++;
+		}
+		
+	}else{
+		LOG_DBG("No saved ID found");
 	}
 
+	bt_scan_init(&scan_init);
+	bt_scan_cb_register(&scan_cb);
+
+	//k_work_init(&scan_work, scan_work_handler);
+	LOG_INF("Scan module initialized");
+
+	k_work_schedule(&scan_work, K_MSEC(50));
+	
 	return 0;
 }
 
@@ -289,35 +355,20 @@ static void pairing_failed(struct bt_conn *conn, enum bt_security_err reason){
 
 static void scan_work_handler(struct k_work *item){
 	ARG_UNUSED(item);
-	LOG_DBG("Scan start");
-	(void)scan_start();
-}
-
-static void scan_init(void){
-	struct bt_scan_init_param scan_init = {
-		#ifdef BT_AUTO_CONNECT
-		.connect_if_match = true,
-		#else
-		.connect_if_match = false,
-		#endif
-	};
-
-	bt_scan_init(&scan_init);
-	bt_scan_cb_register(&scan_cb);
-
-	k_work_init(&scan_work, scan_work_handler);
-	LOG_INF("Scan module initialized");
-}
-
-static int scan_start(void){
 	int err;
 	uint8_t filter_mode = 0;
 
+
+	//(void)scan_start();
 	err = bt_scan_stop();
-	if (err) {
-		LOG_ERR("Failed to stop scanning (err %d)", err);
-		return err;
+	if (err != 0 && err != -EALREADY) {
+		LOG_ERR("Stop LE scan failed (err %d)", err);
+		return;
+	}else{
+		LOG_DBG("Scan stopped");
 	}
+
+	LOG_DBG("Scan start");
 
 	bt_scan_filter_remove_all();
 	bt_foreach_bond(BT_ID_DEFAULT, try_add_address_filter, &filter_mode);
@@ -329,26 +380,82 @@ static int scan_start(void){
 		err = bt_scan_filter_add(BT_SCAN_FILTER_TYPE_UUID, BT_UUID_GOPRO_SERVICE);
 		if (err) {
 			LOG_ERR("UUID filter cannot be added (err %d", err);
-			return err;
+			return;
 		}
 	}
 
 	err = bt_scan_filter_enable(filter_mode, false);
 	if (err) {
 		LOG_ERR("Filters cannot be turned on (err %d)", err);
-		return err;
+		return;
 	}
 
 	err = bt_scan_start(BT_SCAN_TYPE_SCAN_ACTIVE);
 	if (err) {
 		LOG_ERR("Scanning failed to start (err %d)", err);
-		return err;
+		return;
 	}
 
 	led_idle_timer_start(1);
 	LOG_INF("Scan started");
-	return 0;
 }
+
+// static void scan_init(void){
+// 	struct bt_scan_init_param scan_init = {
+// 		#ifdef BT_AUTO_CONNECT
+// 		.connect_if_match = true,
+// 		#else
+// 		.connect_if_match = false,
+// 		#endif
+// 	};
+
+// 	bt_scan_init(&scan_init);
+// 	bt_scan_cb_register(&scan_cb);
+
+// 	//k_work_init(&scan_work, scan_work_handler);
+// 	LOG_INF("Scan module initialized");
+// }
+
+// static int scan_start(void){
+// 	int err;
+// 	uint8_t filter_mode = 0;
+
+// 	err = bt_scan_stop();
+// 	if (err) {
+// 		LOG_ERR("Failed to stop scanning (err %d)", err);
+// 		return err;
+// 	}
+
+// 	bt_scan_filter_remove_all();
+// 	bt_foreach_bond(BT_ID_DEFAULT, try_add_address_filter, &filter_mode);
+
+// 	if((filter_mode & BT_SCAN_ADDR_FILTER) == 0){
+// 		LOG_DBG("Saved bonds not found, filter by UUID");
+// 		filter_mode = BT_SCAN_UUID_FILTER;	
+
+// 		err = bt_scan_filter_add(BT_SCAN_FILTER_TYPE_UUID, BT_UUID_GOPRO_SERVICE);
+// 		if (err) {
+// 			LOG_ERR("UUID filter cannot be added (err %d", err);
+// 			return err;
+// 		}
+// 	}
+
+// 	err = bt_scan_filter_enable(filter_mode, false);
+// 	if (err) {
+// 		LOG_ERR("Filters cannot be turned on (err %d)", err);
+// 		return err;
+// 	}
+
+// 	err = bt_scan_start(BT_SCAN_TYPE_SCAN_ACTIVE);
+// 	if (err) {
+// 		LOG_ERR("Scanning failed to start (err %d)", err);
+// 		return err;
+// 	}
+
+// 	led_idle_timer_start(1);
+// 	LOG_INF("Scan started");
+// 	return 0;
+// }
 
 static void try_add_address_filter(const struct bt_bond_info *info, void *user_data){
 	int err;
@@ -429,8 +536,8 @@ static bool eir_found(struct bt_data *data, void *user_data){
 			
 			#ifndef BT_AUTO_CONNECT
 			err = bt_scan_stop();
-			if (err) {
-				LOG_ERR("Failed to stop scanning (err %d)", err);
+			if (err != 0 && err != -EALREADY) {
+				LOG_ERR("Stop LE scan failed (err %d)", err);
 				return err;
 			}
 
@@ -450,8 +557,8 @@ static bool eir_found(struct bt_data *data, void *user_data){
 
 			#ifndef BT_AUTO_CONNECT
 			err = bt_scan_stop();
-			if (err) {
-				LOG_ERR("Failed to stop scanning (err %d)", err);
+			if (err != 0 && err != -EALREADY) {
+				LOG_ERR("Stop LE scan failed (err %d)", err);
 				return err;
 			}
 
@@ -490,7 +597,8 @@ static void connected(struct bt_conn *conn, uint8_t conn_err){
 			bt_conn_unref(default_conn);
 			default_conn = NULL;
 
-			(void)k_work_submit(&scan_work);
+			//(void)k_work_submit(&scan_work);
+			k_work_schedule(&scan_work, K_MSEC(50));
 		}
 
 		return;
@@ -515,8 +623,10 @@ static void connected(struct bt_conn *conn, uint8_t conn_err){
 	}
 
 	err = bt_scan_stop();
-	if ((!err) && (err != -EALREADY)) {
+	if (err != 0 && err != -EALREADY) {
 		LOG_ERR("Stop LE scan failed (err %d)", err);
+	}else{
+		LOG_DBG("Scan stopped");
 	}
 }
 
@@ -531,16 +641,18 @@ static void disconnected(struct bt_conn *conn, uint8_t reason){
 	gopro_led_mode_set(LED_NUM_REC,LED_MODE_OFF);
 
 	if (default_conn != conn) {
+		LOG_WRN("Con != default connection");
 		return;
 	}
 
 	bt_conn_unref(default_conn);
 	default_conn = NULL;
 
-	LOG_DBG("Pause for 3 sec");
-	k_sleep(K_MSEC(3000));
+	// LOG_DBG("Pause for 3 sec");
+	// k_sleep(K_MSEC(3000));
 
-	(void)k_work_submit(&scan_work);
+	//(void)k_work_submit(&scan_work);
+	k_work_schedule(&scan_work, K_MSEC(3000));
 }
 
 static void security_changed(struct bt_conn *conn, bt_security_t level,enum bt_security_err err){
