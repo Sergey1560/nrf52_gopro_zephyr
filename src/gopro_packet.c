@@ -651,5 +651,20 @@ static void gopro_packet_parse_net(struct gopro_packet_t *gopro_packet){
     }
 }
 
+    if(gopro_packet->feature == 0x03){ //Feature ID
+    switch (gopro_packet->action){ //Action ID
+
+        case 0x81:
+            LOG_DBG("Set Pairing State response");
+            gopro_parse_response_generic(&gopro_packet->data[2],gopro_packet->packet_len);
+            break;
+
+
+        default:
+            LOG_WRN("No PARSE for 0x03:0x%0X",gopro_packet->action);
+            break;
+        
+    }
+}
 
 }

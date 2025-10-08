@@ -315,7 +315,15 @@ static void discovery_finish_work_handler(struct k_work *work){
 		}
 
 	}
+	if(gopro_client.just_paired == 1){
+		LOG_DBG("Just paired, send RequestPairingFinish");
+		//atomic_clear_bit(&gopro_client.state,GP_FLAG_JUST_PAIRED);
+		gopro_client.just_paired = 0;
+		gopro_finish_pairing();
+	}
 	
+
+
 	LOG_DBG("Push subscribe to TX chan");
 	for(uint32_t i=0; i < sizeof(startup_query_list)/sizeof(startup_query_list[0]); i++){
 		//LOG_HEXDUMP_DBG(startup_query_list[i]->data,startup_query_list[i]->len,"Push to TX chan:");
@@ -369,6 +377,8 @@ static void pairing_complete(struct bt_conn *conn, bool bonded){
 	char addr[BT_ADDR_LE_STR_LEN];
 	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
 	LOG_INF("Pairing completed: %s, bonded: %d", addr, bonded);
+	//atomic_set_bit(&gopro_client.state,GP_FLAG_JUST_PAIRED);
+	gopro_client.just_paired = 1;
 }
 
 static void pairing_failed(struct bt_conn *conn, enum bt_security_err reason){

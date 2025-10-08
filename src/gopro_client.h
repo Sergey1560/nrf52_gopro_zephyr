@@ -81,6 +81,7 @@ enum gopro_wifi_handle_list_t{
 };
 
 enum gopro_flag_t{
+	GP_FLAG_JUST_PAIRED,
 	GP_FLAG_CMD_NOTIF_ENABLED,
 	GP_FLAG_SETTINGS_NOTIF_ENABLED,
 	GP_FLAG_QUERY_NOTIF_ENABLED,
@@ -128,6 +129,7 @@ struct bt_gopro_client_handles {
 struct bt_gopro_client {
 	struct bt_conn *conn;
 	atomic_t state;
+	uint32_t just_paired;
 	struct bt_gopro_client_handles handles[GP_CNTRL_HANDLE_END];
 	uint16_t wifihandles[GP_WIFI_HANDLE_END];
 	struct bt_gatt_subscribe_params notif_params[GP_CNTRL_HANDLE_END];

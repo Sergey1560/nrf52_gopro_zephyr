@@ -25,8 +25,6 @@
 LOG_MODULE_REGISTER(gopro_protobuf, LOG_LEVEL_DBG);
 
 static char *gopro_pb_provstate(open_gopro_EnumProvisioning state);
-
-
 static int gopro_pb_req_ap(uint8_t scan_id, uint8_t start_index, uint8_t count);
 
 static char *gopro_pb_result(open_gopro_EnumResultGeneric state);
@@ -38,10 +36,13 @@ static char *gopro_pb_cohn_state(open_gopro_EnumCOHNNetworkState state);
 static void gopro_connect_ap(struct ap_list_t *ap_list, int count);
 static uint32_t gopro_prepare_connect_new(uint8_t *data, uint32_t max_len);
 static uint32_t gopro_prepare_connect_saved(uint8_t *data, uint32_t max_len);
+static uint32_t gopro_prepare_finish_pairing(uint8_t *data, uint32_t max_len);
 
 static void gopro_send_big_data(uint8_t *data, uint32_t len, uint8_t type, uint8_t feature, uint8_t action);
 
 static void can_rx_ble_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
+
+const char pairing_str[]="nrf52";
 
 ZBUS_CHAN_DECLARE(gopro_cmd_chan);
 ZBUS_CHAN_DECLARE(can_tx_ble_chan);
@@ -420,6 +421,19 @@ static char *gopro_pb_cohn_state(open_gopro_EnumCOHNNetworkState state){
     }
 }
 
+
+int gopro_finish_pairing(void){
+
+    LOG_DBG("Send RequestPairingFinish cmd");
+
+    uint32_t len=gopro_prepare_finish_pairing(work_buff,WORK_BUFF_SIZE);
+    gopro_send_big_data(work_buff,len,GP_CNTRL_HANDLE_NET,0x03,0x01);
+
+    return 0;
+}
+
+
+
 static int gopro_pb_req_ap(uint8_t scan_id, uint8_t start_index, uint8_t count){
     int err;
     struct gopro_cmd_t gopro_cmd;
@@ -618,6 +632,21 @@ static uint32_t gopro_prepare_connect_saved(uint8_t *data, uint32_t max_len){
     pb_ostream_t stream = pb_ostream_from_buffer(data, max_len);
 
     err = pb_encode(&stream, open_gopro_RequestConnect_fields, &req);
+
+    return stream.bytes_written;
+}
+
+static uint32_t gopro_prepare_finish_pairing(uint8_t *data, uint32_t max_len){
+    int err;
+    open_gopro_RequestPairingFinish req = open_gopro_RequestPairingFinish_init_zero;
+
+    req.result = 1;
+    req.phoneName.funcs.encode = copy_str;
+    req.phoneName.arg = (char*)pairing_str;
+
+    pb_ostream_t stream = pb_ostream_from_buffer(data, max_len);
+
+    err = pb_encode(&stream, open_gopro_RequestPairingFinish_fields, &req);
 
     return stream.bytes_written;
 }

@@ -84,13 +84,14 @@ message RequestConnect {
  * Notification: @ref NotifProvisioningState sent periodically as provisioning state changes
  */
 message RequestConnectNew {
-    required string ssid          = 1; // AP SSID
-    required string password      = 2; // AP password
-    optional bytes  static_ip     = 3; // Static IP address
-    optional bytes  gateway       = 4; // Gateway IP address
-    optional bytes  subnet        = 5; // Subnet mask
-    optional bytes  dns_primary   = 6; // Primary DNS
-    optional bytes  dns_secondary = 7; // Secondary DNS
+    required string ssid              = 1;  // AP SSID
+    required string password          = 2;  // AP password
+    optional bytes  static_ip         = 3;  // Static IP address
+    optional bytes  gateway           = 4;  // Gateway IP address
+    optional bytes  subnet            = 5;  // Subnet mask
+    optional bytes  dns_primary       = 6;  // Primary DNS
+    optional bytes  dns_secondary     = 7;  // Secondary DNS
+    optional bool   bypass_eula_check = 10; // Allow network configuration without internet connectivity
 }
 
 /**
@@ -188,4 +189,24 @@ message ResponseGetApEntries {
 message ResponseStartScanning {
     required EnumResultGeneric result         = 1; // Generic pass/fail/error info
     required EnumScanning      scanning_state = 2; // Scanning state
+}
+
+/**
+ * Set Wireless 2.0 Pairing State
+ *
+ * This is often colloquially referred to as "sending pairing complete"
+ *
+ * Response: @ref ResponseGeneric
+ */
+message RequestPairingFinish {
+    required EnumPairingFinishState result    = 1; // Pairing state to set
+    /**
+     * This must be a non empty string but it does not actually affect anything.
+     */
+    required string                 phoneName = 2;
+}
+
+enum EnumPairingFinishState {
+    SUCCESS = 0;
+    FAILED  = 1;
 }
