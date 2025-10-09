@@ -133,6 +133,8 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 //#define BT_AUTO_CONNECT
 #ifndef BT_AUTO_CONNECT
 struct bt_conn_le_create_param *conn_params = BT_CONN_LE_CREATE_PARAM(BT_CONN_LE_OPT_CODED | BT_CONN_LE_OPT_NO_1M,BT_GAP_SCAN_FAST_INTERVAL,BT_GAP_SCAN_FAST_INTERVAL);
+
+static int ble_connect(void);
 #endif
 
 #define MY_STACK_SIZE 2048
@@ -329,6 +331,8 @@ static void discovery_finish_work_handler(struct k_work *work){
 			LOG_ERR("Chan pub failed: %d",err);
 		}
 	}
+
+	atomic_clear_bit(&gopro_client.state,GP_FLAG_FORCE_CONNECT);
 }
 
 static void discovery_service_not_found(struct bt_conn *conn, void *context){
@@ -388,8 +392,6 @@ static void scan_work_handler(struct k_work *item){
 	int err;
 	uint8_t filter_mode = 0;
 
-
-	//(void)scan_start();
 	err = bt_scan_stop();
 	if (err != 0 && err != -EALREADY) {
 		LOG_ERR("Stop LE scan failed (err %d)", err);
@@ -429,63 +431,6 @@ static void scan_work_handler(struct k_work *item){
 	led_idle_timer_start(1);
 	LOG_INF("Scan started");
 }
-
-// static void scan_init(void){
-// 	struct bt_scan_init_param scan_init = {
-// 		#ifdef BT_AUTO_CONNECT
-// 		.connect_if_match = true,
-// 		#else
-// 		.connect_if_match = false,
-// 		#endif
-// 	};
-
-// 	bt_scan_init(&scan_init);
-// 	bt_scan_cb_register(&scan_cb);
-
-// 	//k_work_init(&scan_work, scan_work_handler);
-// 	LOG_INF("Scan module initialized");
-// }
-
-// static int scan_start(void){
-// 	int err;
-// 	uint8_t filter_mode = 0;
-
-// 	err = bt_scan_stop();
-// 	if (err) {
-// 		LOG_ERR("Failed to stop scanning (err %d)", err);
-// 		return err;
-// 	}
-
-// 	bt_scan_filter_remove_all();
-// 	bt_foreach_bond(BT_ID_DEFAULT, try_add_address_filter, &filter_mode);
-
-// 	if((filter_mode & BT_SCAN_ADDR_FILTER) == 0){
-// 		LOG_DBG("Saved bonds not found, filter by UUID");
-// 		filter_mode = BT_SCAN_UUID_FILTER;	
-
-// 		err = bt_scan_filter_add(BT_SCAN_FILTER_TYPE_UUID, BT_UUID_GOPRO_SERVICE);
-// 		if (err) {
-// 			LOG_ERR("UUID filter cannot be added (err %d", err);
-// 			return err;
-// 		}
-// 	}
-
-// 	err = bt_scan_filter_enable(filter_mode, false);
-// 	if (err) {
-// 		LOG_ERR("Filters cannot be turned on (err %d)", err);
-// 		return err;
-// 	}
-
-// 	err = bt_scan_start(BT_SCAN_TYPE_SCAN_ACTIVE);
-// 	if (err) {
-// 		LOG_ERR("Scanning failed to start (err %d)", err);
-// 		return err;
-// 	}
-
-// 	led_idle_timer_start(1);
-// 	LOG_INF("Scan started");
-// 	return 0;
-// }
 
 static void try_add_address_filter(const struct bt_bond_info *info, void *user_data){
 	int err;
@@ -538,6 +483,7 @@ static void scan_filter_match(struct bt_scan_device_info *device_info,struct bt_
 
 static void scan_connecting_error(struct bt_scan_device_info *device_info){
 	LOG_WRN("Connecting failed");
+	atomic_clear_bit(&gopro_client.state,GP_FLAG_FORCE_CONNECT);
 }
 
 static void scan_connecting(struct bt_scan_device_info *device_info, struct bt_conn *conn){
@@ -545,8 +491,27 @@ static void scan_connecting(struct bt_scan_device_info *device_info, struct bt_c
 	default_conn = bt_conn_ref(conn);
 }
 
-static bool eir_found(struct bt_data *data, void *user_data){
+#ifndef BT_AUTO_CONNECT
+static int ble_connect(void){
 	int err;
+	err = bt_scan_stop();
+
+	if (err != 0 && err != -EALREADY) {
+		LOG_ERR("Stop LE scan failed (err %d)", err);
+		return err;
+	}
+
+	err = bt_conn_le_create(gopro_client_get_device_addr(), conn_params,BT_LE_CONN_PARAM_DEFAULT,&default_conn);
+
+	if(err != 0){
+		LOG_ERR("Conn failed, err: %d",err);
+	}
+
+	return err;
+}
+#endif
+
+static bool eir_found(struct bt_data *data, void *user_data){
 
 	if(data->type == 9){
 		gopro_client_setname((char *)data->data,data->data_len);
@@ -557,25 +522,21 @@ static bool eir_found(struct bt_data *data, void *user_data){
 		case 0:
 			gopro_led_mode_set(LED_NUM_BT,LED_MODE_BLINK_1S);
 			gopro_client_set_sate(GP_STATE_OFFLINE);
+			
+			if(atomic_test_bit(&gopro_client.state,GP_FLAG_FORCE_CONNECT)){
+				LOG_DBG("Camera OFFLINE, force connect");
+				ble_connect();	
+			}
+
 			break;
 		
 		case 1:
 			gopro_led_mode_set(LED_NUM_BT,LED_MODE_BLINK_300MS);
 			gopro_client_set_sate(GP_STATE_ONLINE);
 			LOG_DBG("Camera ON, connecting");
-			
+		
 			#ifndef BT_AUTO_CONNECT
-			err = bt_scan_stop();
-			if (err != 0 && err != -EALREADY) {
-				LOG_ERR("Stop LE scan failed (err %d)", err);
-				return err;
-			}
-
-			err = bt_conn_le_create(gopro_client_get_device_addr(), conn_params,BT_LE_CONN_PARAM_DEFAULT,&default_conn);
-
-			if(err != 0){
-				LOG_ERR("Conn failed, err: %d",err);
-			}
+			ble_connect();
 			#endif
 			
 			break;
@@ -586,17 +547,7 @@ static bool eir_found(struct bt_data *data, void *user_data){
 			LOG_DBG("Camera Pairing");
 
 			#ifndef BT_AUTO_CONNECT
-			err = bt_scan_stop();
-			if (err != 0 && err != -EALREADY) {
-				LOG_ERR("Stop LE scan failed (err %d)", err);
-				return err;
-			}
-
-			err = bt_conn_le_create(gopro_client_get_device_addr(), conn_params,BT_LE_CONN_PARAM_DEFAULT,&default_conn);
-
-			if(err != 0){
-				LOG_ERR("Conn failed, err: %d",err);
-			}
+			ble_connect();
 			#endif
 
 			break;
@@ -736,9 +687,24 @@ static void gopro_cmd_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
 		if (&gopro_cmd_chan == chan) {
 				//LOG_HEXDUMP_DBG(gopro_cmd.data, gopro_cmd.len,"CMD Data to send:");
 
-				if(gopro_cmd.cmd_type == 0xFF){
-					LOG_WRN("Remove bonding, start new pair");
-					bt_unpair(BT_ID_DEFAULT,BT_ADDR_LE_ANY);
+				if((gopro_cmd.cmd_type == 0xFF) && (gopro_cmd.len==1)){
+
+					switch (gopro_cmd.data[0])
+					{
+					case 0xDA:
+						LOG_WRN("Remove bonding, start new pair");
+						bt_unpair(BT_ID_DEFAULT,BT_ADDR_LE_ANY);
+						break;
+
+					case 0xAF:
+						LOG_INF("Force connect CMD");
+						atomic_set_bit(&gopro_client.state,GP_FLAG_FORCE_CONNECT);
+						break;
+						
+					default:
+						break;
+					}
+
 					continue;
 				}
 				

@@ -89,7 +89,8 @@ enum gopro_flag_t{
 	GP_FLAG_CMD_WRITE_PENDING = (1 << 5),
 	GP_FLAG_SETTINGS_WRITE_PENDING = (1 << 6),
 	GP_FLAG_QUERY_WRITE_PENDING = (1 << 7),
-	GP_FLAG_NET_WRITE_PENDING = (1 << 8)
+	GP_FLAG_NET_WRITE_PENDING = (1 << 8),
+	GP_FLAG_FORCE_CONNECT = (1 << 9)
 };
 
 struct gopro_state_t {

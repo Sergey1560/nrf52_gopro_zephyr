@@ -185,7 +185,7 @@ static void on_sent_data(struct bt_conn *conn, uint8_t err, struct bt_gatt_write
 		return;
 	}
 
-	atomic_clear_bit(&gopro_client.state, GP_FLAG_CMD_WRITE_PENDING);
+	//atomic_clear_bit(&gopro_client.state, GP_FLAG_CMD_WRITE_PENDING);
 	k_sem_give(&ble_write_sem);
 
 	if (err) {
@@ -194,16 +194,18 @@ static void on_sent_data(struct bt_conn *conn, uint8_t err, struct bt_gatt_write
 
 }
 
-int bt_gopro_client_send(struct bt_gopro_client *nus_c, struct gopro_cmd_t *gopro_cmd){
+int bt_gopro_client_send(struct bt_gopro_client *gp_client, struct gopro_cmd_t *gopro_cmd){
 	int err;
 	int flag_bit;
 	int handle_index;
 
-	if (!nus_c->conn) {
+	if (!gp_client->conn) {
+		LOG_ERR("No connection");
 		return -ENOTCONN;
 	}
 
 	if(gopro_cmd->cmd_type >= GP_CNTRL_HANDLE_END){
+		LOG_ERR("Unknown cmd type");
 		return -ENOTSUP;
 	}
 
@@ -230,21 +232,23 @@ int bt_gopro_client_send(struct bt_gopro_client *nus_c, struct gopro_cmd_t *gopr
 		break;
 	}
 
-	if (atomic_test_and_set_bit(&nus_c->state, flag_bit)) {
+	if (atomic_test_and_set_bit(&gp_client->state, flag_bit)) {
+		LOG_ERR("Flag already set");
 		return -EALREADY;
 	}
 
-	LOG_DBG("Send handle: 0x%0X %d bytes",nus_c->write_params[handle_index].handle, gopro_cmd->len);
+	LOG_DBG("Send handle: 0x%0X %d bytes",gp_client->write_params[handle_index].handle, gopro_cmd->len);
 
-	nus_c->write_params[handle_index].handle = nus_c->handles[handle_index].write;
-	nus_c->write_params[handle_index].func = on_sent_data;
-	nus_c->write_params[handle_index].offset = 0;
-	nus_c->write_params[handle_index].data = gopro_cmd->data;
-	nus_c->write_params[handle_index].length = gopro_cmd->len;
+	gp_client->write_params[handle_index].handle = gp_client->handles[handle_index].write;
+	gp_client->write_params[handle_index].func = on_sent_data;
+	gp_client->write_params[handle_index].offset = 0;
+	gp_client->write_params[handle_index].data = gopro_cmd->data;
+	gp_client->write_params[handle_index].length = gopro_cmd->len;
 
-	err = bt_gatt_write(nus_c->conn, &nus_c->write_params[handle_index]);
+	err = bt_gatt_write(gp_client->conn, &gp_client->write_params[handle_index]);
 	if (err) {
-		atomic_clear_bit(&nus_c->state, flag_bit);
+		atomic_clear_bit(&gp_client->state, flag_bit);
+		LOG_ERR("Gatt write failed: %d",err);
 	}
 
 	return err;
