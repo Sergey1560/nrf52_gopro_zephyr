@@ -1,0 +1,8 @@
+board:
+  name: rc_nrf5340
+  vendor: vend
+  socs:
+  - name: nrf5340
+    variants:
+    - name: ns
+      cpucluster: cpuapp

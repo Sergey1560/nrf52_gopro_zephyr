@@ -297,9 +297,6 @@ static void discovery_finish_work_handler(struct k_work *work){
 	gopro_led_mode_set(LED_NUM_BT,LED_MODE_ON);
 	gopro_client_set_sate(GP_STATE_CONNECTED);
 
-	// LOG_DBG("Dummy wait");
-	// k_sleep(K_MSEC(1000));
-
 	for(uint32_t i=0; i<GET_HW_POLL_COUNT; i++){
 		LOG_DBG("Poll HW Info");
 		
@@ -315,10 +312,10 @@ static void discovery_finish_work_handler(struct k_work *work){
 		}
 
 	}
-	if(gopro_client.just_paired == 1){
+
+	if(gopro_client.state & GP_FLAG_JUST_PAIRED){
 		LOG_DBG("Just paired, send RequestPairingFinish");
-		//atomic_clear_bit(&gopro_client.state,GP_FLAG_JUST_PAIRED);
-		gopro_client.just_paired = 0;
+		atomic_clear_bit(&gopro_client.state,GP_FLAG_JUST_PAIRED);
 		gopro_finish_pairing();
 	}
 	
@@ -377,8 +374,7 @@ static void pairing_complete(struct bt_conn *conn, bool bonded){
 	char addr[BT_ADDR_LE_STR_LEN];
 	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
 	LOG_INF("Pairing completed: %s, bonded: %d", addr, bonded);
-	//atomic_set_bit(&gopro_client.state,GP_FLAG_JUST_PAIRED);
-	gopro_client.just_paired = 1;
+	atomic_set_bit(&gopro_client.state,GP_FLAG_JUST_PAIRED);
 }
 
 static void pairing_failed(struct bt_conn *conn, enum bt_security_err reason){

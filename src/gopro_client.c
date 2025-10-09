@@ -632,7 +632,7 @@ int bt_gopro_net_handle_assign(struct bt_gatt_dm *dm,  struct bt_gopro_client *n
 	return 0;
 }
 
-int gopro_set_subscribe(struct bt_gopro_client *nus_c, enum gopro_control_handle_list_t gopro_handle){
+int gopro_set_subscribe(struct bt_gopro_client *gp_client, enum gopro_control_handle_list_t gopro_handle){
 	int flag_bit;
 	int err;
 
@@ -659,23 +659,23 @@ int gopro_set_subscribe(struct bt_gopro_client *nus_c, enum gopro_control_handle
 		break;
 	}
 
-	if (atomic_test_and_set_bit(&nus_c->state, flag_bit)) {
+	if (atomic_test_and_set_bit(&gp_client->state, flag_bit)) {
 		LOG_ERR("Subs error");
 		return -EALREADY;
 	}
 
-	nus_c->notif_params[gopro_handle].notify = on_notify_received;
-	nus_c->notif_params[gopro_handle].value = BT_GATT_CCC_NOTIFY;
-	nus_c->notif_params[gopro_handle].value_handle = nus_c->handles[gopro_handle].notify;
-	nus_c->notif_params[gopro_handle].ccc_handle = nus_c->handles[gopro_handle].notify_ccc;
+	gp_client->notif_params[gopro_handle].notify = on_notify_received;
+	gp_client->notif_params[gopro_handle].value = BT_GATT_CCC_NOTIFY;
+	gp_client->notif_params[gopro_handle].value_handle = gp_client->handles[gopro_handle].notify;
+	gp_client->notif_params[gopro_handle].ccc_handle = gp_client->handles[gopro_handle].notify_ccc;
 	
-	atomic_set_bit(nus_c->notif_params[gopro_handle].flags,BT_GATT_SUBSCRIBE_FLAG_VOLATILE);
+	atomic_set_bit(gp_client->notif_params[gopro_handle].flags,BT_GATT_SUBSCRIBE_FLAG_VOLATILE);
 
-	err = bt_gatt_subscribe(nus_c->conn, &nus_c->notif_params[gopro_handle]);
+	err = bt_gatt_subscribe(gp_client->conn, &gp_client->notif_params[gopro_handle]);
 
 	if (err) {
 		LOG_ERR("Subscribe failed (err %d)", err);
-		atomic_clear_bit(&nus_c->state, flag_bit);
+		atomic_clear_bit(&gp_client->state, flag_bit);
 	} else {
 		LOG_DBG("[SUBSCRIBED] for %d handle",gopro_handle);
 	}

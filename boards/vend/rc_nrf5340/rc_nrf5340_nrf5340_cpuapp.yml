@@ -1,0 +1,10 @@
+identifier: rc_nrf5340/nrf5340/cpuapp
+name: ble can
+vendor: vend
+type: mcu
+arch: arm
+ram: 448
+flash: 1024
+toolchain:
+  - zephyr
+supported: []

@@ -1,0 +1,18 @@
+/dts-v1/;
+#include <nordic/nrf5340_cpuappns_qkaa.dtsi>
+#include "rc_nrf5340-pinctrl.dtsi"
+
+/ {
+	model = "ble can (CPUAPP Non-Secure)";
+	compatible = "vend,rc-nrf5340-cpuapp-ns";
+
+	chosen {
+		zephyr,sram = &sram0_ns;
+		zephyr,flash = &flash0;
+		zephyr,code-partition = &slot0_ns_partition;
+		zephyr,bt-hci = &bt_hci_ipc0;
+	};
+};
+
+#include "rc_nrf5340-cpuapp_partitioning.dtsi"
+#include "rc_nrf5340-shared_sram.dtsi"

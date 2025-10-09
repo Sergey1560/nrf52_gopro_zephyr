@@ -1,0 +1,129 @@
+/dts-v1/;
+#include <nordic/nrf5340_cpuapp_qkaa.dtsi>
+#include "rc_nrf5340-pinctrl.dtsi"
+#include <zephyr/dt-bindings/led/led.h>
+
+/ {
+	model = "ble can (CPUAPP)";
+	compatible = "vend,rc-nrf5340-cpuapp";
+
+	chosen {
+		zephyr,sram = &sram0_image;
+		zephyr,flash = &flash0;
+		zephyr,code-partition = &slot0_partition;
+		zephyr,sram-secure-partition = &sram0_s;
+		zephyr,sram-non-secure-partition = &sram0_ns;
+		zephyr,bt-hci = &bt_hci_ipc0;
+		nordic,gps-uart = &uart0;
+		zephyr,canbus = &canbus;
+	};
+
+	aliases {
+		led0 = &led0;
+		led1 = &led1;
+		cannode = &canbus;
+		ledst = &led_strip;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+		led0: led_0 {
+			gpios = <&gpio0 30 GPIO_ACTIVE_HIGH>;
+			label = "Green LED";
+		};
+		led1: led_1 {
+			gpios = <&gpio0 31 GPIO_ACTIVE_HIGH>;
+			label = "Blue LED";
+		};
+	};
+
+	mcp_rst_switch: mcp_rst_switch {
+		//compatible = "power-switch";
+		compatible = "nordic,gpio-pins";
+		gpios = <&gpio1 9 GPIO_ACTIVE_HIGH>;
+	};
+
+
+	// led_strip: ws2812 {
+	// 	compatible = "worldsemi,ws2812-i2s";
+
+	// 	i2s-dev = < &i2s0 >;
+	// 	chain-length = <10>; /* arbitrary; change at will */
+	// 	color-mapping = <LED_COLOR_ID_GREEN
+	// 				LED_COLOR_ID_RED
+	// 				LED_COLOR_ID_BLUE>;
+	// 	out-active-low;
+	// 	reset-delay = <120>;
+	// };
+
+
+};
+
+
+&uart0 {
+	pinctrl-0 = <&uart0_default>;
+	pinctrl-1 = <&uart0_sleep>;
+	current-speed = <9600>;
+	pinctrl-names = "default", "sleep";
+	status = "okay";
+};
+
+&gpio1 {
+	status = "okay";
+	label = "GPIO_1";
+};
+
+&gpio0 {
+	status = "okay";
+	label = "GPIO_0";
+};
+
+&gpiote {
+    status = "okay";
+};
+
+&spi1{
+    compatible = "nordic,nrf-spim";
+    status = "okay";
+    cs-gpios = <&gpio1 7 GPIO_ACTIVE_LOW>;
+    pinctrl-0 = <&spi1_default>;
+    pinctrl-1 = <&spi1_sleep>;
+    pinctrl-names = "default","sleep";
+
+    canbus:mcp2515@0 {
+		compatible = "microchip,mcp2515";
+		spi-max-frequency = <1000000>;
+		int-gpios = <&gpio1 8 (GPIO_ACTIVE_LOW)>; 
+		status = "okay";
+		label = "CAN_1";
+		reg = <0x0>;
+		osc-freq = <8000000>;
+		can-transceiver {
+			min-bitrate = <125000>;
+			max-bitrate = <1000000>;
+		};
+
+	};
+};
+
+i2s_led: &i2s0 {
+	status = "okay";
+	pinctrl-0 = <&i2s0_default_alt>;
+	pinctrl-names = "default";
+
+	led_strip: ws2812@0 {
+		compatible = "worldsemi,ws2812-i2s";
+
+		reg = <0>;
+		chain-length = <2>; /* arbitrary; change at will */
+		color-mapping = <LED_COLOR_ID_GREEN
+					LED_COLOR_ID_RED
+					LED_COLOR_ID_BLUE>;
+		reset-delay = <500>;
+	};
+};
+
+
+
+#include "rc_nrf5340-cpuapp_partitioning.dtsi"
+#include "rc_nrf5340-shared_sram.dtsi"

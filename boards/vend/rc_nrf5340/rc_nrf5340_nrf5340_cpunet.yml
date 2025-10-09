@@ -1,0 +1,10 @@
+identifier: rc_nrf5340/nrf5340/cpunet
+name: ble can
+vendor: vend
+type: mcu
+arch: arm
+ram: 64
+flash: 256
+toolchain:
+  - zephyr
+supported: []
