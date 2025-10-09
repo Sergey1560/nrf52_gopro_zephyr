@@ -315,13 +315,11 @@ static void discovery_finish_work_handler(struct k_work *work){
 
 	}
 
-	if(gopro_client.state & GP_FLAG_JUST_PAIRED){
+	if(atomic_test_bit(&gopro_client.state,GP_FLAG_JUST_PAIRED)){
 		LOG_DBG("Just paired, send RequestPairingFinish");
 		atomic_clear_bit(&gopro_client.state,GP_FLAG_JUST_PAIRED);
 		gopro_finish_pairing();
 	}
-	
-
 
 	LOG_DBG("Push subscribe to TX chan");
 	for(uint32_t i=0; i < sizeof(startup_query_list)/sizeof(startup_query_list[0]); i++){
