@@ -413,11 +413,6 @@ static void gopro_parse_response_hw_info(struct gopro_packet_t *gopro_packet){
     uint8_t *pdata = &gopro_packet->data[2];
     uint32_t len = gopro_packet->packet_len;
     uint32_t index = 0;
-    // char model_name[20];
-    // char firmware_version[20];
-    // char serial_number[20];
-    // char ap_ssid[20];
-    // char ap_mac[20];
     
     //LOG_HEXDUMP_DBG(gopro_packet->data,gopro_packet->total_len,"Parse CMD INPUT");
 
@@ -632,39 +627,39 @@ static void gopro_packet_parse_net(struct gopro_packet_t *gopro_packet){
 
 
     if(gopro_packet->feature == 0xF1){ //Feature ID
-    switch (gopro_packet->action){ //Action ID
+        switch (gopro_packet->action){ //Action ID
 
-        case 0xE6:
-            LOG_DBG("Clear COHN Certificate response");
-            gopro_parse_response_generic(&gopro_packet->data[2],gopro_packet->packet_len);
-            break;
+            case 0xE6:
+                LOG_DBG("Clear COHN Certificate response");
+                gopro_parse_response_generic(&gopro_packet->data[2],gopro_packet->packet_len);
+                break;
 
-        case 0xE7:
-            LOG_DBG("Create COHN Certificate response");
-            gopro_parse_response_generic(&gopro_packet->data[2],gopro_packet->packet_len);
-            break;
+            case 0xE7:
+                LOG_DBG("Create COHN Certificate response");
+                gopro_parse_response_generic(&gopro_packet->data[2],gopro_packet->packet_len);
+                break;
 
-        default:
-            LOG_WRN("No PARSE for 0xF1:0x%0X",gopro_packet->action);
-            break;
-        
-    }
+            default:
+                LOG_WRN("No PARSE for 0xF1:0x%0X",gopro_packet->action);
+                break;
+            
+        }
 }
 
     if(gopro_packet->feature == 0x03){ //Feature ID
-    switch (gopro_packet->action){ //Action ID
+        switch (gopro_packet->action){ //Action ID
 
-        case 0x81:
-            LOG_DBG("Set Pairing State response");
-            gopro_parse_response_generic(&gopro_packet->data[2],gopro_packet->packet_len);
-            break;
+            case 0x81:
+                LOG_DBG("Set Pairing State response");
+                gopro_parse_response_generic(&gopro_packet->data[2],gopro_packet->packet_len);
+                break;
 
 
-        default:
-            LOG_WRN("No PARSE for 0x03:0x%0X",gopro_packet->action);
-            break;
-        
-    }
+            default:
+                LOG_WRN("No PARSE for 0x03:0x%0X",gopro_packet->action);
+                break;
+            
+        }
 }
 
 }
