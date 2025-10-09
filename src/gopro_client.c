@@ -196,7 +196,7 @@ static void on_sent_data(struct bt_conn *conn, uint8_t err, struct bt_gatt_write
 
 int bt_gopro_client_send(struct bt_gopro_client *gp_client, struct gopro_cmd_t *gopro_cmd){
 	int err;
-	int flag_bit;
+	uint32_t flag_bit;
 	int handle_index;
 
 	if (!gp_client->conn) {

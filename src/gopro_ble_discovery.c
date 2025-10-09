@@ -577,8 +577,6 @@ static void connected(struct bt_conn *conn, uint8_t conn_err){
 		if (default_conn == conn) {
 			bt_conn_unref(default_conn);
 			default_conn = NULL;
-
-			//(void)k_work_submit(&scan_work);
 			k_work_schedule(&scan_work, K_MSEC(50));
 		}
 
@@ -629,10 +627,6 @@ static void disconnected(struct bt_conn *conn, uint8_t reason){
 	bt_conn_unref(default_conn);
 	default_conn = NULL;
 
-	// LOG_DBG("Pause for 3 sec");
-	// k_sleep(K_MSEC(3000));
-
-	//(void)k_work_submit(&scan_work);
 	k_work_schedule(&scan_work, K_MSEC(3000));
 }
 
