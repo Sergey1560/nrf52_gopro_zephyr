@@ -645,6 +645,8 @@ static void security_changed(struct bt_conn *conn, bt_security_t level,enum bt_s
 				gopro_client_set_sate(GP_STATE_NEED_PAIRING);
 				gopro_led_mode_set(LED_NUM_REC,LED_MODE_BLINK_300MS);
 			}
+	
+			bt_conn_disconnect(conn,BT_HCI_ERR_AUTH_FAIL);
 		}
 }
 
