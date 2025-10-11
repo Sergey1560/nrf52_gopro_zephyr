@@ -2,6 +2,7 @@ syntax = "proto3";
 
 message GoproClient_bledata {
     int32 ble_addr = 1;
-    bytes data = 2;
+    int32 data_size = 2;
+    bytes data = 3;
 }
 
