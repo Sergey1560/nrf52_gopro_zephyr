@@ -546,8 +546,28 @@ static void gopro_packet_parse_cmd(struct gopro_packet_t *gopro_packet){
             LOG_ERR("Unknown status: %d",gopro_packet->action);
             break;
         }
-    
     }
+
+    if(gopro_packet->feature == 0x0F){
+        LOG_DBG("Get Set Local Time response");
+        switch (gopro_packet->action)
+        {
+        case 0:
+            LOG_DBG("Status OK");
+            break;
+        case 1:
+            LOG_ERR("Status Error");
+            break;
+        case 2:
+            LOG_ERR("Invalid Parameter");
+            break;
+        
+        default:
+            LOG_ERR("Unknown status: %d",gopro_packet->action);
+            break;
+        }
+    }
+
 }
 
 static void gopro_packet_parse_query(struct gopro_packet_t *gopro_packet){

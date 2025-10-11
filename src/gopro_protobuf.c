@@ -640,7 +640,7 @@ static uint32_t gopro_prepare_finish_pairing(uint8_t *data, uint32_t max_len){
     int err;
     open_gopro_RequestPairingFinish req = open_gopro_RequestPairingFinish_init_zero;
 
-    req.result = 1;
+    req.result = open_gopro_EnumPairingFinishState_SUCCESS;
     req.phoneName.funcs.encode = copy_str;
     req.phoneName.arg = (char*)pairing_str;
 
