@@ -17,13 +17,11 @@ struct ap_list_t{
     char ssid[MAX_SSID_LEN];
 };
 
+//size_t gopro_wifi_request_scan(uint8_t *data, uint32_t max_len);
 
-
-size_t gopro_wifi_request_scan(uint8_t *data, uint32_t max_len);
-
-int gopro_parse_net_reply(struct gopro_cmd_t *gopro_cmd);
-int gopro_build_packet_cohn_status(uint8_t *data, uint32_t len, int32_t packet_len);
-int gopro_build_packet_cohn_cert(uint8_t *data, uint32_t len, int32_t packet_len);
+// int gopro_parse_net_reply(struct gopro_cmd_t *gopro_cmd);
+// int gopro_build_packet_cohn_status(uint8_t *data, uint32_t len, int32_t packet_len);
+// int gopro_build_packet_cohn_cert(uint8_t *data, uint32_t len, int32_t packet_len);
 int gopro_finish_pairing(void);
 void gopro_parse_start_scaning(uint8_t *data, uint32_t len);
 int  gopro_parse_ap_entries(struct gopro_packet_t *gopro_packet);

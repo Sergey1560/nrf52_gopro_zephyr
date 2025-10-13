@@ -41,6 +41,8 @@ static uint32_t gopro_prepare_finish_pairing(uint8_t *data, uint32_t max_len);
 static void gopro_send_big_data(uint8_t *data, uint32_t len, uint8_t type, uint8_t feature, uint8_t action);
 
 static void can_rx_ble_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
+GoproClient_bledata bledata;
+extern struct k_sem can_isotp_rx_sem;
 
 const char pairing_str[]="nrf52";
 
@@ -651,13 +653,99 @@ static uint32_t gopro_prepare_finish_pairing(uint8_t *data, uint32_t max_len){
     return stream.bytes_written;
 }
 
+static void gopro_send_buf(uint8_t *data, uint32_t len, uint8_t type){
+    struct gopro_cmd_t gopro_cmd; 
+    int err;
+    uint8_t *data_ptr;
+
+    gopro_cmd.cmd_type = type; //Адрес куда слать
+
+    if(len <= 20){ //5bit packet
+        LOG_DBG("5bit packet Len: %d",len);
+        gopro_cmd.len = len;
+
+        for(uint32_t i=0; i<len; i++){
+            gopro_cmd.data[i] = data[i];
+        }
+        
+        LOG_HEXDUMP_DBG(gopro_cmd.data,gopro_cmd.len,"Packet:");
+        
+        err = zbus_chan_pub(&gopro_cmd_chan, &gopro_cmd, K_NO_WAIT);
+		if(err != 0){
+			if(err == -ENOMSG){
+				LOG_ERR("Invalid Gopro state, skip cmd");
+			}
+			LOG_ERR("CMD chan pub failed: %d",err);
+		}
+
+    }else if(len < 8191){ //13bit
+        LOG_DBG("13bit packet Len: %d",len);
+
+        gopro_cmd.len = 20;
+        gopro_cmd.data[0] = (((len) >> 8) & 0x1f) | (1 << 5);
+        gopro_cmd.data[1] = (uint8_t)((len) & 0xff);
+        
+        for(uint32_t i=0; i<18; i++){
+            gopro_cmd.data[2+i] = data[i];
+        }
+
+        //LOG_HEXDUMP_DBG(gopro_cmd.data,gopro_cmd.len,"Packet:");
+        err = zbus_chan_pub(&gopro_cmd_chan, &gopro_cmd, K_NO_WAIT);
+		if(err != 0){
+			if(err == -ENOMSG){
+				LOG_ERR("Invalid Gopro state, skip cmd");
+			}
+			LOG_ERR("CMD chan pub failed: %d",err);
+		}
+
+        len = len - 18;
+        data_ptr = data+18;
+        uint8_t packet_num = 0;
+
+        while(len > 0){
+            gopro_cmd.data[0] = 0x80|(packet_num & 0x0F);
+
+            uint8_t data_len = (len > 19) ? 19 : len;
+
+            LOG_DBG("Cont packet len: %d datalen: %d",len,data_len);
+
+            for(uint32_t i=0; i<data_len; i++){
+                gopro_cmd.data[1+i]=data_ptr[i];
+            }
+
+            gopro_cmd.len = data_len+1;
+
+            //LOG_HEXDUMP_DBG(gopro_cmd.data,gopro_cmd.len,"Packet:");
+            err = zbus_chan_pub(&gopro_cmd_chan, &gopro_cmd, K_NO_WAIT);
+            if(err != 0){
+                if(err == -ENOMSG){
+                    LOG_ERR("Invalid Gopro state, skip cmd");
+                }
+                LOG_ERR("CMD chan pub failed: %d",err);
+            }
+            
+            packet_num++;
+            
+            len = len - data_len;
+            data_ptr += data_len;
+        }
+
+
+    }else if(len < 65535){ //16bit
+        //To do...
+    }else{
+        LOG_ERR("Packet to big: %d",len);
+    }    
+}
+
+
 static void gopro_send_big_data(uint8_t *data, uint32_t len, uint8_t type, uint8_t feature, uint8_t action){
     int err;
     struct gopro_cmd_t gopro_cmd; 
     uint8_t *data_ptr;
 
-    gopro_cmd.cmd_type = type;
-
+    gopro_cmd.cmd_type = type; //Адрес куда слать
+    
     if(len <= (20 - 3)){ //5bit packet
         LOG_DBG("5bit packet Len: %d",len);
         gopro_cmd.len = len+3;
@@ -748,20 +836,24 @@ static void can_rx_ble_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
 		if (&can_rx_ble_chan == chan) {
 
             LOG_DBG("Unpack msg %d len",mem_pkt.len);
-        
-            GoproClient_bledata bledata = GoproClient_bledata_init_zero;
+            LOG_HEXDUMP_DBG(mem_pkt.data,mem_pkt.len,"Data:");
+
+            memset(&bledata,0,sizeof(GoproClient_bledata));
+
             pb_istream_t stream = pb_istream_from_buffer(mem_pkt.data, mem_pkt.len);
             int err = pb_decode(&stream, GoproClient_bledata_fields, &bledata);
 
             if(!err){
                 LOG_ERR("PB decode failed %s", PB_GET_ERROR(&stream));
-                LOG_HEXDUMP_DBG(mem_pkt.data,mem_pkt.len,"PB Data");
             }else{
-                LOG_DBG("Data for addr: %d",bledata.ble_addr);
+                LOG_DBG("Data for addr: %d size: %d",bledata.ble_addr, bledata.data.size);
+                LOG_HEXDUMP_DBG(bledata.data.bytes,bledata.data.size,"Decode:");
 
-                LOG_HEXDUMP_DBG(bledata.data.bytes,32,"Decode:");
+                if(bledata.ble_addr < GP_CNTRL_HANDLE_END){
+                    gopro_send_buf(bledata.data.bytes,bledata.data.size,bledata.ble_addr);
+                };
             };
-
+            LOG_DBG("Free semaphore");
             k_sem_give(&can_isotp_rx_sem);
         }
 	}

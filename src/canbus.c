@@ -37,7 +37,8 @@ static void can_tx_work_handler(struct k_work *work);
 static void isotp_rx_thread(void *arg1, void *arg2, void *arg3);
 static void isotp_tx_thread(void *arg1, void *arg2, void *arg3);
 
-K_SEM_DEFINE(can_isotp_rx_sem, 1, 1);
+//K_SEM_DEFINE(can_isotp_rx_sem, 1, 1);
+struct k_sem can_isotp_rx_sem;
 K_SEM_DEFINE(can_tx_sem, 0, 1);
 
 ZBUS_CHAN_DEFINE(can_tx_chan,                           	/* Name */
@@ -236,6 +237,8 @@ static void __attribute__((unused)) mcp2515_get_timing(struct can_timing *timing
 int canbus_init(void){
     int err;
 	k_tid_t tid;
+
+	k_sem_init(&can_isotp_rx_sem, 1, 1);
 
 	if (!gpio_is_ready_dt(&mcp_rst_switch)) {
 		LOG_ERR("The MCP2515 RST pin GPIO port is not ready.");

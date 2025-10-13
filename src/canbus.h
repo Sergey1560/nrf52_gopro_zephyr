@@ -36,8 +36,6 @@
 #define ISOTP_TX_THREAD_PRIORITY 	9
 #define ISOTP_TX_THREAD_STACK_SIZE	2048
 
-extern struct k_sem can_isotp_rx_sem;
-
 int canbus_init(void);
 int can_hb(void);
 
