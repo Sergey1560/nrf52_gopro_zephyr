@@ -19,7 +19,7 @@
 
 
 #ifdef LED_PRESENT
-LOG_MODULE_REGISTER(gopro_leds, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(gopro_leds, CONFIG_LEDS_LOG_LVL);
 
 static struct gpio_dt_spec led_rec = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led0), gpios,{0});
 static struct gpio_dt_spec led_bt = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led1), gpios,{0});

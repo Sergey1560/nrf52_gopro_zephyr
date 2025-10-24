@@ -8,7 +8,9 @@
 #include <zephyr/drivers/hwinfo.h>
 //#include <hw_id.h>
 
-LOG_MODULE_REGISTER(gopro_discovery, LOG_LEVEL_DBG);
+#define  LOG_LVL	CONFIG_BLE_LOG_LVL
+
+LOG_MODULE_REGISTER(gopro_discovery, LOG_LVL);
 
 extern struct k_sem ble_write_sem;
 extern struct k_sem ble_read_sem;
@@ -166,7 +168,7 @@ int gopro_bt_start(void){
 	uint8_t hw_len = hwinfo_get_device_id(hw_id,10);	
 
 	if(hw_len > 0){
-		LOG_DBG("HW ID: 0x%0X:0x%0X:0x%0X:0x%0X:0x%0X:0x%0X:0x%0X:0x%0X ",hw_id[0],hw_id[1],hw_id[2],hw_id[3],hw_id[4],hw_id[5],hw_id[6],hw_id[7]);
+		LOG_INF("HW ID: 0x%0X:0x%0X:0x%0X:0x%0X:0x%0X:0x%0X:0x%0X:0x%0X ",hw_id[0],hw_id[1],hw_id[2],hw_id[3],hw_id[4],hw_id[5],hw_id[6],hw_id[7]);
 
 		uint8_t start_index = 0;
 		
@@ -204,7 +206,7 @@ int gopro_bt_start(void){
 		LOG_ERR("failed to create profile (err %d)", profile);
 		return profile;
 	}
-	LOG_INF("default profile %d created", profile);
+	LOG_DBG("default profile %d created", profile);
 	
 	err = bt_enable(NULL);
 	if (err) {
@@ -222,7 +224,7 @@ int gopro_bt_start(void){
 
 	bt_id_get(addrs, &count);
 	if(count > 0){
-		LOG_DBG("Found %u saved ID",count);
+		LOG_INF("Found %u saved ID",count);
 		bt_addr_le_t *p_addrs = addrs;
 		
 		while(count--){
@@ -232,14 +234,14 @@ int gopro_bt_start(void){
 		}
 		
 	}else{
-		LOG_DBG("No saved ID found");
+		LOG_INF("No saved ID found");
 	}
 
 	bt_scan_init(&scan_init);
 	bt_scan_cb_register(&scan_cb);
 
 	//k_work_init(&scan_work, scan_work_handler);
-	LOG_INF("Scan module initialized");
+	LOG_DBG("Scan module initialized");
 
 	k_work_schedule(&scan_work, K_MSEC(50));
 	
@@ -272,7 +274,10 @@ static void discovery_complete(struct bt_gatt_dm *dm, void *context){
 
 	LOG_INF("Service discovery complete");
 
+	#if LOG_LVL == LOG_LEVEL_DBG
 	bt_gatt_dm_data_print(dm);
+	#endif
+
 	handles_assign(dm, nus);
 	bt_gatt_dm_data_release(dm);
 	k_work_submit(&discovery_start_work);
@@ -395,10 +400,8 @@ static void scan_work_handler(struct k_work *item){
 		LOG_ERR("Stop LE scan failed (err %d)", err);
 		return;
 	}else{
-		LOG_DBG("Scan stopped");
+		LOG_INF("Scan stopped");
 	}
-
-	LOG_DBG("Scan start");
 
 	bt_scan_filter_remove_all();
 	bt_foreach_bond(BT_ID_DEFAULT, try_add_address_filter, &filter_mode);
@@ -468,7 +471,7 @@ static void scan_filter_match(struct bt_scan_device_info *device_info,struct bt_
 
 	if(bt_addr_le_cmp(&last_addr,device_info->recv_info->addr)){
 		bt_addr_le_to_str(device_info->recv_info->addr, addr, sizeof(addr));
-		LOG_DBG("Filters matched. Address: %s connectable: %d", addr, connectable);
+		LOG_INF("Filters matched. Address: %s connectable: %d", addr, connectable);
 		bt_addr_le_copy(&last_addr,device_info->recv_info->addr);
 	}
 
@@ -652,7 +655,7 @@ static void security_changed(struct bt_conn *conn, bt_security_t level,enum bt_s
 
 static void exchange_func(struct bt_conn *conn, uint8_t err, struct bt_gatt_exchange_params *params){
 	if (!err) {
-		LOG_INF("MTU exchange done");
+		LOG_DBG("MTU exchange done");
 	} else {
 		LOG_WRN("MTU exchange failed (err %" PRIu8 ")", err);
 	}

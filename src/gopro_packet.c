@@ -1,12 +1,15 @@
 #include "gopro_packet.h"
 #include <zephyr/logging/log.h>
+#include <zephyr/zbus/zbus.h>
 
 #include "gopro_protobuf.h"
 #include "gopro_client.h"
 #include "leds.h"
 
 K_SEM_DEFINE(get_hw_sem, 0, 1);
-LOG_MODULE_REGISTER(gopro_packet, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(gopro_packet, CONFIG_PARSE_LOG_LVL);
+
+ZBUS_CHAN_DECLARE(can_txdata_chan);
 
 struct gopro_packet_t gopro_packet;
 
@@ -191,17 +194,17 @@ static int gopro_parse_query_status_reply(const void *data, uint16_t length){
 		for(uint32_t i=0; i<status_len; i++){
 			gopro_state.video_count = (gopro_state.video_count*256) + pdata[4+i];
 		}	
-		LOG_DBG("Video count: %d",gopro_state.video_count);
+		LOG_INF("Video count: %d",gopro_state.video_count);
 		break;
 
 	case GOPRO_STATUS_ID_BAT_PERCENT:
 		gopro_state.battery = pdata[4];
-		LOG_DBG("Battery: %d",gopro_state.battery);
+		LOG_INF("Battery: %d",gopro_state.battery);
 		break;
 
 	case GOPRO_STATUS_ID_ENCODING:
 		gopro_state.record = pdata[4];
-		LOG_DBG("Encoding: %d",gopro_state.record);
+		LOG_INF("Encoding: %d",gopro_state.record);
 
 		if(gopro_state.record > 0){
 			gopro_led_mode_set(LED_NUM_REC,LED_MODE_ON);
@@ -216,7 +219,7 @@ static int gopro_parse_query_status_reply(const void *data, uint16_t length){
 		break;
 	}
 
-	gopro_client_update_state();
+	//gopro_client_update_state();
 
 	return 0;
 }
@@ -257,7 +260,7 @@ static int gopro_parse_query_status_notify(const void *data, uint16_t length){
 		case GOPRO_STATUS_ID_ENCODING:
 			gopro_state.record = *pdata++;
 			total_data_len--;
-			LOG_DBG("Encoding: %d",gopro_state.record);
+			LOG_INF("Encoding: %d",gopro_state.record);
 
 			if(gopro_state.record > 0){
 				gopro_led_mode_set(LED_NUM_REC,LED_MODE_ON);
@@ -273,13 +276,13 @@ static int gopro_parse_query_status_notify(const void *data, uint16_t length){
 				total_data_len--;
 				gopro_state.video_count = (gopro_state.video_count*256) + *pdata++;
 			}	
-			LOG_DBG("Video Count: %d",gopro_state.video_count);
+			LOG_INF("Video Count: %d",gopro_state.video_count);
 			break;
 
 		case GOPRO_STATUS_ID_BAT_PERCENT:
 			gopro_state.battery = *pdata++;
 			total_data_len--;
-			LOG_DBG("Battery: %d",gopro_state.battery);
+			LOG_INF("Battery: %d",gopro_state.battery);
 			break;
 	
 
@@ -291,7 +294,7 @@ static int gopro_parse_query_status_notify(const void *data, uint16_t length){
 		}
 	}
 
-	gopro_client_update_state();
+	//gopro_client_update_state();
 
 	return 0;
 }
@@ -326,7 +329,7 @@ void gopro_packet_build(struct gopro_cmd_t *gopro_cmd){
         gopro_packet.saved_len += gopro_packet.data_len;
 
         if(gopro_packet.saved_len == gopro_packet.total_len){
-            LOG_DBG("Full multi-packet saved");
+            LOG_INF("Full multi-packet saved");
             //LOG_HEXDUMP_DBG(gopro_packet.data,gopro_packet.total_len,"Total packet");
             gopro_packet_parse(&gopro_packet);
             k_free(gopro_packet.data);
@@ -334,6 +337,15 @@ void gopro_packet_build(struct gopro_cmd_t *gopro_cmd){
         }
  
     }else{
+        if(packet_type == gopro_packet_5bit){ //Short reply send to can
+            int err = zbus_chan_pub(&can_txdata_chan, gopro_cmd, K_NO_WAIT);
+            if(err != 0){
+                if(err == -ENOMSG){
+                    LOG_ERR("Msg validate failed");
+                }
+                LOG_ERR("Zbus pub failed: %d",err);
+            }
+        }
 
         if(gopro_packet.data != NULL){
             LOG_WRN("Mem not free");
@@ -370,7 +382,7 @@ void gopro_packet_build(struct gopro_cmd_t *gopro_cmd){
         gopro_packet.saved_len = gopro_packet.pkt_len;
 
         if(gopro_packet.saved_len == gopro_packet.total_len){
-            LOG_DBG("Full single-packet saved");
+            LOG_INF("Full single-packet saved");
             //LOG_HEXDUMP_DBG(gopro_packet.data,gopro_packet.total_len,"Total packet");
             gopro_packet_parse(&gopro_packet);
             k_free(gopro_packet.data);
@@ -429,7 +441,7 @@ static void gopro_parse_response_hw_info(struct gopro_packet_t *gopro_packet){
         model_number |= (uint32_t)(pdata[index] << (i-1)*8);
         index++;
     }
-    LOG_DBG("Model number: 0x%0X",model_number);
+    LOG_INF("Model number: 0x%0X",model_number);
 
     uint8_t model_name_length = pdata[index];
     index++;
@@ -441,7 +453,7 @@ static void gopro_parse_response_hw_info(struct gopro_packet_t *gopro_packet){
     memcpy(gopro_state.model_name,&pdata[index],model_name_length);
     gopro_state.model_name[model_name_length]=0;
     index += model_name_length;
-    LOG_DBG("Model name: %s",gopro_state.model_name);
+    LOG_INF("Model name: %s",gopro_state.model_name);
 
     uint8_t deprecated_length = pdata[index];
     index++;
@@ -457,7 +469,7 @@ static void gopro_parse_response_hw_info(struct gopro_packet_t *gopro_packet){
     memcpy(gopro_state.firmware_version,&pdata[index],firmware_version_length);
     gopro_state.firmware_version[firmware_version_length]=0;
     index += firmware_version_length;
-    LOG_DBG("Firmware: %s",gopro_state.firmware_version);
+    LOG_INF("Firmware: %s",gopro_state.firmware_version);
 
     //Serial Number
     uint8_t serial_number_length = pdata[index];
@@ -469,7 +481,7 @@ static void gopro_parse_response_hw_info(struct gopro_packet_t *gopro_packet){
     memcpy(gopro_state.serial_number,&pdata[index],serial_number_length);
     gopro_state.serial_number[serial_number_length]=0;
     index += serial_number_length;
-    LOG_DBG("Serial: %s",gopro_state.serial_number);
+    LOG_INF("Serial: %s",gopro_state.serial_number);
 
     //AP SSID
     uint8_t ap_ssid_length = pdata[index];
@@ -481,7 +493,7 @@ static void gopro_parse_response_hw_info(struct gopro_packet_t *gopro_packet){
     memcpy(gopro_state.wifi_ssid,&pdata[index],ap_ssid_length);
     gopro_state.wifi_ssid[ap_ssid_length]=0;
     index += ap_ssid_length;
-    LOG_DBG("AP SSID: %s",gopro_state.wifi_ssid);
+    LOG_INF("AP SSID: %s",gopro_state.wifi_ssid);
 
     //AP MAC
     uint8_t ap_mac_address_length = pdata[index];
@@ -493,7 +505,7 @@ static void gopro_parse_response_hw_info(struct gopro_packet_t *gopro_packet){
     memcpy(gopro_state.ap_mac,&pdata[index],ap_mac_address_length);
     gopro_state.ap_mac[ap_mac_address_length]=0;
     index += ap_mac_address_length;
-    LOG_DBG("AP MAC: %s",gopro_state.ap_mac);
+    LOG_INF("AP MAC: %s",gopro_state.ap_mac);
 
     index += 11; //reserved data not part of the payload
     if(index == len){
@@ -516,7 +528,7 @@ static void gopro_packet_parse_cmd(struct gopro_packet_t *gopro_packet){
             case 0xE9:
             case 0xEB:
             case 0xF9:
-                LOG_DBG("Generic response");
+                LOG_INF("Generic response");
                 gopro_parse_response_generic(&gopro_packet->data[2],gopro_packet->packet_len);
                 break;
 
@@ -527,11 +539,11 @@ static void gopro_packet_parse_cmd(struct gopro_packet_t *gopro_packet){
     }
 
     if(gopro_packet->feature == 0x3C){
-        LOG_DBG("Get HW status response");
+        LOG_INF("Get HW status response");
         switch (gopro_packet->action)
         {
         case 0:
-            LOG_DBG("Status OK");
+            LOG_INF("Status OK");
             gopro_parse_response_hw_info(gopro_packet);
             k_sem_give(&get_hw_sem);
             break;

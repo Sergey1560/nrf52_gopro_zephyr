@@ -22,7 +22,7 @@
 #include "canbus.h"
 
 #include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(gopro_protobuf, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(gopro_protobuf, CONFIG_PARSE_LOG_LVL);
 
 static char *gopro_pb_provstate(open_gopro_EnumProvisioning state);
 static int gopro_pb_req_ap(uint8_t scan_id, uint8_t start_index, uint8_t count);
@@ -176,15 +176,15 @@ void gopro_parse_response_cohn_status(uint8_t *data, uint32_t len){
         LOG_HEXDUMP_DBG(input_data,input_len,"Data:");
     }else{
         if(scan_resp.has_state){
-            LOG_DBG("State: %s",gopro_pb_cohn_state(scan_resp.state));    
+            LOG_INF("State: %s",gopro_pb_cohn_state(scan_resp.state));    
         }
 
         if(scan_resp.has_status){
-            LOG_DBG("Status: %s State: %s",gopro_pb_cohn_status(scan_resp.status),gopro_pb_cohn_state(scan_resp.state));
+            LOG_INF("Status: %s",gopro_pb_cohn_status(scan_resp.status));
         }
 
         if(scan_resp.has_enabled){
-            LOG_DBG("COHN Enabled: %d",scan_resp.enabled);
+            LOG_INF("COHN Enabled: %d",scan_resp.enabled);
         }
     }
 
@@ -333,7 +333,7 @@ void gopro_parse_start_scaning(uint8_t *data, uint32_t len){
         LOG_ERR("PB decode failed %s", PB_GET_ERROR(&stream));
         LOG_HEXDUMP_DBG(input_data,input_len,"Data:");
     }else{
-        LOG_DBG("Scan_id: %d  Totlal: %d  State: %s",scan_resp.scan_id, scan_resp.total_entries, gopro_pb_state(scan_resp.scanning_state));
+        LOG_INF("Scan_id: %d  Totlal: %d  State: %s",scan_resp.scan_id, scan_resp.total_entries, gopro_pb_state(scan_resp.scanning_state));
     }
 
     if(scan_resp.scanning_state == open_gopro_EnumScanning_SCANNING_SUCCESS){
@@ -571,19 +571,19 @@ static void __attribute__((unused)) gopro_connect_ap(struct ap_list_t *ap_list, 
 
         if( strncmp(ap_list[i].ssid,my_wifi_ssid,strlen(my_wifi_ssid)) == 0 ){
             if( (ap_list[i].flags & open_gopro_EnumScanEntryFlags_SCAN_FLAG_ASSOCIATED) > 0){
-                LOG_DBG("Already connected to SSID %s",my_wifi_ssid);
+                LOG_WRN("Already connected to SSID %s",my_wifi_ssid);
                 return;
             }
 
             if( (ap_list[i].flags & open_gopro_EnumScanEntryFlags_SCAN_FLAG_CONFIGURED) > 0){
-                LOG_DBG("Connect to saved SSID %s",my_wifi_ssid);
+                LOG_INF("Connect to saved SSID %s",my_wifi_ssid);
                 int len = gopro_prepare_connect_saved(work_buff,WORK_BUFF_SIZE);
                 // LOG_DBG("Req size: %d",len);
                 // LOG_HEXDUMP_DBG(work_buff,len,"PB Request:");
                 gopro_send_big_data(work_buff,len,GP_CNTRL_HANDLE_NET,0x02,0x04);
 
             }else{
-                LOG_DBG("Connect to new SSID %s",my_wifi_ssid);
+                LOG_INF("Connect to new SSID %s",my_wifi_ssid);
                 int len = gopro_prepare_connect_new(work_buff,WORK_BUFF_SIZE);
                 // LOG_DBG("Req size: %d",len);
                 // LOG_HEXDUMP_DBG(work_buff,len,"PB Request:");

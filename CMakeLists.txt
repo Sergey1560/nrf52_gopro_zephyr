@@ -30,6 +30,7 @@ target_sources(app PRIVATE
   src/gopro_protobuf.c
   src/gopro_packet.c
   src/canbus.c
+  src/canbus_isotp.c
   src/buttons.c
   src/leds.c
 )

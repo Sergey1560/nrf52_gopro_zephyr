@@ -14,3 +14,82 @@ config ZMS
 
 config NVS
 	default y if !(SOC_FLASH_NRF_RRAM || SOC_FLASH_NRF_MRAM)
+
+
+
+#define LOG_LEVEL_NONE 0
+#define LOG_LEVEL_ERR  1
+#define LOG_LEVEL_WRN  2
+#define LOG_LEVEL_INF  3
+#define LOG_LEVEL_DBG  4
+
+config CAN_LOG_LVL
+	int
+	default 3
+
+config BLE_LOG_LVL
+	int
+	default 3
+
+config PARSE_LOG_LVL
+	int
+	default 3
+
+config LEDS_LOG_LVL
+	int
+	default 3
+
+config ENABLE_SHELL
+	bool "Enable SHELL support"
+	default n
+
+if ENABLE_SHELL
+    config SHELL
+        bool 
+        default y
+
+	config SHELL_BACKEND_RTT
+		bool 
+		default y
+
+	config LOG_BACKEND_RTT_BUFFER
+		int
+		default 1
+
+	config SHELL_LOG_BACKEND
+		bool 
+		default y
+
+	config SHELL_HELP
+		bool 
+		default y
+
+	config SHELL_CMDS
+		bool 
+		default y
+
+	config SHELL_HISTORY
+		bool 
+		default y
+
+	config CAN_SHELL
+		bool 
+		default y
+
+	config BT_SHELL
+		bool 
+		default y
+
+	config GPIO_SHELL
+		bool 
+		default y
+
+	config LED_SHELL
+		bool 
+		default y
+
+	config STATS_SHELL
+		bool 
+		default y
+
+endif

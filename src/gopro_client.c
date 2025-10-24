@@ -15,15 +15,7 @@
 #include <leds.h>
 
 #include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(gopro_c, LOG_LEVEL_DBG);
-
-ZBUS_CHAN_DEFINE(gopro_state_chan,                     	/* Name */
-	struct gopro_state_t,                   		      	/* Message type */
-	NULL,                                       	/* Validator */
-	NULL,                                       	/* User Data */
-	ZBUS_OBSERVERS_EMPTY,  	        		/* observers */
-	ZBUS_MSG_INIT(0)       						/* Initial value */
-);
+LOG_MODULE_REGISTER(gopro_c, CONFIG_BLE_LOG_LVL);
 
 K_SEM_DEFINE(ble_write_sem, 0, 1);
 
@@ -62,7 +54,7 @@ int gopro_client_set_sate(enum gopro_state_list_t  state){
 	if(gopro_state.state != state){
 		gopro_state.state = state;
 		LOG_DBG("Set GoPro state: %d", gopro_state.state);
-		gopro_client_update_state();
+		//gopro_client_update_state();
 	}
 
 	return 0;
@@ -93,14 +85,14 @@ int gopro_client_setname(char *name, uint8_t len){
 		memset(gopro_state.name,0,GOPRO_NAME_LEN);
 	}
 	
-	gopro_client_update_state();
+	//gopro_client_update_state();
 
 	return 0;
 }
 
-void gopro_client_update_state(void){
-	zbus_chan_pub(&gopro_state_chan, &gopro_state, K_NO_WAIT);
-};
+// void gopro_client_update_state(void){
+// 	//zbus_chan_pub(&gopro_state_chan, &gopro_state, K_NO_WAIT);
+// };
 
 static uint8_t on_notify_received(struct bt_conn *conn, struct bt_gatt_subscribe_params *params, const void *data, uint16_t length)
 {
@@ -276,7 +268,7 @@ static uint8_t on_read_ssid(struct bt_conn *conn, uint8_t err, struct bt_gatt_re
 		memcpy(gopro_state.wifi_ssid,data,str_size);
 		gopro_state.wifi_ssid[str_size]=0;
 		
-		LOG_DBG("Get AP SSID %s",gopro_state.wifi_ssid);
+		LOG_INF("Get AP SSID %s",gopro_state.wifi_ssid);
 	}else{
 		LOG_HEXDUMP_DBG(data,length,"Read CHAR data:");
 	}
@@ -306,7 +298,7 @@ static uint8_t on_read_pass(struct bt_conn *conn, uint8_t err, struct bt_gatt_re
 		memcpy(gopro_state.wifi_pass,data,str_size);
 		gopro_state.wifi_pass[str_size]=0;
 		
-		LOG_DBG("Get AP PASS %s",gopro_state.wifi_pass);
+		LOG_INF("Get AP PASS %s",gopro_state.wifi_pass);
 	}else{
 		LOG_HEXDUMP_DBG(data,length,"Read CHAR data:");
 	}
