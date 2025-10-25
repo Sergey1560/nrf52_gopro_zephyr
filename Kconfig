@@ -39,57 +39,56 @@ config LEDS_LOG_LVL
 	int
 	default 3
 
-config ENABLE_SHELL
-	bool "Enable SHELL support"
-	default n
+# config ENABLE_SHELL
+# 	bool "Enable SHELL support"
+# 	default n
 
-if ENABLE_SHELL
-    config SHELL
-        bool 
-        default y
+# if ENABLE_SHELL
+#     config SHELL
+#         bool 
+#         default y
 
-	config SHELL_BACKEND_RTT
-		bool 
-		default y
+# 	config SHELL_BACKEND_RTT
+# 		bool 
+# 		default y
 
-	config LOG_BACKEND_RTT_BUFFER
-		int
-		default 1
+# 	config LOG_BACKEND_RTT_BUFFER
+# 		int
+# 		default 1
 
-	config SHELL_LOG_BACKEND
-		bool 
-		default y
+# 	config SHELL_LOG_BACKEND
+# 		bool 
+# 		default y
 
-	config SHELL_HELP
-		bool 
-		default y
+# 	config SHELL_HELP
+# 		bool 
+# 		default y
 
-	config SHELL_CMDS
-		bool 
-		default y
+# 	config SHELL_CMDS
+# 		bool 
+# 		default y
 
-	config SHELL_HISTORY
-		bool 
-		default y
+# 	config SHELL_HISTORY
+# 		bool 
+# 		default y
 
-	config CAN_SHELL
-		bool 
-		default y
+# 	config CAN_SHELL
+# 		bool 
+# 		default y
 
-	config BT_SHELL
-		bool 
-		default y
+# 	config BT_SHELL
+# 		bool 
+# 		default y
 
-	config GPIO_SHELL
-		bool 
-		default y
+# 	config GPIO_SHELL
+# 		bool 
+# 		default y
 
-	config LED_SHELL
-		bool 
-		default y
+# 	config LED_SHELL
+# 		bool 
+# 		default y
 
-	config STATS_SHELL
-		bool 
-		default y
-
-endif
+# 	config STATS_SHELL
+# 		bool 
+# 		default y
+#endif

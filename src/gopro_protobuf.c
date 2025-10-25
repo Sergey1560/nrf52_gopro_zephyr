@@ -772,7 +772,7 @@ static void gopro_send_big_data(uint8_t *data, uint32_t len, uint8_t type, uint8
         gopro_cmd.data[2] = feature;
         gopro_cmd.data[3] = action;
         
-        for(uint32_t i=0; i<17; i++){
+        for(uint32_t i=0; i<16; i++){
             gopro_cmd.data[4+i] = data[i];
         }
 
