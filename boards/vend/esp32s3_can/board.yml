@@ -1,0 +1,6 @@
+board:
+  name: esp32s3_can
+  full_name: ESP32-S3-CAN
+  vendor: espressif
+  socs:
+  - name: esp32s3
