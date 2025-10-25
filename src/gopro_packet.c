@@ -9,7 +9,9 @@
 K_SEM_DEFINE(get_hw_sem, 0, 1);
 LOG_MODULE_REGISTER(gopro_packet, CONFIG_PARSE_LOG_LVL);
 
+#ifdef CONFIG_HAS_CANBUS
 ZBUS_CHAN_DECLARE(can_txdata_chan);
+#endif
 
 struct gopro_packet_t gopro_packet;
 
@@ -337,6 +339,7 @@ void gopro_packet_build(struct gopro_cmd_t *gopro_cmd){
         }
  
     }else{
+        #ifdef CONFIG_HAS_CANBUS
         if(packet_type == gopro_packet_5bit){ //Short reply send to can
             int err = zbus_chan_pub(&can_txdata_chan, gopro_cmd, K_NO_WAIT);
             if(err != 0){
@@ -346,7 +349,7 @@ void gopro_packet_build(struct gopro_cmd_t *gopro_cmd){
                 LOG_ERR("Zbus pub failed: %d",err);
             }
         }
-
+        #endif
         if(gopro_packet.data != NULL){
             LOG_WRN("Mem not free");
             k_free(gopro_packet.data);

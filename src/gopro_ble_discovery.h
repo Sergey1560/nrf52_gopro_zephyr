@@ -10,8 +10,13 @@
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/bluetooth/gatt.h>
+#ifdef CONFIG_SOC_SERIES_NRF52X
 #include <bluetooth/gatt_dm.h>
 #include <bluetooth/scan.h>
+#else
+#include "nrf_hal/gatt_dm.h"
+#include "nrf_hal/scan.h"
+#endif
 
 #include "gopro_client.h"
 

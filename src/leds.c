@@ -225,8 +225,14 @@ void led_idle_timer_start(uint8_t enable){
 int gopro_leds_init(void){
     return 0;
 }
-int gopro_led_mode_set(enum led_mode_t mode, enum led_number_t led_num){
+int gopro_led_mode_set(enum led_number_t led_num, enum led_mode_t mode){
 	return 0;
 }
+
+void led_idle_timer_start(uint8_t enable){
+
+	return;	
+}
+
 #endif
 

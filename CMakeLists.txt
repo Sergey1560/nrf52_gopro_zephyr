@@ -34,6 +34,8 @@ target_sources(app PRIVATE
   src/buttons.c
   src/leds.c
   src/shell.c
+  src/nrf_hal/gatt_dm.c
+  src/nrf_hal/scan.c
 )
 target_include_directories(app PRIVATE
 src

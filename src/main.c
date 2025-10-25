@@ -15,6 +15,7 @@ LOG_MODULE_REGISTER(gopro_main, LOG_LEVEL_INF);
 // System heap
 extern struct sys_heap _system_heap;
 
+#ifdef CONFIG_SOC_SERIES_NRF52X
 int clocks_start(void)
 {
 	int err;
@@ -47,13 +48,16 @@ int clocks_start(void)
 	LOG_DBG("HF clock started");
 	return 0;
 }
+#endif
 
 int main(void)
 {
 	struct sys_memory_stats heap_stats;
 	int ret;
 
+	#ifdef CONFIG_SOC_SERIES_NRF52X
 	clocks_start();
+	#endif
 	gopro_gpio_init();
 	gopro_leds_init();	
 	canbus_init();
