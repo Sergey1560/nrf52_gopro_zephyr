@@ -27,7 +27,7 @@ LOG_MODULE_REGISTER(gopro_buttons, LOG_LEVEL_DBG);
 
 
 void button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins){
-	static uint8_t cmd_index = 0;
+	// static uint8_t cmd_index = 0;
 
 	LOG_INF("Button pressed at %" PRIu32 " pins: %d", k_cycle_get_32(),pins);
 	
