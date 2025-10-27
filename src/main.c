@@ -15,7 +15,7 @@ LOG_MODULE_REGISTER(gopro_main, LOG_LEVEL_INF);
 // System heap
 extern struct sys_heap _system_heap;
 
-#ifdef CONFIG_SOC_SERIES_NRF52X
+#ifdef CONFIG_USE_NRF_SDK
 int clocks_start(void)
 {
 	int err;
@@ -55,7 +55,7 @@ int main(void)
 	struct sys_memory_stats heap_stats;
 	int ret;
 
-	#ifdef CONFIG_SOC_SERIES_NRF52X
+	#ifdef CONFIG_USE_NRF_SDK
 	clocks_start();
 	#endif
 	gopro_gpio_init();

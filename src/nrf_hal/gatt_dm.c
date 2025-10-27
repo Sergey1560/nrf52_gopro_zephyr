@@ -3,7 +3,7 @@
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
-#ifndef CONFIG_SOC_SERIES_NRF52X
+#ifndef CONFIG_USE_NRF_SDK
 
 
 #include <inttypes.h>

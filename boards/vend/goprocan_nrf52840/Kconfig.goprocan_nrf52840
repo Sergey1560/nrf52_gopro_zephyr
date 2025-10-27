@@ -1,2 +1,6 @@
 config BOARD_GOPROCAN_NRF52840
 	select SOC_NRF52840_QFAA
+
+config USE_NRF_SDK
+	bool
+	default y

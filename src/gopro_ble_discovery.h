@@ -10,7 +10,7 @@
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/bluetooth/gatt.h>
-#ifdef CONFIG_SOC_SERIES_NRF52X
+#ifdef CONFIG_USE_NRF_SDK
 #include <bluetooth/gatt_dm.h>
 #include <bluetooth/scan.h>
 #else
