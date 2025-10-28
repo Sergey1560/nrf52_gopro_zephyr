@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2024-2025 Espressif Systems (Shanghai) Co., Ltd.
- *
- * SPDX-License-Identifier: Apache-2.0
- */
 /dts-v1/;
 
 #include <espressif/esp32s3/esp32s3_wroom_n8.dtsi>
@@ -10,15 +5,11 @@
 #include <zephyr/dt-bindings/input/esp32-touch-sensor-input.h>
 #include <espressif/partitions_0x0_amp.dtsi>
 #include "esp32s3_can-pinctrl.dtsi"
+#include <zephyr/dt-bindings/led/led.h>
 
 / {
 	model = "Espressif ESP32S3-DevkitC PROCPU";
 	compatible = "espressif,esp32s3";
-
-	aliases {
-		i2c-0 = &i2c0;
-		watchdog0 = &wdt0;
-	};
 
 	chosen {
 		zephyr,sram = &sram1;
@@ -33,6 +24,9 @@
 	aliases {
 		uart-0 = &uart0;
 		sw0 = &button0;
+		i2c-0 = &i2c0;
+		watchdog0 = &wdt0;
+		ledstrip = &ledstrip;
 	};
 
 	buttons {
@@ -110,11 +104,30 @@
 };
 
 &spi3 {
+	/* Workaround to support WS2812 driver */
+	line-idle-low;
 	#address-cells = <1>;
 	#size-cells = <0>;
 	status = "okay";
 	pinctrl-0 = <&spim3_default>;
 	pinctrl-names = "default";
+	
+	ledstrip:ws2812@0 {
+		compatible = "worldsemi,ws2812-spi";
+
+		/* SPI */
+		reg = <0>; /* ignored, but necessary for SPI bindings */
+		spi-max-frequency = <6400000>;
+
+		/* WS2812 */
+		chain-length = <1>; /* arbitrary; change at will */
+		spi-cpha;
+		spi-one-frame = <0xf0>; /* 11110000: 625 ns high and 625 ns low */
+		spi-zero-frame = <0xc0>; /* 11000000: 312.5 ns high and 937.5 ns low */
+		color-mapping = <2 1 3>;
+		status = "okay"; 
+	};
+
 };
 
 &twai {
@@ -152,9 +165,9 @@
 };
 
 &wifi {
-	status = "okay";
+	status = "disabled";
 };
 
 zephyr_udc0: &usb_otg {
-	status = "okay";
+	status = "disabled";
 };

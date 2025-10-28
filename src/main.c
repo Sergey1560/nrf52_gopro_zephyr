@@ -10,7 +10,7 @@
 #include <zephyr/drivers/clock_control.h>
 #include <zephyr/drivers/clock_control/nrf_clock_control.h>
 
-LOG_MODULE_REGISTER(gopro_main, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(gopro_main, LOG_LEVEL_DBG);
 
 // System heap
 extern struct sys_heap _system_heap;

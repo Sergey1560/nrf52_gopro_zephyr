@@ -33,6 +33,8 @@ target_sources(app PRIVATE
   src/canbus_isotp.c
   src/buttons.c
   src/leds.c
+  src/led_simple.c
+  src/led_rgb.c
   src/shell.c
   src/nrf_hal/gatt_dm.c
   src/nrf_hal/scan.c

@@ -108,7 +108,7 @@
 		};
 
 		group2 {
-			pinmux = <SPIM3_MOSI_GPIO39>;
+			pinmux = <SPIM3_MOSI_GPIO48>;
 			output-low;
 		};
 	};

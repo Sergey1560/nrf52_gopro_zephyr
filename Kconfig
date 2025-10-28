@@ -94,7 +94,7 @@ config PARSE_LOG_LVL
 
 config LEDS_LOG_LVL
 	int
-	default 3
+	default 4
 
 # config ENABLE_SHELL
 # 	bool "Enable SHELL support"

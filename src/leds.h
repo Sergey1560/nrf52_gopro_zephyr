@@ -1,7 +1,15 @@
-#ifndef GOPRO_LEDS_H
-#define GOPRO_LEDS_H
+#ifndef GP_LEDS_H
+#define GP_LEDS_H
 
+#include <errno.h>
 #include <zephyr/kernel.h>
+#include <zephyr/device.h>
+#include <zephyr/devicetree.h>
+#include <zephyr/sys/byteorder.h>
+#include <zephyr/sys/printk.h>
+#include <zephyr/drivers/gpio.h>
+#include <zephyr/logging/log.h>
+
 
 enum led_mode_t{
     LED_MODE_OFF,
@@ -25,20 +33,10 @@ struct led_mode_timing_t{
 };    
 
 
-struct led_message_t{    
-    union {
-        uint8_t value;
-        struct 
-        {
-            uint8_t mode:3;
-            uint8_t led_number:5;
-        };
-    };
-};
-
 
 int gopro_leds_init(void);
 int gopro_led_mode_set(enum led_number_t led_num, enum led_mode_t mode);
 void led_idle_timer_start(uint8_t enable);
+
 
 #endif
