@@ -1,4 +1,4 @@
-#include "leds.h"
+#include "led_simple.h"
 
 #include <errno.h>
 #include <zephyr/kernel.h>
@@ -8,7 +8,6 @@
 #include <zephyr/sys/printk.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/zbus/zbus.h>
 
 #ifdef CONFIG_HAS_LED_SIMPLE
 
@@ -16,78 +15,47 @@
 
 #define LED0_NODE	DT_ALIAS(led0)
 #if DT_NODE_HAS_STATUS_OKAY(LED0_NODE)
-#define LED_PRESENT
+#define LED_REC_PRESENT
 #endif
 
-#ifdef LED_PRESENT
-LOG_MODULE_REGISTER(gopro_leds, CONFIG_LEDS_LOG_LVL);
+#define LED1_NODE	DT_ALIAS(led1)
+#if DT_NODE_HAS_STATUS_OKAY(LED1_NODE)
+#define LED_BT_PRESENT
+#endif
 
+
+LOG_MODULE_REGISTER(gopro_ledsimple, CONFIG_LEDS_LOG_LVL);
+
+#ifdef LED_REC_PRESENT
 static struct gpio_dt_spec led_rec = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led0), gpios,{0});
+#endif
+
+#ifdef LED_BT_PRESENT
 static struct gpio_dt_spec led_bt = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led1), gpios,{0});
+#endif
 
 enum led_mode_t leds_mode[LED_NUM_END];
 
-const struct led_mode_timing_t led_mode_timing[LED_MODE_END] = {
-	{.on_time=K_MSEC(0),   .off_time=K_MSEC(100)},		//LED_MODE_OFF
-	{.on_time=K_MSEC(100), .off_time=K_MSEC(900)},		//LED_MODE_BLINK_1S
-	{.on_time=K_MSEC(100), .off_time=K_MSEC(4900)},		//LED_MODE_BLINK_5S
-	{.on_time=K_MSEC(100), .off_time=K_MSEC(200)},		//LED_MODE_BLINK_300MS
-	{.on_time=K_MSEC(100), .off_time=K_MSEC(100)},		//LED_MODE_BLINK_100MS
-	{.on_time=K_MSEC(100), .off_time=K_MSEC(0)}			//LED_MODE_ON
-};
+extern const struct led_mode_timing_t led_mode_timing[LED_MODE_END];
+
+static void led_set_bt(uint8_t val);
+static void led_set_rec(uint8_t val);
+
+#ifdef LED_BT_PRESENT
+K_THREAD_STACK_DEFINE(bt_stack_area, 512);
+struct k_thread bt_thread_data;
+static void leds_bt_task(void *, void *, void *);
+#endif
+
+#ifdef LED_REC_PRESENT
+K_THREAD_STACK_DEFINE(rec_stack_area, 512);
+struct k_thread rec_thread_data;
+static void leds_rec_task(void *, void *, void *);
+#endif
 
 
-static void leds_bt_task(void);
-static void leds_rec_task(void);
-//static void leds_callback(const struct zbus_channel *chan);
-
-static void gopro_led_set_bt(uint8_t val);
-static void gopro_led_set_rec(uint8_t val);
-
-// static void led_idle_handler(struct k_work *work);
-// static void led_idle_timer_handler(struct k_timer *dummy);
-
-// ZBUS_CHAN_DEFINE(leds_chan,                           	/* Name */
-//          struct led_message_t,                       		      	/* Message type */
-//          NULL,                                       	/* Validator */
-//          NULL,                                       	/* User Data */
-//          ZBUS_OBSERVERS(leds_listener),  	        		/* observers */
-//          ZBUS_MSG_INIT(0)       						/* Initial value */
-// );
-
-// ZBUS_LISTENER_DEFINE(leds_listener, leds_callback);
-
-K_THREAD_DEFINE(led_bt_task_id, 512, leds_bt_task, NULL, NULL, NULL, 7, 0, 0);
-K_THREAD_DEFINE(led_rec_task_id, 512, leds_rec_task, NULL, NULL, NULL, 7, 0, 0);
-
-// K_WORK_DEFINE(led_idle_work, led_idle_handler);
-// K_TIMER_DEFINE(led_idle_timer, led_idle_timer_handler, NULL);
-//#define LED_TIMER_START	do{k_timer_start(&led_idle_timer, K_SECONDS(5), K_SECONDS(5));}while(0)
-
-static void leds_callback(const struct zbus_channel *chan)
-{
- 	const struct led_message_t *led_message;
-	if (&leds_chan == chan) {
-			led_message = zbus_chan_const_msg(chan); // Direct message access
-
-			switch (led_message->led_number)
-			{
-			case LED_NUM_BT:
-				leds_mode[LED_NUM_BT] = led_message->mode;
-				break;
-
-			case LED_NUM_REC:
-				leds_mode[LED_NUM_REC] = led_message->mode;
-				break;
-			
-			default:
-				LOG_ERR("Led number not found: %d",led_message->led_number);
-				break;
-			}
-	}
-}
-
-static void leds_bt_task(void){
+#ifdef LED_BT_PRESENT
+static void leds_bt_task(void *, void *, void *){
 	k_timeout_t on_time, off_time;
 
 	while(1){
@@ -95,18 +63,20 @@ static void leds_bt_task(void){
 		off_time = led_mode_timing[leds_mode[LED_NUM_BT]].off_time;
 		
 		if(on_time.ticks > 0){
-			gopro_led_set_bt(1);
+			led_set_bt(1);
 			k_sleep(on_time);
 		}
 
 		if(off_time.ticks > 0){
-			gopro_led_set_bt(0);
+			led_set_bt(0);
 			k_sleep(off_time);
 		}
 	}
 }
+#endif
 
-static void leds_rec_task(void){
+#ifdef LED_REC_PRESENT
+static void leds_rec_task(void *, void *, void *){
 	k_timeout_t on_time, off_time;
 
 	while(1){
@@ -114,23 +84,23 @@ static void leds_rec_task(void){
 		off_time = led_mode_timing[leds_mode[LED_NUM_REC]].off_time;
 		
 		if(on_time.ticks > 0){
-			gopro_led_set_rec(1);
+			led_set_rec(1);
 			k_sleep(on_time);
 		}
 
 		if(off_time.ticks > 0){
-			gopro_led_set_rec(0);
+			led_set_rec(0);
 			k_sleep(off_time);
 		}
 	}
 
 }
+#endif
 
 int led_hw_init(void){
 	int err;
 
-	LOG_DBG("LED Simple init");
-
+	#ifdef LED_REC_PRESENT
 	if (led_rec.port && !gpio_is_ready_dt(&led_rec)) {
 		LOG_ERR("Error: LED device %s is not ready; ignoring it", led_rec.port->name);
 		led_rec.port = NULL;
@@ -145,6 +115,15 @@ int led_hw_init(void){
 		}
 	}
 
+    k_thread_create(&rec_thread_data, rec_stack_area,
+                    K_THREAD_STACK_SIZEOF(rec_stack_area),
+                    leds_rec_task,
+                    NULL, NULL, NULL,
+                    7, 0, K_NO_WAIT);
+
+	#endif
+
+	#ifdef LED_BT_PRESENT
 	if (led_bt.port && !gpio_is_ready_dt(&led_bt)) {
 		LOG_ERR("Error: LED device %s is not ready; ignoring it", led_bt.port->name);
 		led_bt.port = NULL;
@@ -159,13 +138,17 @@ int led_hw_init(void){
 		}
 	}
 
-	gopro_led_mode_set(LED_NUM_BT,LED_MODE_BLINK_5S);
+    k_thread_create(&bt_thread_data, bt_stack_area,
+                    K_THREAD_STACK_SIZEOF(bt_stack_area),
+                    leds_bt_task,
+                    NULL, NULL, NULL,
+                    7, 0, K_NO_WAIT);
+	#endif
 
 	return 0;
 }
 
-int gopro_led_mode_set(enum led_number_t led_num, enum led_mode_t mode){
-	struct led_message_t led_message;
+int led_mode_set(enum led_number_t led_num, enum led_mode_t mode){
 	
 	if(mode >= LED_MODE_END) {
 		LOG_ERR("Ivalid mode number: %d of %d",mode,LED_MODE_END-1);
@@ -177,14 +160,25 @@ int gopro_led_mode_set(enum led_number_t led_num, enum led_mode_t mode){
 		return -2;
 	}
 
-	led_message.mode = mode;
-	led_message.led_number = led_num;
-	zbus_chan_pub(&leds_chan, &led_message, K_NO_WAIT);			
+    switch (led_num)
+        {
+        case LED_NUM_BT:
+            leds_mode[SIMPLE_LED_BT] = mode;
+            break;
 
-	return 0;
+        case LED_NUM_REC:
+            leds_mode[SIMPLE_LED_REC] = mode;
+            break;
+        
+        default:
+            LOG_ERR("Led number not found: %d",led_num);
+            break;
+		}
+	
+		return 0;
 }
 
-static void gopro_led_set_bt(uint8_t val){
+static void led_set_bt(uint8_t val){
 	if(val){
 		gpio_pin_set_dt(&led_bt,1);
 	}else{
@@ -192,7 +186,7 @@ static void gopro_led_set_bt(uint8_t val){
 	}
 }
 
-static void gopro_led_set_rec(uint8_t val){
+static void led_set_rec(uint8_t val){
 	if(val){
 		gpio_pin_set_dt(&led_rec,1);
 	}else{
@@ -202,5 +196,4 @@ static void gopro_led_set_rec(uint8_t val){
 
 
 
-#endif
 #endif
