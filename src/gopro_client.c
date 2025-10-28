@@ -660,6 +660,8 @@ int gopro_set_subscribe(struct bt_gopro_client *gp_client, enum gopro_control_ha
 		return -EALREADY;
 	}
 
+	LOG_DBG("Hanndle: %d",gopro_handle);
+
 	gp_client->notif_params[gopro_handle].notify = on_notify_received;
 	gp_client->notif_params[gopro_handle].value = BT_GATT_CCC_NOTIFY;
 	gp_client->notif_params[gopro_handle].value_handle = gp_client->handles[gopro_handle].notify;

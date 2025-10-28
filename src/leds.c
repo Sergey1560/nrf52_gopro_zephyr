@@ -22,7 +22,7 @@ const struct led_mode_timing_t led_mode_timing[LED_MODE_END] = {
 
 
 int gopro_leds_init(void){
-
+	
     #if defined(CONFIG_HAS_LED_SIMPLE) || defined(CONFIG_HAS_LED_RGB)
     led_hw_init();
     #endif

@@ -19,58 +19,58 @@ config HAS_CANBUS
 	bool "CAN-BUS present onboard"
 	default n
 
-#ESP32 settings
-config BT_SCAN_UUID_CNT
-	int
-	default 1
+# #ESP32 settings
+# config BT_SCAN_UUID_CNT
+# 	int
+# 	default 1
 
-config BT_SCAN_FILTER_ENABLE
-	bool
-	default y
+# config BT_SCAN_FILTER_ENABLE
+# 	bool
+# 	default y
 
-config BT_SCAN_MANUFACTURER_DATA_CNT
-	int
-	default 0
+# config BT_SCAN_MANUFACTURER_DATA_CNT
+# 	int
+# 	default 0
 
-config BT_SCAN_MANUFACTURER_DATA_MAX_LEN
-	int
-	default 32
+# config BT_SCAN_MANUFACTURER_DATA_MAX_LEN
+# 	int
+# 	default 32
 
-config BT_SCAN_APPEARANCE_CNT
-	int
-	default 0
+# config BT_SCAN_APPEARANCE_CNT
+# 	int
+# 	default 0
 
-config BT_SCAN_ADDRESS_CNT
-	int	
-	default 1
+# config BT_SCAN_ADDRESS_CNT
+# 	int	
+# 	default 1
 
-config BT_SCAN_SHORT_NAME_CNT
-	int
-	default 0
+# config BT_SCAN_SHORT_NAME_CNT
+# 	int
+# 	default 0
 
-config BT_SCAN_SHORT_NAME_MAX_LEN
-	int
-	default 32
+# config BT_SCAN_SHORT_NAME_MAX_LEN
+# 	int
+# 	default 32
 
-config BT_SCAN_LOG_LEVEL
-	int
-	default 3 
+# config BT_SCAN_LOG_LEVEL
+# 	int
+# 	default 3 
 
-config BT_GATT_DM_MAX_ATTRS
-	int
-	default 35
+# config BT_GATT_DM_MAX_ATTRS
+# 	int
+# 	default 35
 
-config BT_GATT_DM_LOG_LEVEL
-	int
-	default 3
+# config BT_GATT_DM_LOG_LEVEL
+# 	int
+# 	default 3
 
-config BT_SCAN_NAME_CNT
-	int
-	default 0
+# config BT_SCAN_NAME_CNT
+# 	int
+# 	default 0
 
-config BT_SCAN_NAME_MAX_LEN
-	int
-	default 32
+# config BT_SCAN_NAME_MAX_LEN
+# 	int
+# 	default 32
 
 
 
@@ -94,58 +94,5 @@ config PARSE_LOG_LVL
 
 config LEDS_LOG_LVL
 	int
-	default 4
+	default 3
 
-# config ENABLE_SHELL
-# 	bool "Enable SHELL support"
-# 	default n
-
-# if ENABLE_SHELL
-#     config SHELL
-#         bool 
-#         default y
-
-# 	config SHELL_BACKEND_RTT
-# 		bool 
-# 		default y
-
-# 	config LOG_BACKEND_RTT_BUFFER
-# 		int
-# 		default 1
-
-# 	config SHELL_LOG_BACKEND
-# 		bool 
-# 		default y
-
-# 	config SHELL_HELP
-# 		bool 
-# 		default y
-
-# 	config SHELL_CMDS
-# 		bool 
-# 		default y
-
-# 	config SHELL_HISTORY
-# 		bool 
-# 		default y
-
-# 	config CAN_SHELL
-# 		bool 
-# 		default y
-
-# 	config BT_SHELL
-# 		bool 
-# 		default y
-
-# 	config GPIO_SHELL
-# 		bool 
-# 		default y
-
-# 	config LED_SHELL
-# 		bool 
-# 		default y
-
-# 	config STATS_SHELL
-# 		bool 
-# 		default y
-#endif

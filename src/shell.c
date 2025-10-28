@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 
-
+#if CONFIG_SHELL
 static int gopro_cmd_handler(const struct shell *sh, size_t argc, char **argv)
 {
 	ARG_UNUSED(sh);
@@ -44,3 +44,5 @@ SHELL_STATIC_SUBCMD_SET_CREATE(sub_demo,
 );
 /* Creating root (level 0) command "demo" */
 SHELL_CMD_REGISTER(gopro, &sub_demo, "Demo commands", &gopro_cmd_handler);
+
+#endif

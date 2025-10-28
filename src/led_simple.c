@@ -58,9 +58,11 @@ static void leds_rec_task(void *, void *, void *);
 static void leds_bt_task(void *, void *, void *){
 	k_timeout_t on_time, off_time;
 
+	LOG_DBG("Start led-bt task");
+
 	while(1){
-		on_time = led_mode_timing[leds_mode[LED_NUM_BT]].on_time;
-		off_time = led_mode_timing[leds_mode[LED_NUM_BT]].off_time;
+		on_time = led_mode_timing[leds_mode[SIMPLE_LED_BT]].on_time;
+		off_time = led_mode_timing[leds_mode[SIMPLE_LED_BT]].off_time;
 		
 		if(on_time.ticks > 0){
 			led_set_bt(1);
@@ -79,9 +81,11 @@ static void leds_bt_task(void *, void *, void *){
 static void leds_rec_task(void *, void *, void *){
 	k_timeout_t on_time, off_time;
 
+	LOG_DBG("Start led-rec task");
+
 	while(1){
-		on_time = led_mode_timing[leds_mode[LED_NUM_REC]].on_time;
-		off_time = led_mode_timing[leds_mode[LED_NUM_REC]].off_time;
+		on_time = led_mode_timing[leds_mode[SIMPLE_LED_REC]].on_time;
+		off_time = led_mode_timing[leds_mode[SIMPLE_LED_REC]].off_time;
 		
 		if(on_time.ticks > 0){
 			led_set_rec(1);
@@ -99,6 +103,8 @@ static void leds_rec_task(void *, void *, void *){
 
 int led_hw_init(void){
 	int err;
+
+	LOG_INF("LED simple init");
 
 	#ifdef LED_REC_PRESENT
 	if (led_rec.port && !gpio_is_ready_dt(&led_rec)) {
