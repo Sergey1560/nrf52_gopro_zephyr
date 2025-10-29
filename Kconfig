@@ -19,60 +19,6 @@ config HAS_CANBUS
 	bool "CAN-BUS present onboard"
 	default n
 
-# #ESP32 settings
-# config BT_SCAN_UUID_CNT
-# 	int
-# 	default 1
-
-# config BT_SCAN_FILTER_ENABLE
-# 	bool
-# 	default y
-
-# config BT_SCAN_MANUFACTURER_DATA_CNT
-# 	int
-# 	default 0
-
-# config BT_SCAN_MANUFACTURER_DATA_MAX_LEN
-# 	int
-# 	default 32
-
-# config BT_SCAN_APPEARANCE_CNT
-# 	int
-# 	default 0
-
-# config BT_SCAN_ADDRESS_CNT
-# 	int	
-# 	default 1
-
-# config BT_SCAN_SHORT_NAME_CNT
-# 	int
-# 	default 0
-
-# config BT_SCAN_SHORT_NAME_MAX_LEN
-# 	int
-# 	default 32
-
-# config BT_SCAN_LOG_LEVEL
-# 	int
-# 	default 3 
-
-# config BT_GATT_DM_MAX_ATTRS
-# 	int
-# 	default 35
-
-# config BT_GATT_DM_LOG_LEVEL
-# 	int
-# 	default 3
-
-# config BT_SCAN_NAME_CNT
-# 	int
-# 	default 0
-
-# config BT_SCAN_NAME_MAX_LEN
-# 	int
-# 	default 32
-
-
 
 #define LOG_LEVEL_NONE 0
 #define LOG_LEVEL_ERR  1
@@ -96,3 +42,58 @@ config LEDS_LOG_LVL
 	int
 	default 3
 
+
+#ESP32 settings
+if !USE_NRF_SDK
+config BT_SCAN_UUID_CNT
+	int
+	default 1
+
+config BT_SCAN_FILTER_ENABLE
+	bool
+	default y
+
+config BT_SCAN_MANUFACTURER_DATA_CNT
+	int
+	default 0
+
+config BT_SCAN_MANUFACTURER_DATA_MAX_LEN
+	int
+	default 32
+
+config BT_SCAN_APPEARANCE_CNT
+	int
+	default 0
+
+config BT_SCAN_ADDRESS_CNT
+	int	
+	default 1
+
+config BT_SCAN_SHORT_NAME_CNT
+	int
+	default 0
+
+config BT_SCAN_SHORT_NAME_MAX_LEN
+	int
+	default 33554432
+
+config BT_SCAN_LOG_LEVEL
+	int
+	default 3 
+
+config BT_GATT_DM_MAX_ATTRS
+	int
+	default 35
+
+config BT_GATT_DM_LOG_LEVEL
+	int
+	default 3
+
+config BT_SCAN_NAME_CNT
+	int
+	default 0
+
+config BT_SCAN_NAME_MAX_LEN
+	int
+	default 32
+endif
