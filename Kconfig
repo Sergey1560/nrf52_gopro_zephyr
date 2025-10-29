@@ -42,6 +42,9 @@ config LEDS_LOG_LVL
 	int
 	default 3
 
+config BUTTONS_LOG_LVL
+	int
+	default 3
 
 #ESP32 settings
 if !USE_NRF_SDK

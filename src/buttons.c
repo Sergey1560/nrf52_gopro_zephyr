@@ -12,14 +12,15 @@
 
 
 #ifdef BUTTON_PRESENT
+
+LOG_MODULE_REGISTER(gopro_buttons, CONFIG_BUTTONS_LOG_LVL);
+
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/zbus/zbus.h>
 #include "gopro_client.h"
-
-
 
 static const struct gpio_dt_spec button_rec = GPIO_DT_SPEC_GET_OR(SW0_NODE, gpios,{0});
 static struct gpio_callback button_cb_data;
@@ -40,7 +41,6 @@ extern struct gopro_state_t gopro_state;
 
 ZBUS_CHAN_DECLARE(gopro_cmd_chan);
 
-LOG_MODULE_REGISTER(gopro_buttons, LOG_LEVEL_DBG);
 
 void button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins){
 	int err;
@@ -50,18 +50,22 @@ void button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t
 	LOG_INF("Button pressed at %" PRIu32 " pins: %d", k_cycle_get_32(),pins);
 
 	if(gopro_state.record == 1){
-		p_gopro_cmd = &gopro_start_rec_msg;
+		p_gopro_cmd = (struct gopro_cmd_t *)&gopro_stop_rec_msg;
 	}else{
-		p_gopro_cmd = &gopro_stop_rec_msg;
+		p_gopro_cmd = (struct gopro_cmd_t *)&gopro_start_rec_msg;
 	}
+
+	LOG_HEXDUMP_DBG(p_gopro_cmd,sizeof(struct gopro_cmd_t),"Button cmd:");
 
 	err = zbus_chan_pub(&gopro_cmd_chan, p_gopro_cmd, K_NO_WAIT);
 	if(err != 0){
-	if(err == -ENOMSG){
-		LOG_ERR("Invalid Gopro state, skip cmd");
-		return;
-	}
-	LOG_ERR("CMD chan pub failed: %d",err);
+		if(err == -ENOMSG){
+			LOG_ERR("Invalid Gopro state, skip cmd");
+			return;
+		}
+		LOG_ERR("CMD chan pub failed: %d",err);
+	}else{
+		LOG_DBG("Rec cmd sent");
 	}
 
 
