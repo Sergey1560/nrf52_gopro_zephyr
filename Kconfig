@@ -75,7 +75,7 @@ config BT_SCAN_SHORT_NAME_CNT
 
 config BT_SCAN_SHORT_NAME_MAX_LEN
 	int
-	default 33554432
+	default 32
 
 config BT_SCAN_LOG_LEVEL
 	int
