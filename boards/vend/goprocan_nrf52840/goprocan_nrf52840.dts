@@ -75,7 +75,7 @@
 		status = "okay";
 		label = "CAN_1";
 		reg = <0x0>;
-		osc-freq = <8000000>;
+		osc-freq = <16000000>;
 		can-transceiver {
 			min-bitrate = <125000>;
 			max-bitrate = <1000000>;

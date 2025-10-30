@@ -3,6 +3,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
+#include <zephyr/logging/log.h>
 
 #define SW0_NODE	DT_ALIAS(sw0)
 

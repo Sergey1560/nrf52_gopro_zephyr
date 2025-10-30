@@ -24,12 +24,13 @@
 #ifdef CONFIG_HAS_CANBUS
 LOG_MODULE_REGISTER(canbus_gopro, CONFIG_CAN_LOG_LVL);
 
-#if !DT_NODE_EXISTS(DT_NODELABEL(mcp_rst_switch))
-#error "Overlay for MCP2515 RST pin not properly defined."
+#if DT_NODE_EXISTS(DT_NODELABEL(mcp_rst_switch))
+#define MCP_RST_SWITCH
+//#error "Overlay for MCP2515 RST pin not properly defined."
 #endif
 
 static void mcp2515_get_timing(struct can_timing *timing, uint8_t cnf1, uint8_t cnf2, uint8_t cnf3);
-
+static void can_print_timing(struct can_timing *timing);
 static void can_tx_timer_handler(struct k_timer *dummy);
 static void can_tx_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
 static void can_data_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
@@ -95,7 +96,10 @@ const struct can_timing mcp2515_16mhz_1000 = {
 	.prescaler = 1
 };
 
+#ifdef MCP_RST_SWITCH
 static const struct gpio_dt_spec mcp_rst_switch = 	GPIO_DT_SPEC_GET_OR(DT_NODELABEL(mcp_rst_switch), gpios, {0});
+#endif
+
 const struct device *can_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_canbus));
 
 const struct can_frame err_state_frame = {
@@ -233,6 +237,7 @@ static void __attribute__((unused)) mcp2515_get_timing(struct can_timing *timing
 int canbus_init(void){
     int err;
 
+	#ifdef MCP_RST_SWITCH
 	if (!gpio_is_ready_dt(&mcp_rst_switch)) {
 		LOG_ERR("The MCP2515 RST pin GPIO port is not ready.");
 		return -1;
@@ -249,6 +254,7 @@ int canbus_init(void){
 		LOG_ERR("Setting RST pin level failed: %d\n", err);
 		return -1;
 	}
+	#endif
 
 	if (!device_is_ready(can_dev)) {
 		LOG_ERR("CAN: Device %s not ready.\n", can_dev->name);
@@ -283,7 +289,20 @@ int canbus_init(void){
 
 	#endif
 
-	err = can_set_timing(can_dev, &mcp2515_16mhz_1000);
+	struct can_timing timing;
+
+	err = can_calc_timing(can_dev, &timing, CONFIG_CANBUS_BD, 875);
+	
+	if (err < 0) {
+		LOG_ERR("Failed to calc a valid timing");
+		return -1;
+	}else{
+		LOG_INF("Sample-Point error: %d", err);
+	}
+
+	can_print_timing(&timing);
+
+	err = can_set_timing(can_dev, &timing);
 	
 	if (err != 0) {
 		LOG_ERR("Failed to set timing: %d",err);
@@ -312,6 +331,21 @@ int canbus_init(void){
 	LOG_INF("CAN BUS init done");
     return 0;
 }
+
+static void can_print_timing(struct can_timing *timing){
+
+	const struct can_timing *min = can_get_timing_min(can_dev);
+  	const struct can_timing *max = can_get_timing_max(can_dev);
+
+	LOG_DBG("Can bitrate MIN: %d MAX: %d",can_get_bitrate_min(can_dev),can_get_bitrate_max(can_dev));
+	LOG_DBG("SWJ: %d  MIN: %d MAX: %d",timing->sjw,min->sjw,max->sjw);
+	LOG_DBG("Prescaler: %d  MIN: %d MAX: %d",timing->prescaler,min->prescaler,max->prescaler);
+	LOG_DBG("Pseg1: %d  MIN: %d MAX: %d",timing->phase_seg1,min->phase_seg1,max->phase_seg1);
+	LOG_DBG("Pseg2: %d  MIN: %d MAX: %d",timing->phase_seg2,min->phase_seg2,max->phase_seg2);
+	LOG_DBG("Propseg: %d  MIN: %d MAX: %d",timing->prop_seg,min->prop_seg,max->prop_seg);
+
+}
+
 
 void can_tx_callback(const struct device *dev, int error, void *user_data){
 	k_sem_give(&can_tx_sem);
