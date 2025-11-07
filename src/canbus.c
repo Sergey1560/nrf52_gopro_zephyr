@@ -72,29 +72,29 @@ K_TIMER_DEFINE(can_tx_timer, can_tx_timer_handler, NULL);
 #define CAN_TX_TIMER_START	do{k_timer_start(&can_tx_timer, K_MSEC(100), K_MSEC(100));}while(0)
 K_WORK_DEFINE(can_tx_work, can_tx_work_handler);
 
-const struct can_timing mcp2515_8mhz_500 = {
-	.sjw = 2,
-	.prop_seg = 2,
-	.phase_seg1 = 3,
-	.phase_seg2 = 2,
-	.prescaler = 1
-};
+// const struct can_timing mcp2515_8mhz_500 = {
+// 	.sjw = 2,
+// 	.prop_seg = 2,
+// 	.phase_seg1 = 3,
+// 	.phase_seg2 = 2,
+// 	.prescaler = 1
+// };
 
-const struct can_timing mcp2515_16mhz_500 = {
-	.sjw = 2,
-	.prop_seg = 2,
-	.phase_seg1 = 3,
-	.phase_seg2 = 2,
-	.prescaler = 2
-};
+// const struct can_timing mcp2515_16mhz_500 = {
+// 	.sjw = 2,
+// 	.prop_seg = 2,
+// 	.phase_seg1 = 3,
+// 	.phase_seg2 = 2,
+// 	.prescaler = 2
+// };
 
-const struct can_timing mcp2515_16mhz_1000 = {
-	.sjw = 2,
-	.prop_seg = 2,
-	.phase_seg1 = 3,
-	.phase_seg2 = 2,
-	.prescaler = 1
-};
+// const struct can_timing mcp2515_16mhz_1000 = {
+// 	.sjw = 2,
+// 	.prop_seg = 2,
+// 	.phase_seg1 = 3,
+// 	.phase_seg2 = 2,
+// 	.prescaler = 1
+// };
 
 #ifdef MCP_RST_SWITCH
 static const struct gpio_dt_spec mcp_rst_switch = 	GPIO_DT_SPEC_GET_OR(DT_NODELABEL(mcp_rst_switch), gpios, {0});
@@ -235,32 +235,33 @@ static void __attribute__((unused)) mcp2515_get_timing(struct can_timing *timing
 }
 
 int canbus_init(void){
-    int err;
+	struct can_timing timing;
+	int err;
 
 	#ifdef MCP_RST_SWITCH
-	if (!gpio_is_ready_dt(&mcp_rst_switch)) {
-		LOG_ERR("The MCP2515 RST pin GPIO port is not ready.");
-		return -1;
-	}
+		if (!gpio_is_ready_dt(&mcp_rst_switch)) {
+			LOG_ERR("The MCP2515 RST pin GPIO port is not ready.");
+			return -1;
+		}
 
-	err = gpio_pin_configure_dt(&mcp_rst_switch, GPIO_OUTPUT_INACTIVE);
-	if (err != 0) {
-		LOG_ERR("Configuring RST pin failed: %d", err);
-		return-1;
-	}
+		err = gpio_pin_configure_dt(&mcp_rst_switch, GPIO_OUTPUT_INACTIVE);
+		if (err != 0) {
+			LOG_ERR("Configuring RST pin failed: %d", err);
+			return-1;
+		}
 
-	err = gpio_pin_set_dt(&mcp_rst_switch, 1);
-	if (err != 0) {
-		LOG_ERR("Setting RST pin level failed: %d\n", err);
-		return -1;
-	}
+		err = gpio_pin_set_dt(&mcp_rst_switch, 1);
+		if (err != 0) {
+			LOG_ERR("Setting RST pin level failed: %d\n", err);
+			return -1;
+		}
 	#endif
 
 	if (!device_is_ready(can_dev)) {
 		LOG_ERR("CAN: Device %s not ready.\n", can_dev->name);
 		return -1;
 	}else{
-		LOG_INF("CAN device ready");
+		LOG_DBG("CAN device ready");
 	}
 
 	err = can_set_mode(can_dev, CAN_MODE_NORMAL);
@@ -269,27 +270,8 @@ int canbus_init(void){
         LOG_ERR("Error setting CAN mode [%d]", err);
         return -1;
     }else{
-    	LOG_INF("MODE NORMAL Enabled.");
+    	LOG_DBG("MODE NORMAL Enabled.");
 	}
-
-	#if 0
-	struct can_timing timing;
-
-	LOG_DBG("Can bitrate MIN: %d MAX: %d",can_get_bitrate_min(can_dev),can_get_bitrate_max(can_dev));
-	
-	mcp2515_get_timing(&timing, 0x40, 0x91, 0x01);
-	const struct can_timing *min = can_get_timing_min(can_dev);
-  	const struct can_timing *max = can_get_timing_max(can_dev);
-	
-	LOG_DBG("SWJ: %d  MIN: %d MAX: %d",timing.sjw,min->sjw,max->sjw);
-	LOG_DBG("Prescaler: %d  MIN: %d MAX: %d",timing.prescaler,min->prescaler,max->prescaler);
-	LOG_DBG("Pseg1: %d  MIN: %d MAX: %d",timing.phase_seg1,min->phase_seg1,max->phase_seg1);
-	LOG_DBG("Pseg2: %d  MIN: %d MAX: %d",timing.phase_seg2,min->phase_seg2,max->phase_seg2);
-	LOG_DBG("Propseg: %d  MIN: %d MAX: %d",timing.prop_seg,min->prop_seg,max->prop_seg);
-
-	#endif
-
-	struct can_timing timing;
 
 	err = can_calc_timing(can_dev, &timing, CONFIG_CANBUS_BD, 875);
 	
@@ -297,7 +279,7 @@ int canbus_init(void){
 		LOG_ERR("Failed to calc a valid timing");
 		return -1;
 	}else{
-		LOG_INF("Sample-Point error: %d", err);
+		LOG_DBG("Sample-Point error: %d", err);
 	}
 
 	can_print_timing(&timing);
@@ -321,14 +303,14 @@ int canbus_init(void){
 		LOG_ERR("Error starting CAN controller [%d]", err);
 		return err;
 	}else{
-		LOG_INF("CAN Start");
+		LOG_DBG("CAN Start");
 	}
 
 	CAN_TX_TIMER_START;
 	
 	canbus_isotp_init(can_dev);
 	
-	LOG_INF("CAN BUS init done");
+	LOG_INF("CAN BUS init done at %d kb/s",CONFIG_CANBUS_BD);
     return 0;
 }
 
