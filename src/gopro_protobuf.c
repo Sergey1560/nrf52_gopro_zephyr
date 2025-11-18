@@ -41,8 +41,14 @@ static uint32_t gopro_prepare_finish_pairing(uint8_t *data, uint32_t max_len);
 static void gopro_send_big_data(uint8_t *data, uint32_t len, uint8_t type, uint8_t feature, uint8_t action);
 
 static void can_rx_ble_subscriber_task(void *ptr1, void *ptr2, void *ptr3);
+
 GoproClient_bledata bledata;
+GoproClient_bledata replyreq;
+
 extern struct k_sem can_isotp_rx_sem;
+extern struct gopro_state_t gopro_state;
+
+K_SEM_DEFINE(can_reply_sem, 1, 1);
 
 const char pairing_str[]="nrf52";
 
@@ -116,9 +122,6 @@ const char *pb_enum_cohn_netstate[9]={
     "(30)COHN_STATE_Invalid",
     "ERROR_INDEX"
 };
-
-const char my_wifi_ssid[]="wifi_ssid";
-const char my_wifi_pass[]="wifi_pass";
 
 uint8_t work_buff[WORK_BUFF_SIZE];
 uint8_t resp_ap_entries_buf[128];
@@ -537,13 +540,6 @@ static bool read_ap_entries_callback(pb_istream_t *stream, const pb_field_t *fie
 int gopro_parse_ap_entries(struct gopro_packet_t *gopro_packet){
     int err;
 
-    // struct mem_pkt_t mem_pkt = {
-    //     .data = gopro_packet->data,
-    //     .len = gopro_packet->packet_len
-    // };
-
-    // zbus_chan_pub(&can_tx_ble_chan, &mem_pkt, K_NO_WAIT);
-
     open_gopro_ResponseGetApEntries resp = open_gopro_ResponseGetApEntries_init_zero;
     pb_istream_t stream = pb_istream_from_buffer(&gopro_packet->data[2], gopro_packet->packet_len);
 
@@ -558,6 +554,7 @@ int gopro_parse_ap_entries(struct gopro_packet_t *gopro_packet){
         LOG_ERR("PB decode failed %s", PB_GET_ERROR(&stream));
     }else{
         LOG_DBG("AP Decode OK.");
+        //can_reply(BLE_ADDR_REPLY_AP_LIST,(uint8_t *)&gopro_packet->data[2],gopro_packet->packet_len);
         //gopro_connect_ap((struct ap_list_t *)ap_list, ap_list_index);
     }
 
@@ -569,24 +566,20 @@ static void __attribute__((unused)) gopro_connect_ap(struct ap_list_t *ap_list, 
 
     for(uint32_t i=0; i<count; i++){
 
-        if( strncmp(ap_list[i].ssid,my_wifi_ssid,strlen(my_wifi_ssid)) == 0 ){
+        if( strncmp(ap_list[i].ssid, gopro_state.cohn_net.wifi_ssid,strlen(gopro_state.cohn_net.wifi_ssid)) == 0 ){
             if( (ap_list[i].flags & open_gopro_EnumScanEntryFlags_SCAN_FLAG_ASSOCIATED) > 0){
-                LOG_WRN("Already connected to SSID %s",my_wifi_ssid);
+                LOG_WRN("Already connected to SSID %s", gopro_state.cohn_net.wifi_ssid);
                 return;
             }
 
             if( (ap_list[i].flags & open_gopro_EnumScanEntryFlags_SCAN_FLAG_CONFIGURED) > 0){
-                LOG_INF("Connect to saved SSID %s",my_wifi_ssid);
+                LOG_INF("Connect to saved SSID %s",gopro_state.cohn_net.wifi_ssid);
                 int len = gopro_prepare_connect_saved(work_buff,WORK_BUFF_SIZE);
-                // LOG_DBG("Req size: %d",len);
-                // LOG_HEXDUMP_DBG(work_buff,len,"PB Request:");
                 gopro_send_big_data(work_buff,len,GP_CNTRL_HANDLE_NET,0x02,0x04);
 
             }else{
-                LOG_INF("Connect to new SSID %s",my_wifi_ssid);
+                LOG_INF("Connect to new SSID %s",gopro_state.cohn_net.wifi_ssid);
                 int len = gopro_prepare_connect_new(work_buff,WORK_BUFF_SIZE);
-                // LOG_DBG("Req size: %d",len);
-                // LOG_HEXDUMP_DBG(work_buff,len,"PB Request:");
                 gopro_send_big_data(work_buff,len,GP_CNTRL_HANDLE_NET,0x02,0x05);
             }
             
@@ -611,10 +604,10 @@ static uint32_t gopro_prepare_connect_new(uint8_t *data, uint32_t max_len){
     open_gopro_RequestConnectNew req = open_gopro_RequestConnectNew_init_zero;
 
     req.ssid.funcs.encode = copy_str;
-    req.ssid.arg = (char *)my_wifi_ssid;
+    req.ssid.arg = (char *)gopro_state.cohn_net.wifi_ssid;
 
     req.password.funcs.encode = copy_str;
-    req.password.arg = (char *)my_wifi_pass;
+    req.password.arg = (char *)gopro_state.cohn_net.wifi_pass;
 
     pb_ostream_t stream = pb_ostream_from_buffer(data, max_len);
 
@@ -629,7 +622,7 @@ static uint32_t gopro_prepare_connect_saved(uint8_t *data, uint32_t max_len){
     open_gopro_RequestConnect req = open_gopro_RequestConnect_init_zero;
 
     req.ssid.funcs.encode = copy_str;
-    req.ssid.arg = (char *)my_wifi_ssid;
+    req.ssid.arg = (char *)gopro_state.cohn_net.wifi_ssid;
 
     pb_ostream_t stream = pb_ostream_from_buffer(data, max_len);
 
@@ -776,7 +769,7 @@ static void gopro_send_big_data(uint8_t *data, uint32_t len, uint8_t type, uint8
             gopro_cmd.data[4+i] = data[i];
         }
 
-        //LOG_HEXDUMP_DBG(gopro_cmd.data,gopro_cmd.len,"Packet:");
+        LOG_HEXDUMP_DBG(gopro_cmd.data,gopro_cmd.len,"Packet:");
         err = zbus_chan_pub(&gopro_cmd_chan, &gopro_cmd, K_NO_WAIT);
 		if(err != 0){
 			if(err == -ENOMSG){
@@ -802,7 +795,7 @@ static void gopro_send_big_data(uint8_t *data, uint32_t len, uint8_t type, uint8
 
             gopro_cmd.len = data_len+1;
 
-            //LOG_HEXDUMP_DBG(gopro_cmd.data,gopro_cmd.len,"Packet:");
+            LOG_HEXDUMP_DBG(gopro_cmd.data,gopro_cmd.len,"Packet:");
             err = zbus_chan_pub(&gopro_cmd_chan, &gopro_cmd, K_NO_WAIT);
             if(err != 0){
                 if(err == -ENOMSG){
@@ -824,6 +817,40 @@ static void gopro_send_big_data(uint8_t *data, uint32_t len, uint8_t type, uint8
         LOG_ERR("Packet to big: %d",len);
     }
 }
+
+
+static bool read_str(pb_istream_t *stream, const pb_field_t *field, void **arg) {
+    char* str = (char*)(*arg);
+
+    if (!pb_read(stream, str, stream->bytes_left))
+        return false;
+    return true;
+}
+
+
+static uint32_t gopro_decode_wifi_cred(uint8_t *data, uint32_t max_len){
+    int err;
+
+    open_gopro_RequestConnectNew req = open_gopro_RequestConnectNew_init_zero;
+
+    pb_istream_t stream = pb_istream_from_buffer(data, max_len);
+
+    req.ssid.funcs.decode = read_str;
+    req.ssid.arg = (char *)gopro_state.cohn_net.wifi_ssid;
+
+    req.password.funcs.decode = read_str;
+    req.password.arg = (char *)gopro_state.cohn_net.wifi_pass;
+
+    err = pb_decode(&stream, open_gopro_RequestConnectNew_fields, &req);
+
+    if(!err){
+        LOG_ERR("PB decode failed %s", PB_GET_ERROR(&stream));
+    }else{
+        LOG_DBG("AP Decode OK.");
+    }
+    return 0;
+}
+
 
 static void can_rx_ble_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
     struct mem_pkt_t mem_pkt;
@@ -850,7 +877,18 @@ static void can_rx_ble_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
                 LOG_HEXDUMP_DBG(bledata.data.bytes,bledata.data.size,"Decode:");
 
                 if(bledata.ble_addr < GP_CNTRL_HANDLE_END){
-                    gopro_send_buf(bledata.data.bytes,bledata.data.size,bledata.ble_addr);
+                    LOG_DBG("Addr valid");
+                    if(gopro_state.state == GP_STATE_CONNECTED){
+                        LOG_DBG("State connected, send data"); 
+                        gopro_send_buf(bledata.data.bytes,bledata.data.size,bledata.ble_addr);
+                    }else{
+                        LOG_WRN("Not connected, skip sending");
+                    }
+                }else{
+                    if(bledata.ble_addr == BLE_ADDR_SET_WIFI_CRED){
+                        LOG_DBG("Parse SET WIFI cmd");
+                        gopro_decode_wifi_cred(bledata.data.bytes,bledata.data.size);
+                    }
                 };
             };
             LOG_DBG("Free semaphore");
@@ -859,3 +897,58 @@ static void can_rx_ble_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
 	}
 };
 
+int can_reply(int32_t ble_addr, uint8_t *data, uint32_t len){
+    int err;
+    struct mem_pkt_t mem_pkt;
+
+    LOG_DBG("CAN reply %d bytes",len);
+
+    if(len > WORK_BUFF_SIZE){
+        LOG_ERR("Reply too big %d of %d",len,WORK_BUFF_SIZE);
+        return -EINVAL;
+    }
+
+    if( k_sem_take(&can_reply_sem, K_NO_WAIT) != 0 ){
+        LOG_ERR("Sem busy");
+        return -EINVAL;
+    }
+
+    memset(&mem_pkt,0,sizeof(struct mem_pkt_t));
+    mem_pkt.data = k_malloc(WORK_BUFF_SIZE);
+
+    if (mem_pkt.data != NULL) {
+
+        memset(&replyreq,0,sizeof(GoproClient_bledata));
+        
+        replyreq.ble_addr = ble_addr;
+        replyreq.data.size = len;
+
+        for(uint32_t i=0; i< len; i++){
+            replyreq.data.bytes[i] = data[i]; 
+        }
+
+        pb_ostream_t stream = pb_ostream_from_buffer(mem_pkt.data, WORK_BUFF_SIZE);
+        if(!pb_encode(&stream, GoproClient_bledata_fields, &replyreq)){
+            LOG_ERR("Encode failed");
+            k_free(mem_pkt.data);
+            k_sem_give(&can_reply_sem);
+            return -EINVAL;
+        }
+        mem_pkt.len = stream.bytes_written;
+
+    } else {
+        LOG_ERR("Memory not allocated");
+        return -ENOMEM;
+    }
+
+    err = zbus_chan_pub(&can_tx_ble_chan, &mem_pkt, K_NO_WAIT);
+   
+    if(err < 0){
+        LOG_ERR("Failed pub to chan");
+        k_free(mem_pkt.data);
+        k_sem_give(&can_reply_sem);
+        return -EIO;
+    }
+
+    return 0;
+}

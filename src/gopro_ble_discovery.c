@@ -682,7 +682,7 @@ static void gopro_cmd_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
 
 	while (!zbus_sub_wait_msg(&gopro_cmd_subscriber, &chan, &gopro_cmd, K_FOREVER)) {
 		if (&gopro_cmd_chan == chan) {
-				//LOG_HEXDUMP_DBG(gopro_cmd.data, gopro_cmd.len,"CMD Data to send:");
+				LOG_HEXDUMP_DBG(gopro_cmd.data, gopro_cmd.len,"CMD Data to send:");
 
 				if((gopro_cmd.cmd_type == 0xFF) && (gopro_cmd.len==1)){
 

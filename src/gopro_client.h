@@ -98,6 +98,11 @@ enum gopro_flag_t{
 	GP_FLAG_FORCE_CONNECT
 };
 
+struct my_cohn_net_t{
+	char wifi_ssid[20];
+	char wifi_pass[20];
+};
+
 struct gopro_state_t {
 	struct bt_scan_device_info 	device_info;
 	bt_addr_le_t 				addr;
@@ -112,6 +117,7 @@ struct gopro_state_t {
     char 						firmware_version[20];
     char 						serial_number[20];
     char 						ap_mac[20];
+	struct my_cohn_net_t		cohn_net;
 };
 
 struct gopro_cmd_t {

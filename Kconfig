@@ -35,11 +35,11 @@ config CAN_LOG_LVL
 
 config BLE_LOG_LVL
 	int
-	default 3
+	default 4
 
 config PARSE_LOG_LVL
 	int
-	default 3
+	default 4
 
 config LEDS_LOG_LVL
 	int

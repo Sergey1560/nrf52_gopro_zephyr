@@ -397,6 +397,8 @@ void gopro_packet_build(struct gopro_cmd_t *gopro_cmd){
 
 void gopro_packet_parse(struct gopro_packet_t *gopro_packet){
 
+    can_reply(gopro_packet->packet_type,(uint8_t *)gopro_packet->data,gopro_packet->total_len);
+
     switch (gopro_packet->packet_type){
 
         case GP_CNTRL_HANDLE_CMD:

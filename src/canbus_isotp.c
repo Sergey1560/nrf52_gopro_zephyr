@@ -7,6 +7,7 @@ static void isotp_rx_thread(void *arg1, void *arg2, void *arg3);
 static void isotp_tx_thread(void *arg1, void *arg2, void *arg3);
 
 struct k_sem can_isotp_rx_sem;
+extern struct k_sem can_reply_sem;
 
 K_THREAD_STACK_DEFINE(isotp_rx_thread_stack, ISOTP_RX_THREAD_STACK_SIZE);
 K_THREAD_STACK_DEFINE(isotp_tx_thread_stack, ISOTP_TX_THREAD_STACK_SIZE);
@@ -43,7 +44,7 @@ const struct isotp_msg_id rx_reply = {
 	.std_id = 0x784,
 };
 
-const struct isotp_fc_opts isotp_fc_opts = {.bs = 8, .stmin = 0};
+const struct isotp_fc_opts isotp_fc_opts = {.bs = 8, .stmin = 10};
 
 void canbus_isotp_init(const struct device *can_dev){
 	k_tid_t tid;
@@ -164,10 +165,15 @@ static void isotp_tx_thread(void *arg1, void *arg2, void *arg3){
 				
 				LOG_DBG("Get %d bytes for ISOTP send",mem_pkt.len);
 
+				LOG_HEXDUMP_DBG(mem_pkt.data,mem_pkt.len,"ISOTP_data");
+
 				ret = isotp_send(&send_ctx, can_dev, mem_pkt.data, mem_pkt.len, &tx_reply, &rx_reply, NULL, NULL);
 				if (ret != ISOTP_N_OK) {
 					LOG_ERR("Error while sending data to ID %d [%d]\n",	tx_reply.std_id, ret);
 				}
+
+				k_free(mem_pkt.data);
+				k_sem_give(&can_reply_sem);
 
 			}
 		}

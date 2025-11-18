@@ -206,15 +206,19 @@ int bt_gopro_client_send(struct bt_gopro_client *gp_client, struct gopro_cmd_t *
 	switch (handle_index)
 	{
 	case GP_CNTRL_HANDLE_CMD:
+		LOG_DBG("Send CMD");
 		flag_bit = GP_FLAG_CMD_WRITE_PENDING;
 		break;
 	case GP_CNTRL_HANDLE_SETTINGS:
+		LOG_DBG("Send SETTINGS");
 		flag_bit = GP_FLAG_SETTINGS_WRITE_PENDING;
 		break;
 	case GP_CNTRL_HANDLE_QUERY:
+		LOG_DBG("Send QUERY");
 		flag_bit = GP_FLAG_QUERY_WRITE_PENDING;
 		break;
 	case GP_CNTRL_HANDLE_NET:
+		LOG_DBG("Send NET");
 		flag_bit = GP_FLAG_NET_WRITE_PENDING;
 		break;
 	

@@ -10,6 +10,14 @@
 #define MAX_SSID_LEN        40
 #define MAX_AP_LIST_COUNT   30
 
+enum ble_addr_ext_t{
+    BLE_ADDR_SET_WIFI_CRED = 0xF0,
+    BLE_ADDR_START_AP_SCAN = 0x50,
+    BLE_ADDR_REPLY_AP_LIST = 0x51,
+    BLE_ADDR_CERT = 0x60
+};
+
+
 struct ap_list_t{
     int32_t signal_frequency_mhz;
     int32_t signal_strength_bars;
@@ -33,4 +41,5 @@ void gopro_parse_notif_prov_state(uint8_t *data, uint32_t len);
 void gopro_parse_response_cohn_status(uint8_t *data, uint32_t len);
 void gopro_parse_response_cohn_cert(uint8_t *data, uint32_t len);
 
+int can_reply(int32_t ble_addr, uint8_t *data, uint32_t len);
 #endif
