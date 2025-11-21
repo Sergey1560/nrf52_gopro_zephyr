@@ -6,9 +6,15 @@
 #include "gopro_packet.h"
 
 #define WORK_BUFF_SIZE 2048
+#define BLEDATA_BUFF_SIZE 2048
 
 #define MAX_SSID_LEN        40
 #define MAX_AP_LIST_COUNT   30
+
+struct data_ptr_t{
+    uint32_t size;
+    uint8_t *data;
+};
 
 enum ble_addr_ext_t{
     BLE_ADDR_SET_WIFI_CRED = 0xF0,

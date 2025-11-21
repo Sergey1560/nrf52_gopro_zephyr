@@ -1,7 +1,23 @@
 syntax = "proto3";
 
+enum EnumState {
+    GPSTATE_UNSPECIFIED    = 0;
+    GPSTATE_CONNECTING     = 1;
+    GPSTATE_CONNTECTED     = 2;
+    GPSTATE_NEED_PAIRING   = 3;
+    GPSTATE_PARING         = 4;
+    GPSTATE_SECURITY_ERR   = 5;
+    GPSTATE_READY          = 6;
+    GPSTATE_OFFLINE        = 7;
+}
+
 message GoproClient_bledata {
     int32 ble_addr = 1;
     bytes data = 2;
 }
 
+message GoproClient_state {
+    EnumState gopro_state = 1;
+    optional int32 err_code = 2;
+
+}
