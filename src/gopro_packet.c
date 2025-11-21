@@ -339,17 +339,17 @@ void gopro_packet_build(struct gopro_cmd_t *gopro_cmd){
         }
  
     }else{
-        #ifdef CONFIG_HAS_CANBUS
-        if(packet_type == gopro_packet_5bit){ //Short reply send to can
-            int err = zbus_chan_pub(&can_txdata_chan, gopro_cmd, K_NO_WAIT);
-            if(err != 0){
-                if(err == -ENOMSG){
-                    LOG_ERR("Msg validate failed");
-                }
-                LOG_ERR("Zbus pub failed: %d",err);
-            }
-        }
-        #endif
+        // #ifdef CONFIG_HAS_CANBUS
+        // if(packet_type == gopro_packet_5bit){ //Short reply send to can
+        //     int err = zbus_chan_pub(&can_txdata_chan, gopro_cmd, K_NO_WAIT);
+        //     if(err != 0){
+        //         if(err == -ENOMSG){
+        //             LOG_ERR("Msg validate failed");
+        //         }
+        //         LOG_ERR("Zbus pub failed: %d",err);
+        //     }
+        // }
+        // #endif
         if(gopro_packet.data != NULL){
             LOG_WRN("Mem not free");
             k_free(gopro_packet.data);
