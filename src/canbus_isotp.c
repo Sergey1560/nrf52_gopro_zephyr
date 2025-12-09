@@ -147,6 +147,23 @@ static void isotp_rx_thread(void *arg1, void *arg2, void *arg3){
 	}
 }
 
+
+void isotpsend_callback(int error_nr, void *arg){
+	uint8_t *data=arg;
+
+	if(error_nr == ISOTP_N_OK){
+		LOG_DBG("Send OK");
+	}else{
+		LOG_ERR("Send failed, err: %d",error_nr);
+	}
+
+	k_free(data);
+	k_sem_give(&can_reply_sem);
+	LOG_DBG("Mem free, sem give");
+
+}
+
+
 static void isotp_tx_thread(void *arg1, void *arg2, void *arg3){
 	const struct device *can_dev = arg1;
 	int ret;
@@ -165,15 +182,12 @@ static void isotp_tx_thread(void *arg1, void *arg2, void *arg3){
 				
 				LOG_DBG("Get %d bytes for ISOTP send",mem_pkt.len);
 
-				LOG_HEXDUMP_DBG(mem_pkt.data,mem_pkt.len,"ISOTP_data");
+				//LOG_HEXDUMP_DBG(mem_pkt.data,mem_pkt.len,"ISOTP_data");
 
-				ret = isotp_send(&send_ctx, can_dev, mem_pkt.data, mem_pkt.len, &tx_reply, &rx_reply, NULL, NULL);
+				ret = isotp_send(&send_ctx, can_dev, mem_pkt.data, mem_pkt.len, &tx_reply, &rx_reply, isotpsend_callback, mem_pkt.data);
 				if (ret != ISOTP_N_OK) {
-					LOG_ERR("Error while sending data to ID %d [%d]\n",	tx_reply.std_id, ret);
+					LOG_ERR("Error while sending data to ID %0X [%d]\n", tx_reply.std_id, ret);
 				}
-
-				k_free(mem_pkt.data);
-				k_sem_give(&can_reply_sem);
 
 			}
 		}
