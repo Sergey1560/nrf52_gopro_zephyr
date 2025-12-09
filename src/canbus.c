@@ -17,16 +17,11 @@
 
 #define CAN_MCP_NODE	DT_ALIAS(cannode)
 
-// #if DT_NODE_HAS_STATUS_OKAY(CAN_MCP_NODE)
-// #define CANBUS_PRESENT
-// #endif
-
 #ifdef CONFIG_HAS_CANBUS
 LOG_MODULE_REGISTER(canbus_gopro, CONFIG_CAN_LOG_LVL);
 
 #if DT_NODE_EXISTS(DT_NODELABEL(mcp_rst_switch))
 #define MCP_RST_SWITCH
-//#error "Overlay for MCP2515 RST pin not properly defined."
 #endif
 
 static void mcp2515_get_timing(struct can_timing *timing, uint8_t cnf1, uint8_t cnf2, uint8_t cnf3);
@@ -71,30 +66,6 @@ ZBUS_CHAN_DECLARE(gopro_cmd_chan);
 K_TIMER_DEFINE(can_tx_timer, can_tx_timer_handler, NULL);
 #define CAN_TX_TIMER_START	do{k_timer_start(&can_tx_timer, K_MSEC(100), K_MSEC(100));}while(0)
 K_WORK_DEFINE(can_tx_work, can_tx_work_handler);
-
-// const struct can_timing mcp2515_8mhz_500 = {
-// 	.sjw = 2,
-// 	.prop_seg = 2,
-// 	.phase_seg1 = 3,
-// 	.phase_seg2 = 2,
-// 	.prescaler = 1
-// };
-
-// const struct can_timing mcp2515_16mhz_500 = {
-// 	.sjw = 2,
-// 	.prop_seg = 2,
-// 	.phase_seg1 = 3,
-// 	.phase_seg2 = 2,
-// 	.prescaler = 2
-// };
-
-// const struct can_timing mcp2515_16mhz_1000 = {
-// 	.sjw = 2,
-// 	.prop_seg = 2,
-// 	.phase_seg1 = 3,
-// 	.phase_seg2 = 2,
-// 	.prescaler = 1
-// };
 
 #ifdef MCP_RST_SWITCH
 static const struct gpio_dt_spec mcp_rst_switch = 	GPIO_DT_SPEC_GET_OR(DT_NODELABEL(mcp_rst_switch), gpios, {0});
@@ -327,7 +298,6 @@ static void can_print_timing(struct can_timing *timing){
 	LOG_DBG("Propseg: %d  MIN: %d MAX: %d",timing->prop_seg,min->prop_seg,max->prop_seg);
 
 }
-
 
 void can_tx_callback(const struct device *dev, int error, void *user_data){
 	k_sem_give(&can_tx_sem);
