@@ -147,7 +147,6 @@ static void isotp_rx_thread(void *arg1, void *arg2, void *arg3){
 	}
 }
 
-
 void isotpsend_callback(int error_nr, void *arg){
 	uint8_t *data=arg;
 
@@ -163,7 +162,6 @@ void isotpsend_callback(int error_nr, void *arg){
 
 }
 
-
 static void isotp_tx_thread(void *arg1, void *arg2, void *arg3){
 	const struct device *can_dev = arg1;
 	int ret;
@@ -173,22 +171,16 @@ static void isotp_tx_thread(void *arg1, void *arg2, void *arg3){
 
 	LOG_DBG("ISO-TP TX, dev 0x%0X",(uint32_t)can_dev);
 
-	memset(&send_ctx,0,sizeof(struct isotp_send_ctx));
-
 	while(1){
-
 		while (!zbus_sub_wait_msg(&can_tx_ble_subscriber, &chan, &mem_pkt, K_FOREVER)) {
 			if (&can_tx_ble_chan == chan) {
 				
 				LOG_DBG("Get %d bytes for ISOTP send",mem_pkt.len);
 
-				//LOG_HEXDUMP_DBG(mem_pkt.data,mem_pkt.len,"ISOTP_data");
-
 				ret = isotp_send(&send_ctx, can_dev, mem_pkt.data, mem_pkt.len, &tx_reply, &rx_reply, isotpsend_callback, mem_pkt.data);
 				if (ret != ISOTP_N_OK) {
 					LOG_ERR("Error while sending data to ID %0X [%d]\n", tx_reply.std_id, ret);
 				}
-
 			}
 		}
 	}
