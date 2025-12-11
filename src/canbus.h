@@ -15,7 +15,7 @@
 #define GPCAN_INPUT_NET_ID          0x778
 #define GPCAN_REPLY_MSG_NET_ID      0x779
 
-#define GPCAN_INPUT_UNPAIR_ID       0x77A
+#define GPCAN_INPUT_CONTROL_ID      0x77A
 
 #define GPCAN_REPLY_MSG_ERR_ID      0x740
 

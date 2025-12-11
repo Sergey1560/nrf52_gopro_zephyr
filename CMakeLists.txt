@@ -29,6 +29,7 @@ target_sources(app PRIVATE
   src/gopro_ble_discovery.c
   src/gopro_protobuf.c
   src/gopro_packet.c
+  src/gopro_control.c
   src/canbus.c
   src/canbus_isotp.c
   src/buttons.c

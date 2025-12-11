@@ -6,6 +6,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/settings/settings.h>
 #include <zephyr/drivers/hwinfo.h>
+#include "gopro_control.h"
 //#include <hw_id.h>
 
 #define  LOG_LVL	CONFIG_BLE_LOG_LVL
@@ -684,24 +685,7 @@ static void gopro_cmd_subscriber_task(void *ptr1, void *ptr2, void *ptr3){
 		if (&gopro_cmd_chan == chan) {
 				LOG_HEXDUMP_DBG(gopro_cmd.data, gopro_cmd.len,"CMD Data to send:");
 
-				if((gopro_cmd.cmd_type == 0xFF) && (gopro_cmd.len==1)){
-
-					switch (gopro_cmd.data[0])
-					{
-					case 0xDA:
-						LOG_WRN("Remove bonding, start new pair");
-						bt_unpair(BT_ID_DEFAULT,BT_ADDR_LE_ANY);
-						break;
-
-					case 0xAF:
-						LOG_INF("Force connect CMD");
-						atomic_set_bit(&gopro_client.state,GP_FLAG_FORCE_CONNECT);
-						break;
-						
-					default:
-						break;
-					}
-
+				if(gopro_ctrl_parse(&gopro_cmd) == 1){ //Control packet, skip sending to ble
 					continue;
 				}
 				

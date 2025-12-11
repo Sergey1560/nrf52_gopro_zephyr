@@ -750,7 +750,6 @@ static void gopro_send_buf(uint8_t *data, uint32_t len, uint8_t type){
     }    
 }
 
-
 static void gopro_send_big_data(uint8_t *data, uint32_t len, uint8_t type, uint8_t feature, uint8_t action){
     int err;
     struct gopro_cmd_t gopro_cmd; 
@@ -939,7 +938,7 @@ int can_reply(int32_t ble_addr, uint8_t *data, uint32_t len){
         return -EINVAL;
     }
 
-    if( k_sem_take(&can_reply_sem, K_NO_WAIT) != 0 ){
+    if( k_sem_take(&can_reply_sem, K_MSEC(10)) != 0 ){
         LOG_ERR("Sem busy");
         return -EINVAL;
     }
