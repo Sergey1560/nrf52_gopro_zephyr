@@ -46,7 +46,7 @@ ZBUS_CHAN_DEFINE(can_tx_chan,                           	/* Name */
 
 ZBUS_MSG_SUBSCRIBER_DEFINE(can_tx_subscriber);
 
-K_THREAD_DEFINE(can_tx_subscriber_task_id, 4096, can_tx_subscriber_task, NULL, NULL, NULL, 3, 0, 0);
+K_THREAD_DEFINE(can_tx_subscriber_task_id, 2048, can_tx_subscriber_task, NULL, NULL, NULL, 3, 0, 0);
 
 static bool gopro_cmd_validator(const void* msg, size_t msg_size);
 ZBUS_CHAN_DEFINE(can_txdata_chan,                           	/* Name */
@@ -59,7 +59,7 @@ ZBUS_CHAN_DEFINE(can_txdata_chan,                           	/* Name */
 
 ZBUS_MSG_SUBSCRIBER_DEFINE(can_data_subscriber);
 
-K_THREAD_DEFINE(can_data_subscriber_task_id, 2048, can_data_subscriber_task, NULL, NULL, NULL, 3, 0, 0);
+K_THREAD_DEFINE(can_data_subscriber_task_id, 1024, can_data_subscriber_task, NULL, NULL, NULL, 3, 0, 0);
 
 ZBUS_CHAN_DECLARE(gopro_cmd_chan);
 
