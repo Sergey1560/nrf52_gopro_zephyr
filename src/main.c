@@ -50,11 +50,25 @@ int clocks_start(void)
 }
 #endif
 
+static void __attribute__((unused)) heap_usage(void){
+	struct sys_memory_stats heap_stats;
+	int ret;
+
+	while(1){
+		ret = sys_heap_runtime_stats_get(&_system_heap, &heap_stats);
+        if (ret < 0) {
+            LOG_ERR("Failed to get heap stats");
+        } else {
+            LOG_DBG("Heap | Free: %u bytes, Allocated: %u bytes Max: %u bytes", heap_stats.free_bytes, heap_stats.allocated_bytes, heap_stats.max_allocated_bytes);
+        }
+	
+        k_msleep(5000);
+	}
+}
+
+
 int main(void)
 {
-	// struct sys_memory_stats heap_stats;
-	// int ret;
-
 	#ifdef CONFIG_USE_NRF_SDK
 	clocks_start();
 	#endif
@@ -63,17 +77,7 @@ int main(void)
 	canbus_init();
 	gopro_bt_start();
 
-	// while(1){
-	// 	ret = sys_heap_runtime_stats_get(&_system_heap, &heap_stats);
-    //     if (ret < 0) {
-    //         LOG_ERR("Failed to get heap stats");
-    //     } else {
-    //         LOG_DBG("Heap | Free: %u bytes, Allocated: %u bytes Max: %u bytes", heap_stats.free_bytes, heap_stats.allocated_bytes, heap_stats.max_allocated_bytes);
-    //     }
-	
-    //     k_msleep(5000);
-	// }
-
+	//heap_usage();
 
 	return 0;
 }
