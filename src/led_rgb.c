@@ -24,9 +24,9 @@ static const struct device *const strip = DEVICE_DT_GET(LED_STRIP_NODE);
 
 #define RGB(_r, _g, _b) { .r = (_r), .g = (_g), .b = (_b) }
 
-const struct led_rgb red_color = RGB(CONFIG_SAMPLE_LED_BRIGHTNESS, 0x00, 0x00);
-const struct led_rgb green_color = RGB(0x00, CONFIG_SAMPLE_LED_BRIGHTNESS, 0x00);
-const struct led_rgb blue_color = RGB(0x00, 0x00, CONFIG_SAMPLE_LED_BRIGHTNESS);
+const struct led_rgb red_color = RGB(CONFIG_RGB_LED_BRIGHTNESS, 0x00, 0x00);
+const struct led_rgb green_color = RGB(0x00, CONFIG_RGB_LED_BRIGHTNESS, 0x00);
+const struct led_rgb blue_color = RGB(0x00, 0x00, CONFIG_RGB_LED_BRIGHTNESS);
 const struct led_rgb off_color = RGB(0, 0x00, 0x00);
 
 static struct led_rgb pixels[STRIP_NUM_PIXELS];

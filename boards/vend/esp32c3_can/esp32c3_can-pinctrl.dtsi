@@ -22,8 +22,8 @@
 
 	spim2_default: spim2_default {
 		group1 {
-			pinmux = <SPIM2_MISO_GPIO5>,
-				 <SPIM2_SCLK_GPIO4>,
+			pinmux = <SPIM2_MISO_GPIO8>,
+				 <SPIM2_SCLK_GPIO9>,
 				 <SPIM2_CSEL_GPIO7>;
 		};
 
@@ -45,8 +45,8 @@
 
 	twai_default: twai_default {
 		group1 {
-			pinmux = <TWAI_TX_GPIO5>,
-				 <TWAI_RX_GPIO6>;
+			pinmux = <TWAI_TX_GPIO3>,
+				 <TWAI_RX_GPIO4>;
 		};
 	};
 

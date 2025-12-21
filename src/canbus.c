@@ -19,7 +19,6 @@
 
 #ifdef CONFIG_HAS_CANBUS
 LOG_MODULE_REGISTER(canbus_gopro, CONFIG_CAN_LOG_LVL);
-
 #if DT_NODE_EXISTS(DT_NODELABEL(mcp_rst_switch))
 #define MCP_RST_SWITCH
 #endif
