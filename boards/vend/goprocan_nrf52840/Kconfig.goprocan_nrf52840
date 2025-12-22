@@ -5,18 +5,18 @@ config USE_NRF_SDK
 	bool
 	default y
 
-config HAS_LED_SIMPLE
-	bool
-	default y
+# config HAS_LED_SIMPLE
+# 	bool
+# 	default y
 
-config HAS_LED_RGB
-	bool
-	default n
+# config HAS_LED_RGB
+# 	bool
+# 	default n
 
-config SAMPLE_LED_BRIGHTNESS
-	int "LED brightness"
-	default 16
-	range 1 255
-	help
-	  Brightness level of each LED. Defaults to a low value to make
-	  it easier to distinguish colors.
+# config SAMPLE_LED_BRIGHTNESS
+# 	int "LED brightness"
+# 	default 16
+# 	range 1 255
+# 	help
+# 	  Brightness level of each LED. Defaults to a low value to make
+# 	  it easier to distinguish colors.
