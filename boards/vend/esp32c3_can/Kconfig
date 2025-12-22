@@ -4,6 +4,23 @@ config HEAP_MEM_POOL_ADD_SIZE_BOARD
 	int
 	default 4096
 
+config HAS_CANBUS
+	bool "CAN-BUS present onboard"
+	default n
+
+config HAS_LED_SIMPLE
+	bool "Simple led"
+	default n
+
+config HAS_LED_RGB
+	bool "RGB LED"
+	default n
+
+config RGB_LED_BRIGHTNESS
+	int	
+	default 50
+
+#NRF_SDK
 config BT_SCAN_UUID_CNT
 	int
 	default 1

@@ -9,25 +9,11 @@ config ZMS
 config NVS
 	default y if !(SOC_FLASH_NRF_RRAM || SOC_FLASH_NRF_MRAM)
 
-config HAS_CANBUS
-	bool "CAN-BUS present onboard"
-	default n
 
 config CANBUS_BD
 	int  
 	default 1000000
 
-config HAS_LED_RGB
-	bool "RGB LED"
-	default n
-
-config RGB_LED_BRIGHTNESS
-	int	
-	default 50
-
-config HAS_LED_SIMPLE
-	bool "Simple led"
-	default y
 
 #define LOG_LEVEL_NONE 0
 #define LOG_LEVEL_ERR  1
