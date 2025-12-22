@@ -1,3 +1,11 @@
 config USE_NRF_SDK
 	bool
 	default y
+
+config HAS_CANBUS
+	bool "CAN-BUS present onboard"
+	default n
+
+config HAS_LED_SIMPLE
+	bool "Simple led"
+	default n
