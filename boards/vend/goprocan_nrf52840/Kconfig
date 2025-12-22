@@ -1,0 +1,3 @@
+config USE_NRF_SDK
+	bool
+	default y

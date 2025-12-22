@@ -29,10 +29,6 @@ config HAS_LED_SIMPLE
 	bool "Simple led"
 	default y
 
-config USE_NRF_SDK
-	bool
-	default n
-
 #define LOG_LEVEL_NONE 0
 #define LOG_LEVEL_ERR  1
 #define LOG_LEVEL_WRN  2

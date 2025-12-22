@@ -6,7 +6,6 @@ config HEAP_MEM_POOL_ADD_SIZE_BOARD
 	default 4096 if BOARD_ESP32S3_DEVKITC_ESP32S3_PROCPU
 	default 256 if BOARD_ESP32S3_DEVKITC_ESP32S3_APPCPU
 
-if !USE_NRF_SDK
 config BT_SCAN_UUID_CNT
 	int
 	default 1
@@ -58,4 +57,3 @@ config BT_SCAN_NAME_CNT
 config BT_SCAN_NAME_MAX_LEN
 	int
 	default 32
-endif
