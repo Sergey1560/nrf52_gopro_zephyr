@@ -1,5 +1,9 @@
 / {
 
+	chosen {
+		zephyr,canbus = &can0;
+	};
+
 	aliases {
 		led0 = &led0;
 		led1 = &led1;
@@ -18,5 +22,12 @@
 		};
 	};
 
+	can0:can {
+		status = "okay";
+	};
+
+ 	gpio0: gpio_emul {
+		status = "okay";
+ 	};
 };
 

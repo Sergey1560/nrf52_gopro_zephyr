@@ -1,6 +1,9 @@
 # Сборка для native-sim
 
-west build -p always -S socketcan-native-sim -b native_sim -- -DCONFIG_GPIO=y -DCONFIG_GPIO_EMUL=y -DCONFIG_HAS_CANBUS=y -DDTC_OVERLAY_FILE=./boards/vend/native_sim/native_sim.overlay
+#west build -p always -S socketcan-native-sim -b native_sim -- -DCONFIG_GPIO=y -DCONFIG_GPIO_EMUL=y -DCONFIG_HAS_CANBUS=y -DDTC_OVERLAY_FILE=./boards/vend/native_sim/native_sim.overlay
+
+west build -p always -b native_sim -- -DDTC_OVERLAY_FILE=./boards/vend/native_sim/native_sim.overlay -DOVERLAY_CONFIG=./boards/vend/native_sim/native_sim.conf
+./build/zephyr/zephyr.exe --can-if=vcan0
 
 Для работы BT 
 sudo hciconfig hci0 down

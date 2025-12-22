@@ -5,3 +5,5 @@
 # build
 /build*/
 connection_logs/
+
+flash.bin
