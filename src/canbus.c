@@ -15,7 +15,7 @@
 #include <gopro_client.h>
 #include <canbus_isotp.h>
 
-#define CAN_MCP_NODE	DT_ALIAS(cannode)
+//#define CAN_MCP_NODE	DT_ALIAS(cannode)
 
 #ifdef CONFIG_HAS_CANBUS
 LOG_MODULE_REGISTER(canbus_gopro, CONFIG_CAN_LOG_LVL);
