@@ -123,6 +123,7 @@ const char *pb_enum_cohn_netstate[9]={
 uint8_t work_buff[WORK_BUFF_SIZE];
 uint8_t ble_data_buff[BLEDATA_BUFF_SIZE];
 uint8_t resp_ap_entries_buf[128];
+uint8_t *cert_buff = NULL;
 
 volatile int ap_list_index = 0;
 volatile struct ap_list_t ap_list[MAX_AP_LIST_COUNT];
@@ -227,16 +228,28 @@ void gopro_parse_response_cohn_cert(uint8_t *data, uint32_t len){
     uint8_t *input_data = data;
     uint32_t input_len = len;
 
+    if(cert_buff == NULL){
+        LOG_DBG("Allocate buffer for certificate");
+        cert_buff = k_malloc(CERT_BUFF_SIZE);
+        if(cert_buff == NULL){
+            LOG_ERR("Can't allocate memory for CERT");
+            return;
+        }
+    }else{
+        LOG_DBG("Cert buff already allocated, clean old");
+        memset(cert_buff,0,CERT_BUFF_SIZE);
+    }
+
     open_gopro_ResponseCOHNCert scan_resp = open_gopro_ResponseCOHNCert_init_zero;
     pb_istream_t stream = pb_istream_from_buffer(input_data, input_len);
 
     struct data_ptr_t decode_data;
 
-    decode_data.data = work_buff;
-    decode_data.size = WORK_BUFF_SIZE;
+    decode_data.data = cert_buff;
+    decode_data.size = CERT_BUFF_SIZE;
     
     scan_resp.cert.funcs.decode=pb_decode_bytes;
-    scan_resp.cert.arg = work_buff;
+    scan_resp.cert.arg = &decode_data;
 
     err = pb_decode(&stream, open_gopro_ResponseCOHNCert_fields, &scan_resp);
 
@@ -561,7 +574,7 @@ int gopro_parse_ap_entries(struct gopro_packet_t *gopro_packet){
         LOG_ERR("PB decode failed %s", PB_GET_ERROR(&stream));
     }else{
         LOG_DBG("AP Decode OK.");
-        //gopro_connect_ap((struct ap_list_t *)ap_list, ap_list_index);
+        gopro_connect_ap((struct ap_list_t *)ap_list, ap_list_index);
     }
     LOG_DBG("AP parse finish");
     return 0;
@@ -571,7 +584,14 @@ static void __attribute__((unused)) gopro_connect_ap(struct ap_list_t *ap_list, 
 
     for(uint32_t i=0; i<count; i++){
 
-        if( strncmp(ap_list[i].ssid, gopro_state.cohn_net.wifi_ssid,strlen(gopro_state.cohn_net.wifi_ssid)) == 0 ){
+        uint32_t min_len = strlen(gopro_state.cohn_net.wifi_ssid) > strlen(ap_list[i].ssid) ? strlen(ap_list[i].ssid) : strlen(gopro_state.cohn_net.wifi_ssid);
+
+        if(min_len == 0){
+            LOG_WRN("Empty str len, skip");
+            continue;
+        };
+
+        if( strncmp(ap_list[i].ssid, gopro_state.cohn_net.wifi_ssid,min_len) == 0 ){
             if( (ap_list[i].flags & open_gopro_EnumScanEntryFlags_SCAN_FLAG_ASSOCIATED) > 0){
                 LOG_WRN("Already connected to SSID %s", gopro_state.cohn_net.wifi_ssid);
                 return;
@@ -847,7 +867,7 @@ static uint32_t gopro_decode_wifi_cred(uint8_t *data, uint32_t max_len){
     memset(&data_decode_ssid,0,sizeof(struct data_ptr_t));
     
     data_decode_ssid.data=(char *)gopro_state.cohn_net.wifi_ssid;
-    data_decode_ssid.size=strlen(gopro_state.cohn_net.wifi_ssid);
+    data_decode_ssid.size=sizeof(gopro_state.cohn_net.wifi_ssid);
     
     req.ssid.funcs.decode = pb_decode_bytes;
     req.ssid.arg = &data_decode_ssid;
@@ -856,10 +876,10 @@ static uint32_t gopro_decode_wifi_cred(uint8_t *data, uint32_t max_len){
     memset(&data_decode_pasw,0,sizeof(struct data_ptr_t));
     
     data_decode_pasw.data=(char *)gopro_state.cohn_net.wifi_pass;
-    data_decode_pasw.size=strlen(gopro_state.cohn_net.wifi_pass);
+    data_decode_pasw.size=sizeof(gopro_state.cohn_net.wifi_pass);
     
-    req.ssid.funcs.decode = pb_decode_bytes;
-    req.ssid.arg = &data_decode_pasw;
+    req.password.funcs.decode = pb_decode_bytes;
+    req.password.arg = &data_decode_pasw;
 
     err = pb_decode(&stream, open_gopro_RequestConnectNew_fields, &req);
 

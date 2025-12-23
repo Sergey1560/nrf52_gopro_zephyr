@@ -11,10 +11,10 @@
 
 
 #define ISOTP_RX_THREAD_PRIORITY 	9
-#define ISOTP_RX_THREAD_STACK_SIZE	2048
+#define ISOTP_RX_THREAD_STACK_SIZE	4096
 
 #define ISOTP_TX_THREAD_PRIORITY 	9
-#define ISOTP_TX_THREAD_STACK_SIZE	2560
+#define ISOTP_TX_THREAD_STACK_SIZE	4096
 
 void canbus_isotp_init(const struct device *can_dev);
 
