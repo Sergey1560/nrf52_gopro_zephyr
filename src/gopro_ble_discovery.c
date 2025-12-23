@@ -65,6 +65,11 @@ struct bt_gatt_dm_cb discovery_cb = {
 
 static struct bt_conn_auth_cb conn_auth_callbacks = {
 	.cancel = auth_cancel,
+	.oob_data_request = NULL,
+	.pairing_confirm = NULL,
+	.passkey_confirm = NULL,
+	.passkey_display = NULL,
+	.passkey_entry = NULL
 };
 
 static const struct bt_scan_init_param scan_init = {
@@ -470,6 +475,8 @@ static void scan_filter_match(struct bt_scan_device_info *device_info,struct bt_
 
 	static bt_addr_le_t last_addr;
 
+	LOG_DBG("Scan filter match");
+
 	if(bt_addr_le_cmp(&last_addr,device_info->recv_info->addr)){
 		bt_addr_le_to_str(device_info->recv_info->addr, addr, sizeof(addr));
 		LOG_INF("Filters matched. Address: %s connectable: %d", addr, connectable);
@@ -479,12 +486,10 @@ static void scan_filter_match(struct bt_scan_device_info *device_info,struct bt_
 	gopro_client_set_device_addr((bt_addr_le_t *)device_info->recv_info->addr);
 	led_idle_timer_start(1);
 	bt_data_parse(device_info->adv_data,eir_found,(void *)device_info->recv_info->addr);
-
-
 }
 
 static void scan_connecting_error(struct bt_scan_device_info *device_info){
-	LOG_WRN("Connecting failed");
+	LOG_WRN("Scan Connecting failed");
 	atomic_clear_bit(&gopro_client.state,GP_FLAG_FORCE_CONNECT);
 }
 
@@ -515,6 +520,8 @@ static int ble_connect(void){
 
 static bool eir_found(struct bt_data *data, void *user_data){
 
+	LOG_DBG("Eir found");
+
 	if(data->type == 9){
 		gopro_client_setname((char *)data->data,data->data_len);
 	}else if((data->type == 255) && (data->data_len == 14) ){
@@ -528,6 +535,8 @@ static bool eir_found(struct bt_data *data, void *user_data){
 			if(atomic_test_bit(&gopro_client.state,GP_FLAG_FORCE_CONNECT)){
 				LOG_DBG("Camera OFFLINE, force connect");
 				ble_connect();	
+			}else{
+				LOG_DBG("No force connect, skip");
 			}
 
 			break;
@@ -535,9 +544,9 @@ static bool eir_found(struct bt_data *data, void *user_data){
 		case 1:
 			gopro_led_mode_set(LED_NUM_BT,LED_MODE_BLINK_300MS);
 			gopro_client_set_sate(GP_STATE_ONLINE);
-			LOG_DBG("Camera ON, connecting");
 		
 			#ifndef BT_AUTO_CONNECT
+			LOG_DBG("Camera ON, connecting");
 			ble_connect();
 			#endif
 			
